@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { User, Building, Mail, Lock, Eye, EyeOff, GraduationCap, Briefcase } from 'lucide-react';
+import axiosInstance from "@/utils/axiosInstance";
 
 const Register = () => {
   const [role, setRole] = useState<'student' | 'company' | null>(null);
@@ -66,15 +67,28 @@ const Register = () => {
 
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await axiosInstance.post("/auth/register", { ...formData, role });
+      const data = res.data;
+
+      // Save token to localStorage
+      localStorage.setItem('token', data.token);
+
       toast({
         title: 'Registration Successful',
         description: `Welcome to InterviewPro! Setting up your ${role} account...`,
       });
 
       navigate(role === 'student' ? '/student/dashboard' : '/company/dashboard');
-    }, 2000);
+    } catch (error: any) {
+      toast({
+        title: 'Registration Failed',
+        description: error.response?.data?.message || error.message || 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

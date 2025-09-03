@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { User, Building, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import axiosInstance from '@/utils/axiosInstance';
 
 const Login = () => {
   const [role, setRole] = useState<'student' | 'company' | null>(null);
@@ -18,30 +19,58 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!role) {
-      toast({
-        title: 'Role Required',
-        description: 'Please select whether you are a Student or Company',
-        variant: 'destructive',
-      });
-      return;
-    }
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
+  if (!role) {
+    toast({
+      title: "Role Required",
+      description: "Please select whether you are a Student or Company",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (!email || !password) {
+    toast({
+      title: "Missing Fields",
+      description: "Email and password are required",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  try {
     setLoading(true);
-    
-    // Mock login - replace with actual authentication
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        title: 'Login Successful',
-        description: `Welcome back! Redirecting to your ${role} dashboard...`,
-      });
-      
-      navigate(role === 'student' ? '/student/dashboard' : '/company/dashboard');
-    }, 1500);
-  };
+
+    const res = await axiosInstance.post("/auth/login", {
+      email,
+      password,
+      role,
+    });
+
+    setLoading(false);
+
+    toast({
+      title: "Login Successful",
+      description: `Welcome back! Redirecting to your ${res.data.role} dashboard...`,
+    });
+
+    // Save token in localStorage (optional)
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("role", res.data.role);
+
+    navigate(res.data.role === "student" ? "/student/dashboard" : "/company/dashboard");
+  } catch (err: any) {
+    setLoading(false);
+
+    toast({
+      title: "Login Failed",
+      description: err.response?.data?.message || "Invalid credentials",
+      variant: "destructive",
+    });
+  }
+};
 
   const handleOAuthLogin = (provider: 'google' | 'linkedin') => {
     if (!role) {
