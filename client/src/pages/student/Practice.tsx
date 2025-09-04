@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
 import PracticeSetup from "@/components/practice/PracticeSetup";
 import PracticeInterview from "@/components/practice/PracticeInterview";
-import PracticeResults from "@/components/practice/PracticeResults";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import axiosInstance from "@/utils/axiosInstance";
+import PracticeResults from "@/components/practice/PracticeResults";
 
 type Step = "setup" | "interview" | "results";
 
@@ -17,6 +18,7 @@ const Practice = () => {
     roundType: "",
     topic: "",
   });
+  const [interviewResults, setInterviewResults] = useState({});
 
   // Interview state
   const [interviewState, setInterviewState] = useState({
@@ -25,15 +27,9 @@ const Practice = () => {
     timeRemaining: 1800, // 30 minutes
     isRecording: false,
     isCameraOn: true,
-    isMicOn: true,
+    isMicOn: false,
     answer: "",
-    questions: [
-      "Tell me about yourself and your background in software development.",
-      "Describe a challenging project you've worked on and how you overcame obstacles.",
-      "How do you approach debugging when you encounter a difficult bug?",
-      "Explain the difference between REST and GraphQL APIs.",
-      "Where do you see yourself in 5 years?",
-    ],
+    question: "",
     chatHistory: [] as {
       type: "question" | "answer";
       content: string;
@@ -41,34 +37,16 @@ const Practice = () => {
     }[],
   });
 
-  // Results state
-  const [results] = useState({
-    overallScore: 85,
-    breakdown: {
-      technical: 88,
-      communication: 82,
-      problemSolving: 87,
-      confidence: 83,
-    },
-    strengths: [
-      "Strong technical knowledge",
-      "Clear communication style",
-      "Good problem-solving approach",
-    ],
-    improvements: [
-      "Provide more specific examples",
-      "Speak with more confidence",
-      "Better time management",
-    ],
-    detailedFeedback:
-      "You demonstrated solid technical knowledge and problem-solving skills. Your explanations were clear and well-structured. To improve, consider providing more specific examples from your experience and speaking with greater confidence about your abilities.",
-  });
-
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSetupSubmit = () => {
+  // assuming you have set up axios baseURL in axios instance
+  // example:
+  // const api = axios.create({ baseURL: "http://localhost:5000/api" });
+
+  const handleSetupSubmit = async () => {
     console.log(setupData);
+
     if (
       !setupData.role ||
       !setupData.difficulty ||
@@ -83,22 +61,45 @@ const Practice = () => {
       return;
     }
 
-    setCurrentStep("interview");
+    try {
+      // Call backend with metadata
+      const res = await axiosInstance.post("/interview/start", {
+        role: setupData.role,
+        resume: setupData.resume, // probably base64 or file id
+        roundType: setupData.roundType,
+        topic: setupData.topic,
+        difficulty: setupData.difficulty,
+      });
 
-    // Initialize chat with first question
-    setInterviewState((prev) => ({
-      ...prev,
-      chatHistory: [
-        {
-          type: "question",
-          content: prev.questions[0],
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ],
-    }));
+      // Response from backend (assuming it returns { question: "..." })
+      const firstQuestion = res.data.message;
+      console.log(firstQuestion);
+      // Move to interview screen
+      setCurrentStep("interview");
+
+      // Update interview state with question and chat history
+      setInterviewState((prev) => ({
+        ...prev,
+        question: firstQuestion,
+        chatHistory: [
+          {
+            type: "question",
+            content: firstQuestion,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ],
+      }));
+    } catch (error: any) {
+      console.error("Error starting interview:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start interview. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAnswerSubmit = () => {
+  const handleAnswerSubmit = async () => {
     if (!interviewState.answer.trim()) {
       toast({
         title: "Answer Required",
@@ -108,7 +109,8 @@ const Practice = () => {
       return;
     }
 
-    const newChatHistory = [
+    // Add current answer to chat history
+    const updatedChatHistory = [
       ...interviewState.chatHistory,
       {
         type: "answer" as const,
@@ -117,25 +119,76 @@ const Practice = () => {
       },
     ];
 
-    if (interviewState.currentQuestion < interviewState.totalQuestions) {
-      const nextQuestion =
-        interviewState.questions[interviewState.currentQuestion];
-      newChatHistory.push({
-        type: "question",
-        content: nextQuestion,
-        timestamp: new Date().toLocaleTimeString(),
+    try {
+      // ✅ Check if last question
+      if (interviewState.currentQuestion >= interviewState.totalQuestions) {
+        // 🎯 Interview conclude
+        console.log(
+          "Interview concluded. Fetching results..." +
+            localStorage.getItem("token")
+        );
+        const res = await axiosInstance.post(
+          "/interview/conclude",
+          {
+            history: updatedChatHistory,
+            resumeText: setupData.resume,
+            roleSummary: setupData.role,
+            roundType: setupData.roundType,
+            customTopic: setupData.topic,
+            difficulty: setupData.difficulty,
+            typeOfInterview: "practice", // or "company"
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        console.log("Interview results:", res.data);
+        const { interview } = res.data;
+
+        // Go to results screen
+        setInterviewResults(interview);
+        setCurrentStep("results");
+
+        // Optionally store results somewhere (context / state)
+        // console.log("Interview Results:", { finalFeedback, result, feedbacks });
+      } else {
+        // 🎯 Normal flow → get next question
+        const res = await axiosInstance.post("/interview/respond", {
+          chatHistory: updatedChatHistory,
+          answer: interviewState.answer,
+          resume: setupData.resume,
+          role: setupData.role,
+          roundType: setupData.roundType,
+          topic: setupData.topic,
+          difficulty: setupData.difficulty,
+        });
+
+        const nextQuestion = res.data.message; // assume backend returns { message: "..." }
+
+        // Append next question to history
+        updatedChatHistory.push({
+          type: "question",
+          content: nextQuestion,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+
+        setInterviewState((prev) => ({
+          ...prev,
+          chatHistory: updatedChatHistory,
+          currentQuestion: prev.currentQuestion + 1,
+          question: nextQuestion,
+          answer: "",
+        }));
+      }
+    } catch (error: any) {
+      console.error("Error in interview flow:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
-    }
-
-    setInterviewState((prev) => ({
-      ...prev,
-      chatHistory: newChatHistory,
-      currentQuestion: prev.currentQuestion + 1,
-      answer: "",
-    }));
-
-    if (interviewState.currentQuestion >= interviewState.totalQuestions) {
-      setTimeout(() => setCurrentStep("results"), 1000);
     }
   };
 
@@ -169,14 +222,23 @@ const Practice = () => {
   if (currentStep === "interview") {
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Navigation />
+        {/* <Navigation /> */}
         <PracticeInterview
           setupData={setupData}
           interviewState={interviewState}
           setInterviewState={setInterviewState}
           handleAnswerSubmit={handleAnswerSubmit}
           formatTime={formatTime}
+          toast={toast}
         />
+      </div>
+    );
+  }
+  if (currentStep === "results") {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#101322]">
+        <Navigation />
+        <PracticeResults interview={interviewResults} navigate={navigate} />
       </div>
     );
   }

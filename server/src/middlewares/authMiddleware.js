@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 const authMiddleware = (roles = []) => {
   return (req, res, next) => {
     const token = req.header("Authorization")?.replace("Bearer ", "");
+
     if (!token)
       return res.status(401).json({ msg: "No token, authorization denied" });
 
@@ -16,6 +17,7 @@ const authMiddleware = (roles = []) => {
 
       next();
     } catch (err) {
+      console.log(err);
       res.status(401).json({ msg: "Token is not valid" });
     }
   };
