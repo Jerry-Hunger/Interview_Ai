@@ -48,7 +48,7 @@ const statusMeta = (raw: string) => {
 type Interview = {
   _id: string;
   result: "success" | "failure" | "Quit";
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: string;
   type: "practice" | "company";
   createdAt: string;
 };
@@ -93,11 +93,40 @@ const StudentDashboard = () => {
   };
 
   // 🎠 Slider Wrapper
+  // 🎠 Slider Wrapper with buttons
   const Carousel = ({ children }: { children: React.ReactNode }) => {
-    const [emblaRef] = useEmblaCarousel({ align: "start", dragFree: true });
+    const [emblaRef, emblaApi] = useEmblaCarousel({
+      align: "start",
+      dragFree: true,
+      containScroll: "trimSnaps",
+    });
+
     return (
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex gap-4">{children}</div>
+      <div className="relative">
+        {/* Track */}
+        <div className="overflow-hidden" ref={emblaRef}>
+          <div className="flex gap-4">{children}</div>
+        </div>
+
+        {/* Prev Button */}
+        <button
+          onClick={() => emblaApi && emblaApi.scrollPrev()}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 
+                   p-2 rounded-full bg-white dark:bg-gray-800 shadow-md 
+                   hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          ‹
+        </button>
+
+        {/* Next Button */}
+        <button
+          onClick={() => emblaApi && emblaApi.scrollNext()}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 
+                   p-2 rounded-full bg-white dark:bg-gray-800 shadow-md 
+                   hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          ›
+        </button>
       </div>
     );
   };

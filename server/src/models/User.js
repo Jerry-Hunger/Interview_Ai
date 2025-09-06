@@ -32,7 +32,9 @@ const userSchema = new mongoose.Schema(
         type: String,
       },
     ],
-
+    resumeText: {
+      type: String,
+    },
     // Company fields
     companyName: {
       type: String,

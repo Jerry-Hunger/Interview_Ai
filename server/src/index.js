@@ -1,9 +1,13 @@
-import express from "express";
+import express, { application } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
+import jobRoutes from "./routes/jobRoutes.js";
+import resumeRoutes from "./routes/resumeRoutes.js";
+import applicationRoutes from "./routes/applicationRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -17,6 +21,10 @@ connectDB();
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/interview", interviewRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/resume", resumeRoutes);
+app.use("/api/applications", applicationRoutes);
+app.use("/api/company", companyRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 API is running...");

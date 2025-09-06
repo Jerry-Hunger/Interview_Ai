@@ -28,7 +28,14 @@ export const register = async (req, res) => {
     }
     await user.save();
 
-    res.status(201).json({ message: "User registered successfully" });
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+    res
+      .status(201)
+      .json({ message: "User registered successfully", user, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -55,7 +62,20 @@ export const login = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({ token, role: user.role });
+    res.json({ token, role: user.role, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const me = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

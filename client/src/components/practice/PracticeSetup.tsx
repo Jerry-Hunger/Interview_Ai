@@ -111,7 +111,11 @@ const PracticeSetup = ({
               )}
             </div>
           </div> */}
-          <ResumeUploader setSetupData={setSetupData} />
+          <ResumeUploader
+            dataChanged={(data) => {
+              setSetupData((prev: any) => ({ ...prev, resumeText: data }));
+            }}
+          />
           {/* Role Selection */}
           <div className="space-y-2">
             <Label htmlFor="role" className="text-gray-900 dark:text-white">

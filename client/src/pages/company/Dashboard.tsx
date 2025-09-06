@@ -1,325 +1,206 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import Navigation from '@/components/Navigation';
-import { 
-  Users, 
-  TrendingUp, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle,
-  Filter,
-  Download,
-  Eye,
-  Settings,
-  Calendar,
-  BarChart3
-} from 'lucide-react';
+// src/pages/company/CompanyDashboard.tsx
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Briefcase, Users, CheckCircle, XCircle } from "lucide-react";
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import axiosInstance from "@/utils/axiosInstance";
+import Navigation from "@/components/Navigation";
+
+const COLORS = ["#6366F1", "#F59E0B", "#10B981", "#EF4444", "#8B5CF6"];
 
 const CompanyDashboard = () => {
-  const [applicants] = useState([
-    { id: 1, name: 'John Doe', role: 'Frontend Developer', resumeLink: '#', status: 'pending', appliedDate: '2024-01-15', score: null, experience: '3 years' },
-    { id: 2, name: 'Sarah Johnson', role: 'Backend Engineer', resumeLink: '#', status: 'interview', appliedDate: '2024-01-14', score: 85, experience: '5 years' },
-    { id: 3, name: 'Mike Chen', role: 'Full Stack Developer', resumeLink: '#', status: 'accepted', appliedDate: '2024-01-12', score: 92, experience: '4 years' },
-    { id: 4, name: 'Emily Davis', role: 'React Developer', resumeLink: '#', status: 'rejected', appliedDate: '2024-01-10', score: 65, experience: '2 years' },
-  ]);
+  const [stats, setStats] = useState<any>(null);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [recentApps, setRecentApps] = useState<any[]>([]);
 
-  const stats = {
-    totalApplications: applicants.length,
-    pending: applicants.filter(a => a.status === 'pending').length,
-    inInterview: applicants.filter(a => a.status === 'interview').length,
-    accepted: applicants.filter(a => a.status === 'accepted').length,
-    rejected: applicants.filter(a => a.status === 'rejected').length,
-  };
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const res = await axiosInstance.get("/company/dashboard", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        setStats(res.data.stats);
+        setJobs(res.data.jobs);
+        setRecentApps(res.data.recentApplications);
+      } catch (err) {
+        console.error("Error loading dashboard:", err);
+      }
+    };
+    fetchDashboardData();
+  }, []);
 
-  const conversionRate = Math.round((stats.accepted / stats.totalApplications) * 100);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'accepted': return 'success';
-      case 'rejected': return 'destructive';
-      case 'interview': return 'warning';
-      default: return 'secondary';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'accepted': return <CheckCircle size={16} />;
-      case 'rejected': return <XCircle size={16} />;
-      case 'interview': return <AlertCircle size={16} />;
-      default: return <Clock size={16} />;
-    }
-  };
+  const chartData = [
+    { name: "Applied", value: stats?.applied || 0 },
+    { name: "In-Process", value: stats?.inProgress || 0 },
+    { name: "Selected", value: stats?.selected || 0 },
+    { name: "Final-Selected", value: stats?.finalSelected || 0 },
+    { name: "Rejected", value: stats?.rejected || 0 },
+  ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#101322]">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <div className="max-w-7xl mx-auto px-6 py-10">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Company Dashboard</h1>
-          <p className="text-lg text-gray-500 dark:text-gray-400">Manage your recruitment process and track applicant progress</p>
-        </div>
+        <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
+          Company Dashboard
+        </h1>
+        <p className="mt-1 text-gray-600 dark:text-gray-300">
+          Manage your jobs and track candidate applications at a glance.
+        </p>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white dark:bg-[#181A2A] shadow-lg border-0 rounded-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-indigo-500 dark:text-indigo-400 text-sm">Total Applicants</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalApplications}</p>
-                </div>
-                <Users className="text-indigo-500 dark:text-indigo-400" size={28} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white dark:bg-[#181A2A] shadow-lg border-0 rounded-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-yellow-500 dark:text-yellow-400 text-sm">In Interview</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.inInterview}</p>
-                </div>
-                <AlertCircle className="text-yellow-500 dark:text-yellow-400" size={28} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white dark:bg-[#181A2A] shadow-lg border-0 rounded-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-500 dark:text-green-400 text-sm">Accepted</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.accepted}</p>
-                </div>
-                <CheckCircle className="text-green-500 dark:text-green-400" size={28} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white dark:bg-[#181A2A] shadow-lg border-0 rounded-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-500 dark:text-purple-400 text-sm">Conversion Rate</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{conversionRate}%</p>
-                </div>
-                <TrendingUp className="text-purple-500 dark:text-purple-400" size={28} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Conversion Funnel */}
-          <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400">
-                <BarChart3 size={22} />
-                Recruitment Funnel
-              </CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                Track your hiring process efficiency
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Applications Received</span>
-                  <span className="font-medium">{stats.totalApplications}</span>
-                </div>
-                <Progress value={100} className="w-full bg-indigo-200 dark:bg-indigo-900" />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">In Interview Process</span>
-                  <span className="font-medium">{stats.inInterview}</span>
-                </div>
-                <Progress value={(stats.inInterview / stats.totalApplications) * 100} className="w-full bg-purple-200 dark:bg-purple-900" />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Final Acceptance</span>
-                  <span className="font-medium">{stats.accepted}</span>
-                </div>
-                <Progress value={conversionRate} className="w-full bg-green-200 dark:bg-green-900" />
-              </div>
-
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Overall Conversion</span>
-                  <span className="text-lg font-bold text-green-500 dark:text-green-400">{conversionRate}%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-purple-500 dark:text-purple-400">
-                <Clock size={22} />
-                Recent Activity
-              </CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                Latest updates in your recruitment process
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg">
-                  <CheckCircle className="text-green-500 dark:text-green-400 mt-0.5" size={16} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Mike Chen accepted offer</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Full Stack Developer • 2 hours ago</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-[#23263A] rounded-lg">
-                  <AlertCircle className="text-yellow-500 dark:text-yellow-400 mt-0.5" size={16} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Sarah Johnson interview scheduled</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Backend Engineer • 4 hours ago</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg">
-                  <Users className="text-indigo-500 dark:text-indigo-400 mt-0.5" size={16} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">3 new applications received</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Various positions • Yesterday</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-[#23263A] rounded-lg">
-                  <XCircle className="text-red-500 dark:text-red-400 mt-0.5" size={16} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Emily Davis application declined</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">React Developer • 2 days ago</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-            <CardHeader>
-              <CardTitle className="text-indigo-500 dark:text-indigo-400">Quick Actions</CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                Common tasks and shortcuts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button className="w-full justify-start bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg">
-                <Settings size={16} className="mr-2" />
-                Setup Interview Process
-              </Button>
-              
-              <Button variant="outline" className="w-full justify-start text-white dark:text-white border border-gray-700 bg-[#23263A] dark:bg-[#23263A]">
-                <Download size={16} className="mr-2" />
-                Export Applicant Data
-              </Button>
-              
-              <Button variant="outline" className="w-full justify-start text-white dark:text-white border border-gray-700 bg-[#23263A] dark:bg-[#23263A]">
-                <Filter size={16} className="mr-2" />
-                Advanced Filters
-              </Button>
-              
-              <Button variant="outline" className="w-full justify-start text-white dark:text-white border border-gray-700 bg-[#23263A] dark:bg-[#23263A]">
-                <BarChart3 size={16} className="mr-2" />
-                View Analytics
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Applicants Table */}
-        <Card className="mt-8 shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-          <CardHeader>
-            <div className="flex justify-between items-center">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Briefcase className="text-indigo-500" />
               <div>
-                <CardTitle className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400">
-                  <Users size={20} />
-                  Applicant Management
-                </CardTitle>
-                <CardDescription className="text-gray-500 dark:text-gray-400">
-                  Review and manage all job applications
-                </CardDescription>
+                <p className="text-sm text-gray-500">Total Jobs</p>
+                <h2 className="text-xl font-semibold">
+                  {stats?.totalJobs || 0}
+                </h2>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="text-white dark:text-white border border-gray-700 bg-[#23263A] dark:bg-[#23263A]">
-                  <Filter size={16} className="mr-2" />
-                  Filter
-                </Button>
-                <Button variant="outline" size="sm" className="text-white dark:text-white border border-gray-700 bg-[#23263A] dark:bg-[#23263A]">
-                  <Download size={16} className="mr-2" />
-                  Export
-                </Button>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Users className="text-purple-500" />
+              <div>
+                <p className="text-sm text-gray-500">Applications</p>
+                <h2 className="text-xl font-semibold">
+                  {stats?.totalApplications || 0}
+                </h2>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {applicants.map((applicant) => (
-                <div key={applicant.id} className="flex items-center justify-between p-4 bg-[#23263A] dark:bg-[#23263A] rounded-lg border border-gray-700">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                    <div>
-                      <p className="font-medium text-white">{applicant.name}</p>
-                      <p className="text-sm text-gray-400">{applicant.role}</p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-400">Experience</p>
-                      <p className="font-medium text-white">{applicant.experience}</p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-400">Applied</p>
-                      <p className="text-sm font-medium flex items-center gap-1 text-white">
-                        <Calendar size={12} />
-                        {applicant.appliedDate}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-400">Score</p>
-                      <p className="font-medium text-white">
-                        {applicant.score ? `${applicant.score}%` : 'Pending'}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusColor(applicant.status) as any} className="flex items-center gap-1">
-                        {getStatusIcon(applicant.status)}
-                        {applicant.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button variant="outline" size="sm" className="text-white border border-gray-700 bg-[#23263A]">
-                      <Eye size={14} className="mr-1" />
-                      Resume
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-white border border-gray-700 bg-[#23263A]">
-                      Actions
-                    </Button>
-                  </div>
-                </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
+            <CardContent className="p-4 flex items-center gap-3">
+              <CheckCircle className="text-green-500" />
+              <div>
+                <p className="text-sm text-gray-500">Selected</p>
+                <h2 className="text-xl font-semibold">
+                  {stats?.selected || 0}
+                </h2>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
+            <CardContent className="p-4 flex items-center gap-3">
+              <XCircle className="text-red-500" />
+              <div>
+                <p className="text-sm text-gray-500">Rejected</p>
+                <h2 className="text-xl font-semibold">
+                  {stats?.rejected || 0}
+                </h2>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Applications Pipeline Chart */}
+        <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
+          <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
+            Applications Pipeline
+          </h2>
+          <PieChart width={400} height={300}>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              dataKey="value"
+              label
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
               ))}
-            </div>
-          </CardContent>
-        </Card>
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </div>
+
+        {/* Jobs List */}
+        <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
+          <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
+            Active Jobs
+          </h2>
+          <div className="space-y-4">
+            {jobs.length > 0 ? (
+              jobs.map((job) => (
+                <div
+                  key={job._id}
+                  className="p-4 rounded-xl bg-indigo-50 dark:bg-[#20263d] flex justify-between items-center"
+                >
+                  <div>
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-200">
+                      {job.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {job.description}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      (window.location.href = `/company/job/${job._id}`)
+                    }
+                    className="bg-indigo-500 text-white rounded-lg px-4 py-2"
+                  >
+                    View Applications
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400">No active jobs</p>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Applications */}
+        <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
+          <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
+            Recent Applications
+          </h2>
+          <div className="space-y-4">
+            {recentApps.length > 0 ? (
+              recentApps.map((app) => (
+                <div
+                  key={app._id}
+                  className="p-4 rounded-xl bg-purple-50 dark:bg-[#20263d] flex justify-between items-center"
+                >
+                  <div>
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-200">
+                      {app.candidateId.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Applied for {app.jobId.title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Status: {app.status}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      (window.location.href = `/company/job/${app.jobId._id}/${app._id}`)
+                    }
+                    className="bg-purple-500 text-white rounded-lg px-4 py-2"
+                  >
+                    View
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400">
+                No recent applications
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

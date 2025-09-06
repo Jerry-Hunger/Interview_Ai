@@ -1,18 +1,23 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
-import { 
-  User, 
-  Building, 
-  Sun, 
-  Moon, 
-  Menu, 
-  X, 
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
+import {
+  User,
+  Building,
+  Sun,
+  Moon,
+  Menu,
+  X,
   LogOut,
   Settings,
-  Home
-} from 'lucide-react';
+  Home,
+  FilePlus,
+  Briefcase,
+  ClipboardList,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,35 +25,63 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Mock user state - replace with actual auth context
-  const [user] = useState({
-    role: 'student', // or 'company'
-    name: 'John Doe',
-    email: 'john@example.com'
-  });
+  // ✅ Just get role + token from localStorage
+  const [role, setRole] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRole(localStorage.getItem("role"));
+    setToken(localStorage.getItem("token"));
+  }, []);
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    setTheme(theme === "light" ? "dark" : "light");
   };
 
   const handleLogout = () => {
-    // Mock logout - implement actual logout logic
-    navigate('/login');
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    setRole(null);
+    setToken(null);
+    navigate("/login");
   };
 
+  // 🌐 Non-logged-in nav items
+  const publicNavItems = [
+    { name: "Home", path: "/", icon: Home },
+    { name: "Sign In", path: "/login", icon: LogIn },
+    { name: "Sign Up", path: "/register", icon: UserPlus },
+  ];
+
+  // 🎓 Student nav items
   const studentNavItems = [
-    { name: 'Dashboard', path: '/student/dashboard', icon: Home },
-    { name: 'Practice Interview', path: '/student/practice', icon: User },
-    { name: 'Explore Companies', path: '/student/companies', icon: Building },
+    { name: "Dashboard", path: "/student/dashboard", icon: Home },
+    { name: "Practice Interview", path: "/student/practice", icon: User },
+    { name: "Explore Jobs", path: "/student/jobs", icon: Building },
+    {
+      name: "Applications",
+      path: "/student/applications",
+      icon: ClipboardList,
+    },
+    { name: "Profile", path: "/student/profile", icon: User },
   ];
 
+  // 🏢 Company nav items
   const companyNavItems = [
-    { name: 'Dashboard', path: '/company/dashboard', icon: Home },
-    { name: 'Setup Interview', path: '/company/setup', icon: Settings },
-    { name: 'Company Profile', path: '/company/profile', icon: Building },
+    { name: "Dashboard", path: "/company/dashboard", icon: Home },
+    { name: "New Job", path: "/company/job/new", icon: FilePlus },
+    { name: "Job Openings", path: "/company/jobs", icon: Briefcase },
+    // {
+    //   name: "Applications",
+    //   path: "/company/applications",
+    //   icon: ClipboardList,
+    // },
+    // { name: "Profile", path: "/company/profile", icon: User },
   ];
 
-  const navItems = user.role === 'student' ? studentNavItems : companyNavItems;
+  let navItems = publicNavItems;
+  if (token && role === "student") navItems = studentNavItems;
+  if (token && role === "company") navItems = companyNavItems;
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -61,7 +94,9 @@ const Navigation = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">IP</span>
             </div>
-            <span className="font-bold text-xl text-indigo-700 dark:text-indigo-300">InterviewPro</span>
+            <span className="font-bold text-xl text-indigo-700 dark:text-indigo-300">
+              InterviewPro
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -74,8 +109,8 @@ const Navigation = () => {
                   to={item.path}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                     isActivePath(item.path)
-                      ? 'bg-indigo-500 dark:bg-indigo-700 text-white shadow'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-[#23263A]'
+                      ? "bg-indigo-500 dark:bg-indigo-700 text-white shadow"
+                      : "text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-[#23263A]"
                   }`}
                 >
                   <Icon size={16} />
@@ -93,14 +128,10 @@ const Navigation = () => {
               onClick={toggleTheme}
               className="w-9 h-9"
             >
-              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
             </Button>
-            
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{user.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user.role}</p>
-              </div>
+
+            {token && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -109,7 +140,7 @@ const Navigation = () => {
               >
                 <LogOut size={16} />
               </Button>
-            </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -138,8 +169,8 @@ const Navigation = () => {
                   to={item.path}
                   className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                     isActivePath(item.path)
-                      ? 'bg-indigo-500 dark:bg-indigo-700 text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-[#23263A]'
+                      ? "bg-indigo-500 dark:bg-indigo-700 text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-[#23263A]"
                   }`}
                   onClick={() => setIsOpen(false)}
                 >
@@ -148,33 +179,19 @@ const Navigation = () => {
                 </Link>
               );
             })}
-            
-            <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 mt-2 pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{user.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user.role}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleTheme}
-                    className="w-9 h-9"
-                  >
-                    {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="w-9 h-9 text-red-500 hover:text-white hover:bg-red-500"
-                  >
-                    <LogOut size={16} />
-                  </Button>
-                </div>
+
+            {token && (
+              <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 mt-2 pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="w-full text-red-500 hover:text-white hover:bg-red-500"
+                >
+                  <LogOut size={16} className="mr-2" /> Logout
+                </Button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

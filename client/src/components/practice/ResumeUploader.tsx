@@ -5,11 +5,11 @@ import pdfjsWorker from "pdfjs-dist/build/pdf.worker?url";
 // ✅ Setup worker correctly for Vite
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-interface ResumeUploaderProps {
-  setSetupData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
-}
+type ResumeUploaderProps = {
+  dataChanged: (data: string) => void; // or (data: File | string) if you return a file
+};
 
-const ResumeUploader: React.FC<ResumeUploaderProps> = ({ setSetupData }) => {
+const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
   const [fileName, setFileName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -33,7 +33,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ setSetupData }) => {
         }
 
         setFileName(file.name);
-        setSetupData((prev) => ({ ...prev, resume: fullText.trim() }));
+        await dataChanged(fullText.trim());
       };
 
       reader.readAsArrayBuffer(file);
