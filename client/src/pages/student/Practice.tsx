@@ -73,7 +73,7 @@ const Practice = () => {
 
       // Response from backend (assuming it returns { question: "..." })
       const firstQuestion = res.data.message;
-      console.log(firstQuestion);
+
       // Move to interview screen
       setCurrentStep("interview");
 
@@ -198,11 +198,11 @@ const Practice = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return "text-green-500 dark:text-green-400";
-    if (score >= 70) return "text-yellow-500 dark:text-yellow-400";
-    return "text-red-500 dark:text-red-400";
-  };
+  // const getScoreColor = (score: number) => {
+  //   if (score >= 85) return "text-green-500 dark:text-green-400";
+  //   if (score >= 70) return "text-yellow-500 dark:text-yellow-400";
+  //   return "text-red-500 dark:text-red-400";
+  // };
 
   if (currentStep === "setup") {
     return (
@@ -213,7 +213,6 @@ const Practice = () => {
           setSetupData={setSetupData}
           handleSetupSubmit={handleSetupSubmit}
           navigate={navigate}
-          toast={toast}
         />
       </div>
     );

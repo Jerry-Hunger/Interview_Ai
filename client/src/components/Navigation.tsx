@@ -10,7 +10,6 @@ import {
   Menu,
   X,
   LogOut,
-  Settings,
   Home,
   FilePlus,
   Briefcase,

@@ -37,8 +37,7 @@ type Application = {
 };
 
 const ApplicationDetailPage: React.FC = () => {
-  const { jobId, applicationId } = useParams<{
-    jobId: string;
+  const { applicationId } = useParams<{
     applicationId: string;
   }>();
   const navigate = useNavigate();
@@ -67,15 +66,13 @@ const ApplicationDetailPage: React.FC = () => {
     if (applicationId) fetchApp();
   }, [applicationId]);
 
-  const updateStatus = async (newStatus: string) => {
+  const updateStatus = async (newStatus: Application["status"]) => {
     if (!application) return;
     setUpdating(true);
     try {
       await axiosInstance.patch(
         `/applications/${application._id}`,
-        {
-          status: newStatus,
-        },
+        { status: newStatus },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -110,7 +107,7 @@ const ApplicationDetailPage: React.FC = () => {
               <Badge
                 variant={
                   application.status === "final-selected"
-                    ? "success"
+                    ? "secondary" // instead of "success"
                     : application.status === "rejected"
                     ? "destructive"
                     : "secondary"

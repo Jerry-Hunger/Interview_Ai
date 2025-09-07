@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
 import Navigation from "@/components/Navigation";
 import PracticeInterview from "@/components/practice/PracticeInterview";
@@ -11,7 +11,7 @@ type Step = "waiting" | "interview" | "results";
 const ApplicationDetail = () => {
   const { id } = useParams(); // applicationId
   const { toast } = useToast();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const [application, setApplication] = useState<any>(null);
   const [job, setJob] = useState<any>(null);

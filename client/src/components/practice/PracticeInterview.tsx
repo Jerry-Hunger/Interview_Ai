@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Clock,
-  MessageCircle,
   FileText,
   Play,
   Pause,
@@ -17,7 +16,6 @@ import {
   Send,
   Camera,
   CameraOff,
-  User,
 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 
