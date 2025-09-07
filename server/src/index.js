@@ -12,7 +12,17 @@ import companyRoutes from "./routes/companyRoutes.js";
 dotenv.config();
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", // local dev
+      "https://interview-ai-pual.onrender.com", // deployed frontend
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // ✅ includes PATCH
+    credentials: true, // allow cookies / Authorization headers
+  })
+);
+
 app.use(express.json());
 
 // DB connection
