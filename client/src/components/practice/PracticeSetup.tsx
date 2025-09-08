@@ -111,7 +111,7 @@ const PracticeSetup = ({
           </div> */}
           <ResumeUploader
             dataChanged={(data) => {
-              setSetupData((prev: any) => ({ ...prev, resumeText: data }));
+              setSetupData((prev: any) => ({ ...prev, resume: data }));
             }}
           />
           {/* Role Selection */}
