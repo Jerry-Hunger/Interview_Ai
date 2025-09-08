@@ -67,7 +67,15 @@ const JobDetailPage: React.FC = () => {
     }
     setApplying(true);
     try {
-      await axiosInstance.post("/applications", { jobId: id });
+      await axiosInstance.post(
+        "/applications",
+        { jobId: id },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       const appsRes = await axiosInstance.get("/applications/mine");
       setApplications(appsRes.data || []);
       alert("Applied successfully!");
