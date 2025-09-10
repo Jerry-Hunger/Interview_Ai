@@ -86,6 +86,7 @@ const StudentJobsPage: React.FC = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
+
       // refresh applications
       const appsRes = await axiosInstance.get("/applications/mine", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
