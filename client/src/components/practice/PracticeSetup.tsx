@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Target, Play, CheckCircle } from "lucide-react";
+import { Target, Play, CheckCircle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import ResumeUploader from "./ResumeUploader";
 
 const PracticeSetup = ({
@@ -25,6 +26,7 @@ const PracticeSetup = ({
   setSetupData,
   handleSetupSubmit,
   navigate,
+  isStarting,
 }: any) => (
   <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div className="mb-8">
@@ -270,7 +272,25 @@ const PracticeSetup = ({
         </CardContent>
       </Card>
     </div>
-  </div>
+
+      {isStarting && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white dark:bg-[#1a1c29] rounded-xl shadow-2xl p-8 w-full max-w-sm mx-4 text-center space-y-6">
+            <Loader2 className="h-10 w-10 animate-spin mx-auto text-indigo-500" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                准备面试中
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                正在生成第一个问题...
+              </p>
+            </div>
+            <Progress value={undefined} className="w-full [&>div]:bg-gradient-to-r [&>div]:from-indigo-500 [&>div]:to-purple-500 [&>div]:animate-pulse" />
+            <p className="text-xs text-gray-400">请稍候，这可能需要几秒钟</p>
+          </div>
+        </div>
+      )}
+    </div>
 );
 
 export default PracticeSetup;

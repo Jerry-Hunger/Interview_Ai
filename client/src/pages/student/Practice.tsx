@@ -11,6 +11,7 @@ type Step = "setup" | "interview" | "results";
 
 const Practice = () => {
   const [currentStep, setCurrentStep] = useState<Step>("setup");
+  const [isStarting, setIsStarting] = useState(false);
   const [setupData, setSetupData] = useState({
     resume: "",
     role: "",
@@ -54,6 +55,8 @@ const Practice = () => {
       return;
     }
 
+    setIsStarting(true);
+
     try {
       const res = await axiosInstance.post("/interview/start", {
         role: setupData.role,
@@ -85,6 +88,8 @@ const Practice = () => {
         description: "启动面试失败，请重试。",
         variant: "destructive",
       });
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -182,6 +187,7 @@ const Practice = () => {
           setSetupData={setSetupData}
           handleSetupSubmit={handleSetupSubmit}
           navigate={navigate}
+          isStarting={isStarting}
         />
       </div>
     );
@@ -223,6 +229,7 @@ const Practice = () => {
         handleSetupSubmit={handleSetupSubmit}
         navigate={navigate}
         toast={toast}
+        isStarting={isStarting}
       />
     </div>
   );
