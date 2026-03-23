@@ -35,6 +35,13 @@ const userSchema = new mongoose.Schema(
     resumeText: {
       type: String,
     },
+    avatarUrl: {
+      type: String,
+    },
+    resumeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Resume',
+    },
     // Company fields
     companyName: {
       type: String,

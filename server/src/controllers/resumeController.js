@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Resume from "../models/Resume.js";
 import { generateDeepSeekResponse } from "../utils/deepseek.js";
 
 export const updateResumeText = async (req, res) => {
@@ -51,5 +52,38 @@ ${resumeText}
   } catch (error) {
     console.error("Error formatting resume:", error.message);
     res.status(500).json({ error: "简历格式化失败" });
+  }
+};
+
+export const getResumeById = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ error: "简历不存在" });
+    }
+    res.json(resume);
+  } catch (err) {
+    console.error("Error getting resume:", err);
+    res.status(500).json({ error: "服务器错误" });
+  }
+};
+
+export const getResumeByUserId = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: "用户不存在" });
+    }
+    if (!user.resumeId) {
+      return res.status(404).json({ error: "用户未上传简历" });
+    }
+    const resume = await Resume.findById(user.resumeId);
+    if (!resume) {
+      return res.status(404).json({ error: "简历不存在" });
+    }
+    res.json(resume);
+  } catch (err) {
+    console.error("Error getting user resume:", err);
+    res.status(500).json({ error: "服务器错误" });
   }
 };

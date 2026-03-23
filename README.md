@@ -102,13 +102,11 @@ JWT_SECRET=your_jwt_secret_here
 # DeepSeek API key
 DEEPSEEK_API_KEY=sk-your_deepseek_api_key_here
 
-# Firebase configuration (optional)
-FIREBASE_API_KEY=
-FIREBASE_AUTH_DOMAIN=
-FIREBASE_PROJECT_ID=
-FIREBASE_STORAGE_BUCKET=
-FIREBASE_MESSAGING_SENDER_ID=
-FIREBASE_APP_ID=
+# 阿里云 OSS configuration
+ALIYUN_OSS_REGION=oss-cn-hangzhou
+ALIYUN_OSS_BUCKET=your-bucket-name
+ALIYUN_OSS_ACCESS_KEY_ID=your-access-key-id
+ALIYUN_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 ```
 
 #### Environment Variable Reference
@@ -119,7 +117,7 @@ FIREBASE_APP_ID=
 | `MONGO_URI` | MongoDB Atlas connection string | ✅ |
 | `JWT_SECRET` | Secret key for JWT token signing | ✅ |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI generation | ✅ |
-| `FIREBASE_*` | Firebase configuration for file storage | ❌ |
+| `ALIYUN_OSS_*` | Aliyun OSS configuration for file storage | ❌ |
 
 ### 2. Frontend Configuration (`client/.env`)
 

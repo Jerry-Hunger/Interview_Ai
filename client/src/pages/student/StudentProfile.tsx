@@ -5,10 +5,13 @@ import axiosInstance from "@/utils/axiosInstance";
 import Navigation from "@/components/Navigation";
 import ResumeUploader from "@/components/practice/ResumeUploader";
 import ResumeViewer from "@/components/resume/ResumeViewer";
+import AvatarUploader from "@/components/ui/AvatarUploader";
 
 const ProfilePage = () => {
   const [user, setUser] = useState<any>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [resumeText, setResumeText] = useState<string>("");
+  const [resumeFileName, setResumeFileName] = useState<string>("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -19,6 +22,9 @@ const ProfilePage = () => {
           },
         });
         setUser(res.data.user);
+        if (res.data.user.resumeText) {
+          setResumeText(res.data.user.resumeText);
+        }
       } catch (err) {
         console.error("获取用户信息失败:", err);
       }
@@ -26,12 +32,23 @@ const ProfilePage = () => {
     fetchProfile();
   }, []);
 
-  const handleResumeTextSave = async (resumeText: string) => {
+  const handleAvatarUploadSuccess = (url: string) => {
+    setUser((prev: any) => ({ ...prev, avatarUrl: url }));
+  };
+
+  const handleResumeUploadSuccess = (data: { resumeId: string; fileUrl: string; fileName: string }) => {
+    console.log("简历上传成功:", data);
+  };
+
+  const handleResumeTextSave = async (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => {
     try {
-      const res = await axiosInstance.post(
+      setResumeText(data.resumeText);
+      setResumeFileName(data.fileName || "");
+      
+      await axiosInstance.post(
         "/resume/update-text",
         {
-          resumeText: resumeText,
+          resumeText: data.resumeText,
         },
         {
           headers: {
@@ -39,7 +56,6 @@ const ProfilePage = () => {
           },
         }
       );
-      setUser(res.data.user);
     } catch (err) {
       console.error("保存简历失败:", err);
       alert("保存简历失败，请稍后重试。");
@@ -65,16 +81,24 @@ const ProfilePage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">姓名：</span> {user.fullName}
-              </p>
-              <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">邮箱：</span> {user.email}
-              </p>
-              <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">角色：</span> {user.role === "student" ? "学生" : "企业"}
-              </p>
+            <div className="flex items-start gap-6">
+              <AvatarUploader
+                avatarUrl={user.avatarUrl}
+                userName={user.fullName}
+                size="xl"
+                onUploadSuccess={handleAvatarUploadSuccess}
+              />
+              <div className="flex-1 space-y-2">
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">姓名：</span> {user.fullName}
+                </p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">邮箱：</span> {user.email}
+                </p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">角色：</span> {user.role === "student" ? "学生" : "企业"}
+                </p>
+              </div>
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -82,14 +106,17 @@ const ProfilePage = () => {
                 简历
               </h3>
 
-              {user.resumeText ? (
+              {resumeText ? (
                 <div className="bg-gray-50 dark:bg-[#23263A] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText size={18} className="text-indigo-500" />
                     <span className="font-medium">已保存的简历</span>
+                    {resumeFileName && (
+                      <span className="text-xs text-gray-500">({resumeFileName})</span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line mb-3">
-                    {user.resumeText.slice(0, 200)}...
+                    {resumeText.slice(0, 200)}...
                   </p>
                   <button
                     onClick={() => setShowModal(true)}
@@ -100,7 +127,7 @@ const ProfilePage = () => {
 
                   {showModal && (
                     <ResumeViewer
-                      resumeText={user.resumeText}
+                      resumeText={resumeText}
                       onClose={() => setShowModal(false)}
                     />
                   )}
@@ -112,7 +139,10 @@ const ProfilePage = () => {
               )}
 
               <div className="mt-4">
-                <ResumeUploader dataChanged={handleResumeTextSave} />
+                <ResumeUploader 
+                  dataChanged={handleResumeTextSave}
+                  onUploadSuccess={handleResumeUploadSuccess}
+                />
               </div>
             </div>
           </CardContent>

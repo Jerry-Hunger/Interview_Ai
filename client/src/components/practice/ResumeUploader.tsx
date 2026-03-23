@@ -4,14 +4,16 @@ import pdfjsWorker from "pdfjs-dist/build/pdf.worker?url";
 import Tesseract from "tesseract.js";
 import mammoth from "mammoth";
 import { Button } from "@/components/ui/button";
+import axiosInstance from "@/utils/axiosInstance";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type ResumeUploaderProps = {
-  dataChanged: (data: string) => void;
+  dataChanged: (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => void;
+  onUploadSuccess?: (data: { resumeId: string; fileUrl: string; fileName: string }) => void;
 };
 
-const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
+const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSuccess }) => {
   const [fileName, setFileName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
@@ -178,7 +180,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
     return fullText.trim();
   };
 
-  const extractTextFromPDF = async (file: File) => {
+  const extractTextFromPDF = async (file: File, resumeId?: string, fileUrl?: string) => {
     cancelRef.current = false;
     setLoading(true);
     setStatus("正在读取 PDF...");
@@ -241,7 +243,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
             setStatus("处理完成！");
             setProgress(100);
             setFileName(file.name);
-            await dataChanged(ocrText);
+            await dataChanged({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
 
             setTimeout(resetStates, 1000);
           } catch (ocrErr: any) {
@@ -258,7 +260,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
           setStatus("处理完成！");
           setProgress(100);
           setFileName(file.name);
-          await dataChanged(trimmedText);
+          await dataChanged({ resumeText: trimmedText, resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
         }
       } catch (pdfErr) {
@@ -289,13 +291,13 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
           setStatus("处理完成！");
           setProgress(100);
           setFileName(file.name);
-          await dataChanged(ocrText);
+          await dataChanged({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
         } catch (ocrErr: any) {
           if (ocrErr.message === "已取消" || ocrErr.message === "Cancelled") {
             setStatus("已取消");
           } else {
-            console.error("OCR 失败:", ocrErr);
+            console.error("OCR 失败:", pdfErr);
             setStatus("识别失败");
             alert("无法识别简历文字，请尝试其他文件或转换为 DOCX 格式。");
           }
@@ -307,7 +309,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
     reader.readAsArrayBuffer(file);
   };
 
-  const extractTextFromDocx = async (file: File) => {
+  const extractTextFromDocx = async (file: File, resumeId?: string, fileUrl?: string) => {
     cancelRef.current = false;
     setLoading(true);
     setStatus("正在提取 DOCX 文字...");
@@ -334,7 +336,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
           setStatus("处理完成！");
           setProgress(100);
           setFileName(file.name);
-          await dataChanged(result.value.trim());
+          await dataChanged({ resumeText: result.value.trim(), resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
         } catch (err) {
           console.error("DOCX 提取失败:", err);
@@ -353,20 +355,63 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged }) => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     resetStates();
 
     const fileType = file.name.toLowerCase();
-
-    if (fileType.endsWith(".pdf")) {
-      extractTextFromPDF(file);
-    } else if (fileType.endsWith(".docx") || fileType.endsWith(".doc")) {
-      extractTextFromDocx(file);
-    } else {
+    const validExtensions = [".pdf", ".docx", ".doc"];
+    const hasValidExtension = validExtensions.some(ext => fileType.endsWith(ext));
+    
+    if (!hasValidExtension) {
       alert("不支持的文件格式，请上传 PDF 或 DOCX 文件。");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("文件大小不能超过 5MB");
+      return;
+    }
+
+    setLoading(true);
+    setStatus("正在上传...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadResponse = await axiosInstance.post("/upload/resume", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (uploadResponse.data.success) {
+        const resumeData = uploadResponse.data.resume;
+        
+        if (onUploadSuccess) {
+          onUploadSuccess({
+            resumeId: resumeData.id,
+            fileUrl: uploadResponse.data.url,
+            fileName: resumeData.fileName,
+          });
+        }
+
+        setStatus("正在提取文字...");
+
+        if (fileType.endsWith(".pdf")) {
+          await extractTextFromPDF(file, resumeData.id, uploadResponse.data.url);
+        } else {
+          await extractTextFromDocx(file, resumeData.id, uploadResponse.data.url);
+        }
+      }
+    } catch (err) {
+      console.error("上传失败:", err);
+      alert("上传失败，请稍后重试");
+      resetStates();
     }
   };
 
