@@ -30,8 +30,8 @@ const Login = () => {
 
     if (!role) {
       toast({
-        title: "Role Required",
-        description: "Please select whether you are a Student or Company",
+        title: "请选择角色",
+        description: "请选择您是学生还是企业用户",
         variant: "destructive",
       });
       return;
@@ -39,8 +39,8 @@ const Login = () => {
 
     if (!email || !password) {
       toast({
-        title: "Missing Fields",
-        description: "Email and password are required",
+        title: "信息不完整",
+        description: "请填写邮箱和密码",
         variant: "destructive",
       });
       return;
@@ -58,11 +58,10 @@ const Login = () => {
       setLoading(false);
 
       toast({
-        title: "Login Successful",
-        description: `Welcome back! Redirecting to your ${res.data.role} dashboard...`,
+        title: "登录成功",
+        description: `欢迎回来！正在跳转到您的${res.data.role === "student" ? "学生" : "企业"}控制台...`,
       });
 
-      // Save token in localStorage (optional)
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.role);
 
@@ -75,8 +74,8 @@ const Login = () => {
       setLoading(false);
 
       toast({
-        title: "Login Failed",
-        description: err.response?.data?.message || "Invalid credentials",
+        title: "登录失败",
+        description: err.response?.data?.message || "邮箱或密码错误",
         variant: "destructive",
       });
     }
@@ -85,23 +84,22 @@ const Login = () => {
   const handleOAuthLogin = (provider: "google" | "linkedin") => {
     if (!role) {
       toast({
-        title: "Role Required",
-        description: "Please select your role before continuing with OAuth",
+        title: "请选择角色",
+        description: "请先选择您的角色再继续",
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: `${provider} Login`,
-      description: "OAuth integration coming soon!",
+      title: `${provider} 登录`,
+      description: "OAuth 集成即将推出！",
     });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500 dark:bg-indigo-700 shadow-lg mb-4">
             <span className="text-white font-bold text-2xl">IP</span>
@@ -110,24 +108,23 @@ const Login = () => {
             InterviewPro
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Sign in to your account
+            登录您的账户
           </p>
         </div>
 
         <Card className="shadow-xl border-0 bg-white dark:bg-gray-800 ring ring-gray-900/5 rounded-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center text-gray-900 dark:text-white">
-              Welcome back
+              欢迎回来
             </CardTitle>
             <CardDescription className="text-center text-gray-500 dark:text-gray-400">
-              Choose your role and enter your credentials
+              选择您的角色并输入登录信息
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Role Selection */}
             <div className="space-y-3">
               <Label className="text-base font-medium text-gray-900 dark:text-white">
-                I am a:
+                我是：
               </Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -141,7 +138,7 @@ const Login = () => {
                   onClick={() => setRole("student")}
                 >
                   <User size={20} />
-                  <span>Student</span>
+                  <span>学生</span>
                 </Button>
                 <Button
                   type="button"
@@ -154,21 +151,20 @@ const Login = () => {
                   onClick={() => setRole("company")}
                 >
                   <Building size={20} />
-                  <span>Company</span>
+                  <span>企业</span>
                 </Button>
               </div>
             </div>
 
             <Separator />
 
-            {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label
                   htmlFor="email"
                   className="text-gray-900 dark:text-white"
                 >
-                  Email
+                  邮箱
                 </Label>
                 <div className="relative">
                   <Mail
@@ -178,7 +174,7 @@ const Login = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="请输入邮箱"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
@@ -192,7 +188,7 @@ const Login = () => {
                   htmlFor="password"
                   className="text-gray-900 dark:text-white"
                 >
-                  Password
+                  密码
                 </Label>
                 <div className="relative">
                   <Lock
@@ -202,7 +198,7 @@ const Login = () => {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                    placeholder="请输入密码"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
@@ -226,13 +222,12 @@ const Login = () => {
                 size="lg"
                 disabled={loading}
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? "登录中..." : "登录"}
               </Button>
             </form>
 
             <Separator />
 
-            {/* OAuth Buttons */}
             <div className="space-y-3">
               <Button
                 type="button"
@@ -259,7 +254,7 @@ const Login = () => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Continue with Google
+                使用 Google 继续
               </Button>
 
               <Button
@@ -276,19 +271,18 @@ const Login = () => {
                 >
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                 </svg>
-                Continue with LinkedIn
+                使用 LinkedIn 继续
               </Button>
             </div>
 
-            {/* Register Link */}
             <div className="text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Don't have an account?{" "}
+                还没有账户？{" "}
                 <Link
                   to="/register"
                   className="text-indigo-500 dark:text-indigo-400 hover:underline font-medium"
                 >
-                  Sign up here
+                  立即注册
                 </Link>
               </p>
             </div>

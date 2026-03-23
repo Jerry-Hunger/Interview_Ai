@@ -5,21 +5,18 @@ import jwt from "jsonwebtoken";
 export const register = async (req, res) => {
   try {
     const { role, email, password, ...rest } = req.body;
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already exists" });
+      return res.status(400).json({ message: "该邮箱已被注册" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
     const user = new User({
       role,
       email,
       password: hashedPassword,
-      ...rest, // includes fullName, educationalBackground, skills OR companyName, etc.
+      ...rest,
     });
     if (role == "student") {
       user.fullName = rest.name;
@@ -35,27 +32,23 @@ export const register = async (req, res) => {
     );
     res
       .status(201)
-      .json({ message: "User registered successfully", user, token });
+      .json({ message: "注册成功", user, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// server/src/controllers/authController.js
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) return res.status(400).json({ message: "邮箱或密码错误" });
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "邮箱或密码错误" });
 
-    // Create JWT
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -73,7 +66,7 @@ export const me = async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId).select("-password");
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "用户不存在" });
     }
     res.json({ user });
   } catch (err) {

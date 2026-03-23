@@ -61,8 +61,8 @@ const Register = () => {
 
     if (!role) {
       toast({
-        title: "Role Required",
-        description: "Please select whether you are a Student or Company",
+        title: "请选择角色",
+        description: "请选择您是学生还是企业用户",
         variant: "destructive",
       });
       return;
@@ -70,8 +70,8 @@ const Register = () => {
 
     if (formData.password !== formData.confirmPassword) {
       toast({
-        title: "Password Mismatch",
-        description: "Please ensure both password fields match",
+        title: "密码不一致",
+        description: "请确保两次输入的密码相同",
         variant: "destructive",
       });
       return;
@@ -79,8 +79,8 @@ const Register = () => {
 
     if (formData.password.length < 8) {
       toast({
-        title: "Password Too Short",
-        description: "Password must be at least 8 characters long",
+        title: "密码太短",
+        description: "密码长度至少为 8 个字符",
         variant: "destructive",
       });
       return;
@@ -95,13 +95,12 @@ const Register = () => {
       });
       const data = res.data;
 
-      // Save token to localStorage
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", role);
 
       toast({
-        title: "Registration Successful",
-        description: `Welcome to InterviewPro! Setting up your ${role} account...`,
+        title: "注册成功",
+        description: `欢迎加入 InterviewPro！正在为您设置${role === "student" ? "学生" : "企业"}账户...`,
       });
 
       navigate(
@@ -109,11 +108,11 @@ const Register = () => {
       );
     } catch (error: any) {
       toast({
-        title: "Registration Failed",
+        title: "注册失败",
         description:
           error.response?.data?.message ||
           error.message ||
-          "Something went wrong. Please try again.",
+          "出错了，请重试。",
         variant: "destructive",
       });
     } finally {
@@ -124,33 +123,31 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <div className="w-full max-w-2xl space-y-6">
-        {/* Logo */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500 dark:bg-indigo-700 shadow-lg mb-4">
             <span className="text-white font-bold text-2xl">IP</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Join InterviewPro
+            加入 InterviewPro
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Create your account and start your journey
+            创建您的账户，开始您的求职之旅
           </p>
         </div>
 
         <Card className="shadow-xl border-0 bg-white dark:bg-gray-800 rounded-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center text-gray-900 dark:text-white">
-              Create Account
+              创建账户
             </CardTitle>
             <CardDescription className="text-center text-gray-500 dark:text-gray-400">
-              Choose your role to get personalized experience
+              选择您的角色以获得个性化体验
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Role Selection */}
             <div className="space-y-3">
               <Label className="text-base font-medium text-gray-900 dark:text-white">
-                I am a:
+                我是：
               </Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -165,9 +162,9 @@ const Register = () => {
                 >
                   <User size={24} />
                   <div className="text-center">
-                    <span className="block font-medium">Student</span>
+                    <span className="block font-medium">学生</span>
                     <span className="text-xs opacity-80">
-                      Looking for opportunities
+                      寻找工作机会
                     </span>
                   </div>
                 </Button>
@@ -183,8 +180,8 @@ const Register = () => {
                 >
                   <Building size={24} />
                   <div className="text-center">
-                    <span className="block font-medium">Company</span>
-                    <span className="text-xs opacity-80">Hiring talent</span>
+                    <span className="block font-medium">企业</span>
+                    <span className="text-xs opacity-80">招聘人才</span>
                   </div>
                 </Button>
               </div>
@@ -192,24 +189,22 @@ const Register = () => {
 
             <Separator />
 
-            {/* Registration Form */}
             <form onSubmit={handleRegister} className="space-y-4">
-              {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label
                     htmlFor="name"
                     className="text-gray-900 dark:text-white"
                   >
-                    {role === "company" ? "Company Name" : "Full Name"}
+                    {role === "company" ? "公司名称" : "姓名"}
                   </Label>
                   <Input
                     id="name"
                     type="text"
                     placeholder={
                       role === "company"
-                        ? "Enter company name"
-                        : "Enter your full name"
+                        ? "请输入公司名称"
+                        : "请输入您的姓名"
                     }
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
@@ -223,7 +218,7 @@ const Register = () => {
                     htmlFor="email"
                     className="text-gray-900 dark:text-white"
                   >
-                    Email Address
+                    电子邮箱
                   </Label>
                   <div className="relative">
                     <Mail
@@ -233,7 +228,7 @@ const Register = () => {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="请输入邮箱"
                       value={formData.email}
                       onChange={(e) =>
                         handleInputChange("email", e.target.value)
@@ -251,7 +246,7 @@ const Register = () => {
                     htmlFor="password"
                     className="text-gray-900 dark:text-white"
                   >
-                    Password
+                    密码
                   </Label>
                   <div className="relative">
                     <Lock
@@ -261,7 +256,7 @@ const Register = () => {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Create password"
+                      placeholder="创建密码"
                       value={formData.password}
                       onChange={(e) =>
                         handleInputChange("password", e.target.value)
@@ -286,7 +281,7 @@ const Register = () => {
                     htmlFor="confirmPassword"
                     className="text-gray-900 dark:text-white"
                   >
-                    Confirm Password
+                    确认密码
                   </Label>
                   <div className="relative">
                     <Lock
@@ -296,7 +291,7 @@ const Register = () => {
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm password"
+                      placeholder="确认密码"
                       value={formData.confirmPassword}
                       onChange={(e) =>
                         handleInputChange("confirmPassword", e.target.value)
@@ -323,12 +318,11 @@ const Register = () => {
                 </div>
               </div>
 
-              {/* Role-specific fields */}
               {role === "student" && (
                 <div className="space-y-4 p-4 bg-indigo-50 dark:bg-indigo-900 rounded-lg border border-indigo-200 dark:border-indigo-700">
                   <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
                     <GraduationCap size={16} />
-                    Student Information
+                    学生信息
                   </div>
 
                   <div className="space-y-2">
@@ -336,12 +330,12 @@ const Register = () => {
                       htmlFor="education"
                       className="text-gray-900 dark:text-white"
                     >
-                      Education Background
+                      教育背景
                     </Label>
                     <Input
                       id="education"
                       type="text"
-                      placeholder="e.g., Computer Science, Stanford University"
+                      placeholder="例如：计算机科学，清华大学"
                       value={formData.education}
                       onChange={(e) =>
                         handleInputChange("education", e.target.value)
@@ -356,11 +350,11 @@ const Register = () => {
                       htmlFor="skills"
                       className="text-gray-900 dark:text-white"
                     >
-                      Skills (Optional)
+                      技能（可选）
                     </Label>
                     <Textarea
                       id="skills"
-                      placeholder="e.g., React, Node.js, Python, Machine Learning..."
+                      placeholder="例如：React, Node.js, Python, 机器学习..."
                       value={formData.skills}
                       onChange={(e) =>
                         handleInputChange("skills", e.target.value)
@@ -376,7 +370,7 @@ const Register = () => {
                 <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900 rounded-lg border border-purple-200 dark:border-purple-700">
                   <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-medium">
                     <Briefcase size={16} />
-                    Company Information
+                    企业信息
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -385,7 +379,7 @@ const Register = () => {
                         htmlFor="industry"
                         className="text-gray-900 dark:text-white"
                       >
-                        Industry
+                        行业
                       </Label>
                       <Select
                         onValueChange={(value) =>
@@ -394,18 +388,18 @@ const Register = () => {
                         required
                       >
                         <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
-                          <SelectValue placeholder="Select industry" />
+                          <SelectValue placeholder="选择行业" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="technology">Technology</SelectItem>
-                          <SelectItem value="finance">Finance</SelectItem>
-                          <SelectItem value="healthcare">Healthcare</SelectItem>
-                          <SelectItem value="education">Education</SelectItem>
-                          <SelectItem value="retail">Retail</SelectItem>
+                          <SelectItem value="technology">科技</SelectItem>
+                          <SelectItem value="finance">金融</SelectItem>
+                          <SelectItem value="healthcare">医疗</SelectItem>
+                          <SelectItem value="education">教育</SelectItem>
+                          <SelectItem value="retail">零售</SelectItem>
                           <SelectItem value="manufacturing">
-                            Manufacturing
+                            制造业
                           </SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="other">其他</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -415,7 +409,7 @@ const Register = () => {
                         htmlFor="companySize"
                         className="text-gray-900 dark:text-white"
                       >
-                        Company Size
+                        公司规模
                       </Label>
                       <Select
                         onValueChange={(value) =>
@@ -424,18 +418,18 @@ const Register = () => {
                         required
                       >
                         <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
-                          <SelectValue placeholder="Select size" />
+                          <SelectValue placeholder="选择规模" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1-10">1-10 employees</SelectItem>
-                          <SelectItem value="11-50">11-50 employees</SelectItem>
+                          <SelectItem value="1-10">1-10 人</SelectItem>
+                          <SelectItem value="11-50">11-50 人</SelectItem>
                           <SelectItem value="51-200">
-                            51-200 employees
+                            51-200 人
                           </SelectItem>
                           <SelectItem value="201-1000">
-                            201-1000 employees
+                            201-1000 人
                           </SelectItem>
-                          <SelectItem value="1000+">1000+ employees</SelectItem>
+                          <SelectItem value="1000+">1000+ 人</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -446,12 +440,12 @@ const Register = () => {
                       htmlFor="roleOffered"
                       className="text-gray-900 dark:text-white"
                     >
-                      Primary Role You're Hiring For
+                      主要招聘职位
                     </Label>
                     <Input
                       id="roleOffered"
                       type="text"
-                      placeholder="e.g., Software Engineer, Product Manager"
+                      placeholder="例如：软件工程师，产品经理"
                       value={formData.roleOffered}
                       onChange={(e) =>
                         handleInputChange("roleOffered", e.target.value)
@@ -469,19 +463,18 @@ const Register = () => {
                 size="lg"
                 disabled={loading || !role}
               >
-                {loading ? "Creating Account..." : "Create Account"}
+                {loading ? "创建账户中..." : "创建账户"}
               </Button>
             </form>
 
-            {/* Login Link */}
             <div className="text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Already have an account?{" "}
+                已有账户？{" "}
                 <Link
                   to="/login"
                   className="text-indigo-500 dark:text-indigo-400 hover:underline font-medium"
                 >
-                  Sign in here
+                  立即登录
                 </Link>
               </p>
             </div>

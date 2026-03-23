@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { Users, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -17,7 +16,7 @@ type Job = {
 
 type Application = {
   _id: string;
-  candidateId: { fullName: string; email: string }; // ✅ fix typing
+  candidateId: { fullName: string; email: string };
   status:
     | "applied"
     | "in-progress"
@@ -28,11 +27,11 @@ type Application = {
 };
 
 const statusLabels: Record<Application["status"], string> = {
-  applied: "Applied",
-  "in-progress": "In-Progress",
-  selected: "Selected",
-  "final-selected": "Final-Selected",
-  rejected: "Rejected",
+  applied: "已申请",
+  "in-progress": "面试中",
+  selected: "已通过",
+  "final-selected": "最终通过",
+  rejected: "已拒绝",
 };
 
 const statusColors: Record<Application["status"], string> = {
@@ -74,9 +73,8 @@ const CompanyJobApplicationsPage: React.FC = () => {
         ]);
         setJob(jobRes.data);
         setApplications(appsRes.data || []);
-        console.log(appsRes.data);
       } catch (err) {
-        console.error("Error fetching job or applications", err);
+        console.error("获取职位或申请列表失败", err);
       } finally {
         setLoading(false);
       }
@@ -84,17 +82,14 @@ const CompanyJobApplicationsPage: React.FC = () => {
     if (id) fetchData();
   }, [id]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (!job) return <div className="p-6">Job not found</div>;
+  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
+  if (!job) return <div className="p-6 text-gray-600 dark:text-gray-300">职位不存在</div>;
 
-  // Group applications by status
-  // Normalize status from backend to match our keys
   const normalizeStatus = (status: string): Application["status"] => {
-    if (status === "in-process") return "in-progress"; // just in case
+    if (status === "in-process") return "in-progress";
     return status as Application["status"];
   };
 
-  // Initialize groups
   const groupedApps: Record<Application["status"], Application[]> = {
     applied: [],
     "in-progress": [],
@@ -103,13 +98,10 @@ const CompanyJobApplicationsPage: React.FC = () => {
     rejected: [],
   };
 
-  // Fill groups safely
   applications.forEach((app) => {
     const normalized = normalizeStatus(app.status);
     if (groupedApps[normalized]) {
       groupedApps[normalized].push(app);
-    } else {
-      console.warn("Unexpected status:", app.status);
     }
   });
 
@@ -124,7 +116,6 @@ const CompanyJobApplicationsPage: React.FC = () => {
     <>
       <Navigation />
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
-        {/* Job Header */}
         <Card className="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -143,7 +134,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
                     : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                 }
               >
-                {job.status === "open" ? "Open" : "Closed"}
+                {job.status === "open" ? "招聘中" : "已结束"}
               </Badge>
             </div>
           </CardHeader>
@@ -154,7 +145,6 @@ const CompanyJobApplicationsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Applications by status */}
         {Object.entries(groupedApps).map(([status, apps]) => (
           <Card
             key={status}
@@ -167,8 +157,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                 <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {statusLabels[status as Application["status"]]} ({apps.length}
-                  )
+                  {statusLabels[status as Application["status"]]} ({apps.length})
                 </CardTitle>
               </div>
               {expandedGroups[status] ? (
@@ -181,7 +170,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
               <CardContent className="space-y-4">
                 {apps.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    No applications yet.
+                    暂无此类申请
                   </p>
                 ) : (
                   apps.map((app) => (
@@ -195,19 +184,18 @@ const CompanyJobApplicationsPage: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">
-                            {app.candidateId.fullName}
+                            {app.candidateId?.fullName || "未知候选人"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {app.candidateId.email}
+                            {app.candidateId?.email}
                           </p>
                         </div>
                         <Badge className={statusColors[app.status]}>
                           {statusLabels[app.status]}
                         </Badge>
                       </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        Applied on:{" "}
-                        {new Date(app.createdAt).toLocaleDateString()}
+                      <p className="text-xs text-gray-400 dark:text-gray-400 mt-1">
+                        申请时间：{new Date(app.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   ))

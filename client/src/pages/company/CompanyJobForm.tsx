@@ -50,7 +50,7 @@ const CompanyJobForm = () => {
       );
       navigate("/company/jobs");
     } catch (err) {
-      console.error("Error creating job:", err);
+      console.error("创建职位失败:", err);
     }
   };
 
@@ -60,15 +60,14 @@ const CompanyJobForm = () => {
       <div className="max-w-4xl mx-auto py-10 px-6">
         <Card className="shadow-xl bg-white dark:bg-[#181A2A] text-gray-900 dark:text-gray-100 transition-colors">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold">
-              Create Job Opening
+            <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+              创建职位
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Job Title */}
             <div>
               <Label className="text-gray-700 dark:text-gray-300">
-                Job Title
+                职位名称
               </Label>
               <Input
                 className="bg-gray-50 dark:bg-[#101322] border-gray-300 dark:border-gray-700"
@@ -77,10 +76,9 @@ const CompanyJobForm = () => {
               />
             </div>
 
-            {/* Description */}
             <div>
               <Label className="text-gray-700 dark:text-gray-300">
-                Description
+                职位描述
               </Label>
               <Textarea
                 className="bg-gray-50 dark:bg-[#101322] border-gray-300 dark:border-gray-700"
@@ -90,10 +88,9 @@ const CompanyJobForm = () => {
               />
             </div>
 
-            {/* Skills */}
             <div>
               <Label className="text-gray-700 dark:text-gray-300">
-                Skills (comma separated)
+                技能要求（用逗号分隔）
               </Label>
               <Input
                 className="bg-gray-50 dark:bg-[#101322] border-gray-300 dark:border-gray-700"
@@ -104,11 +101,10 @@ const CompanyJobForm = () => {
               />
             </div>
 
-            {/* Rounds */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <Label className="text-gray-700 dark:text-gray-300">
-                  Interview Rounds
+                  面试环节
                 </Label>
                 <Button
                   type="button"
@@ -116,7 +112,7 @@ const CompanyJobForm = () => {
                   onClick={addRound}
                   className="dark:border-gray-700 dark:text-gray-200"
                 >
-                  <PlusCircle className="mr-2" size={16} /> Add Round
+                  <PlusCircle className="mr-2" size={16} /> 添加环节
                 </Button>
               </div>
 
@@ -127,7 +123,7 @@ const CompanyJobForm = () => {
                 >
                   <div className="flex justify-between items-center">
                     <h4 className="font-semibold text-gray-800 dark:text-gray-200">
-                      Round {round.roundNumber}
+                      第 {round.roundNumber} 轮
                     </h4>
                     <Button
                       type="button"
@@ -143,41 +139,41 @@ const CompanyJobForm = () => {
                   <div className="grid grid-cols-2 gap-4 mt-3">
                     <div>
                       <Label className="text-gray-700 dark:text-gray-300">
-                        Type
+                        环节类型
                       </Label>
                       <select
-                        className="w-full border p-2 rounded bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200"
+                        className="cursor-pointer w-full border p-2 rounded bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200"
                         value={round.type}
                         onChange={(e) =>
                           updateRound(index, "type", e.target.value)
                         }
                       >
-                        <option value="technical">Technical</option>
-                        <option value="behavioral">Behavioral</option>
-                        <option value="hr">HR</option>
+                        <option value="technical">技术面试</option>
+                        <option value="behavioral">行为面试</option>
+                        <option value="hr">HR 面试</option>
                       </select>
                     </div>
 
                     <div>
                       <Label className="text-gray-700 dark:text-gray-300">
-                        Difficulty
+                        难度
                       </Label>
                       <select
-                        className="w-full border p-2 rounded bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200"
+                        className="cursor-pointer w-full border p-2 rounded bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200"
                         value={round.difficulty}
                         onChange={(e) =>
                           updateRound(index, "difficulty", e.target.value)
                         }
                       >
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
+                        <option value="easy">简单</option>
+                        <option value="medium">中等</option>
+                        <option value="hard">困难</option>
                       </select>
                     </div>
 
                     <div>
                       <Label className="text-gray-700 dark:text-gray-300">
-                        Topic
+                        主题
                       </Label>
                       <Input
                         className="bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700"
@@ -190,7 +186,7 @@ const CompanyJobForm = () => {
 
                     <div>
                       <Label className="text-gray-700 dark:text-gray-300">
-                        Duration (mins)
+                        时长（分钟）
                       </Label>
                       <Input
                         type="number"
@@ -205,7 +201,7 @@ const CompanyJobForm = () => {
 
                   <div className="mt-3">
                     <Label className="text-gray-700 dark:text-gray-300">
-                      Notes
+                      备注
                     </Label>
                     <Textarea
                       className="bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700"
@@ -219,12 +215,11 @@ const CompanyJobForm = () => {
               ))}
             </div>
 
-            {/* Submit */}
             <Button
               onClick={handleSubmit}
               className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600"
             >
-              Submit Job
+              发布职位
             </Button>
           </CardContent>
         </Card>

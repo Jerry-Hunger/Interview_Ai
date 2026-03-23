@@ -1,4 +1,3 @@
-// src/pages/company/CompanyDashboard.tsx
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,14 @@ import axiosInstance from "@/utils/axiosInstance";
 import Navigation from "@/components/Navigation";
 
 const COLORS = ["#6366F1", "#F59E0B", "#10B981", "#EF4444", "#8B5CF6"];
+
+const statusLabels: Record<string, string> = {
+  applied: "已申请",
+  "in-progress": "面试中",
+  selected: "已通过",
+  "final-selected": "最终通过",
+  rejected: "已拒绝",
+};
 
 const CompanyDashboard = () => {
   const [stats, setStats] = useState<any>(null);
@@ -24,18 +31,18 @@ const CompanyDashboard = () => {
         setJobs(res.data.jobs);
         setRecentApps(res.data.recentApplications);
       } catch (err) {
-        console.error("Error loading dashboard:", err);
+        console.error("加载仪表盘失败:", err);
       }
     };
     fetchDashboardData();
   }, []);
 
   const chartData = [
-    { name: "Applied", value: stats?.applied || 0 },
-    { name: "In-Process", value: stats?.inProgress || 0 },
-    { name: "Selected", value: stats?.selected || 0 },
-    { name: "Final-Selected", value: stats?.finalSelected || 0 },
-    { name: "Rejected", value: stats?.rejected || 0 },
+    { name: "已申请", value: stats?.applied || 0 },
+    { name: "面试中", value: stats?.inProgress || 0 },
+    { name: "已通过", value: stats?.selected || 0 },
+    { name: "最终通过", value: stats?.finalSelected || 0 },
+    { name: "已拒绝", value: stats?.rejected || 0 },
   ];
 
   return (
@@ -43,22 +50,20 @@ const CompanyDashboard = () => {
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-6 py-10">
-        {/* Header */}
         <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
-          Company Dashboard
+          企业仪表盘
         </h1>
-        <p className="mt-1 text-gray-600 dark:text-gray-300">
-          Manage your jobs and track candidate applications at a glance.
+        <p className="mt-1 text-gray-600 dark:text-gray-400">
+          管理您的职位和追踪候选人申请状态
         </p>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <Briefcase className="text-indigo-500" />
+              <Briefcase className="text-indigo-500 dark:text-indigo-400" />
               <div>
-                <p className="text-sm text-gray-500">Total Jobs</p>
-                <h2 className="text-xl font-semibold">
+                <p className="text-sm text-gray-500 dark:text-gray-400">职位总数</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   {stats?.totalJobs || 0}
                 </h2>
               </div>
@@ -66,10 +71,10 @@ const CompanyDashboard = () => {
           </Card>
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <Users className="text-purple-500" />
+              <Users className="text-purple-500 dark:text-purple-400" />
               <div>
-                <p className="text-sm text-gray-500">Applications</p>
-                <h2 className="text-xl font-semibold">
+                <p className="text-sm text-gray-500 dark:text-gray-400">申请总数</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   {stats?.totalApplications || 0}
                 </h2>
               </div>
@@ -77,10 +82,10 @@ const CompanyDashboard = () => {
           </Card>
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <CheckCircle className="text-green-500" />
+              <CheckCircle className="text-green-500 dark:text-green-400" />
               <div>
-                <p className="text-sm text-gray-500">Selected</p>
-                <h2 className="text-xl font-semibold">
+                <p className="text-sm text-gray-500 dark:text-gray-400">已通过</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   {stats?.selected || 0}
                 </h2>
               </div>
@@ -88,10 +93,10 @@ const CompanyDashboard = () => {
           </Card>
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <XCircle className="text-red-500" />
+              <XCircle className="text-red-500 dark:text-red-400" />
               <div>
-                <p className="text-sm text-gray-500">Rejected</p>
-                <h2 className="text-xl font-semibold">
+                <p className="text-sm text-gray-500 dark:text-gray-400">已拒绝</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   {stats?.rejected || 0}
                 </h2>
               </div>
@@ -99,10 +104,9 @@ const CompanyDashboard = () => {
           </Card>
         </div>
 
-        {/* Applications Pipeline Chart */}
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
           <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
-            Applications Pipeline
+            申请流程
           </h2>
           <PieChart width={400} height={300}>
             <Pie
@@ -125,10 +129,9 @@ const CompanyDashboard = () => {
           </PieChart>
         </div>
 
-        {/* Jobs List */}
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
           <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
-            Active Jobs
+            进行中的职位
           </h2>
           <div className="space-y-4">
             {jobs.length > 0 ? (
@@ -149,22 +152,21 @@ const CompanyDashboard = () => {
                     onClick={() =>
                       (window.location.href = `/company/job/${job._id}`)
                     }
-                    className="bg-indigo-500 text-white rounded-lg px-4 py-2"
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 dark:bg-indigo-600 dark:hover:bg-indigo-700"
                   >
-                    View Applications
+                    查看申请
                   </Button>
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 dark:text-gray-400">No active jobs</p>
+              <p className="text-gray-500 dark:text-gray-400">暂无进行中的职位</p>
             )}
           </div>
         </div>
 
-        {/* Recent Applications */}
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
           <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
-            Recent Applications
+            最近申请
           </h2>
           <div className="space-y-4">
             {recentApps.length > 0 ? (
@@ -175,28 +177,28 @@ const CompanyDashboard = () => {
                 >
                   <div>
                     <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                      {app.candidateId.name}
+                      {app.candidateId?.name || "未知候选人"}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Applied for {app.jobId.title}
+                      申请了 {app.jobId?.title}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Status: {app.status}
+                      状态：{statusLabels[app.status] || app.status}
                     </p>
                   </div>
                   <Button
                     onClick={() =>
-                      (window.location.href = `/company/job/${app.jobId._id}/${app._id}`)
+                      (window.location.href = `/company/job/${app.jobId?._id}/${app._id}`)
                     }
-                    className="bg-purple-500 text-white rounded-lg px-4 py-2"
+                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg px-4 py-2 dark:bg-purple-600 dark:hover:bg-purple-700"
                   >
-                    View
+                    查看详情
                   </Button>
                 </div>
               ))
             ) : (
               <p className="text-gray-500 dark:text-gray-400">
-                No recent applications
+                暂无最近申请
               </p>
             )}
           </div>

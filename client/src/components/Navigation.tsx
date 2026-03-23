@@ -20,11 +20,11 @@ import {
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Just get role + token from localStorage
   const [role, setRole] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
@@ -38,6 +38,7 @@ const Navigation = () => {
   };
 
   const handleLogout = () => {
+    setShowLogoutConfirm(false);
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     setRole(null);
@@ -45,37 +46,28 @@ const Navigation = () => {
     navigate("/login");
   };
 
-  // 🌐 Non-logged-in nav items
   const publicNavItems = [
-    { name: "Home", path: "/", icon: Home },
-    { name: "Sign In", path: "/login", icon: LogIn },
-    { name: "Sign Up", path: "/register", icon: UserPlus },
+    { name: "首页", path: "/", icon: Home },
+    { name: "登录", path: "/login", icon: LogIn },
+    { name: "注册", path: "/register", icon: UserPlus },
   ];
 
-  // 🎓 Student nav items
   const studentNavItems = [
-    { name: "Dashboard", path: "/student/dashboard", icon: Home },
-    { name: "Practice Interview", path: "/student/practice", icon: User },
-    { name: "Explore Jobs", path: "/student/jobs", icon: Building },
+    { name: "仪表盘", path: "/student/dashboard", icon: Home },
+    { name: "模拟面试", path: "/student/practice", icon: User },
+    { name: "浏览职位", path: "/student/jobs", icon: Building },
     {
-      name: "Applications",
+      name: "我的申请",
       path: "/student/applications",
       icon: ClipboardList,
     },
-    { name: "Profile", path: "/student/profile", icon: User },
+    { name: "个人资料", path: "/student/profile", icon: User },
   ];
 
-  // 🏢 Company nav items
   const companyNavItems = [
-    { name: "Dashboard", path: "/company/dashboard", icon: Home },
-    { name: "New Job", path: "/company/job/new", icon: FilePlus },
-    { name: "Job Openings", path: "/company/jobs", icon: Briefcase },
-    // {
-    //   name: "Applications",
-    //   path: "/company/applications",
-    //   icon: ClipboardList,
-    // },
-    // { name: "Profile", path: "/company/profile", icon: User },
+    { name: "仪表盘", path: "/company/dashboard", icon: Home },
+    { name: "发布职位", path: "/company/job/new", icon: FilePlus },
+    { name: "职位列表", path: "/company/jobs", icon: Briefcase },
   ];
 
   let navItems = publicNavItems;
@@ -93,8 +85,8 @@ const Navigation = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">IP</span>
             </div>
-            <span className="font-bold text-xl text-indigo-700 dark:text-indigo-300">
-              InterviewPro
+            <span className="font-bold text-xl text-indigo-700 dark:text-indigo-400">
+              IntelliHire
             </span>
           </Link>
 
@@ -134,7 +126,7 @@ const Navigation = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="w-9 h-9 text-red-500 hover:text-white hover:bg-red-500"
               >
                 <LogOut size={16} />
@@ -184,13 +176,55 @@ const Navigation = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleLogout}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="w-full text-red-500 hover:text-white hover:bg-red-500"
                 >
-                  <LogOut size={16} className="mr-2" /> Logout
+                  <LogOut size={16} className="mr-2" /> 退出登录
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="relative bg-white dark:bg-[#1a1c29] rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="cursor-pointer absolute top-4 right-4 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition"
+            >
+              <X size={18} />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              确定退出登录？
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              退出后将返回登录页面
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                取消
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleLogout}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                确定退出
+              </Button>
+            </div>
           </div>
         </div>
       )}

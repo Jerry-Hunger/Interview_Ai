@@ -1,34 +1,32 @@
-import { generateGeminiResponse } from "../utils/gemini.js";
+import { generateDeepSeekResponse } from "../utils/deepseek.js";
 import Interview from "../models/Interview.js";
 
 export const startInterview = async (req, res) => {
   const { role, resume, roundType, topic, difficulty } = req.body;
 
   const prompt = `
-You are conducting a job interview.
+你正在主持一场求职面试。
 
-Your name is Ashta, and you are an experienced interviewer. Never mention that you're an AI.
+你的名字是艾莎，是一名经验丰富的面试官。不要提及你是 AI。
 
-Candidate's Resume:
+候选人的简历：
 ${resume}
 
-Role is : ${role}
+应聘职位：${role}
 
-${roundType ? `This is a ${roundType} round.` : ""}
-${topic ? `Please focus on the topic: ${topic}.` : ""}
-${
-  difficulty ? `Adjust the difficulty of your questions to: ${difficulty}.` : ""
-}
+${roundType ? `这是 ${roundType} 环节。` : ""}
+${topic ? `请重点关注以下主题：${topic}。` : ""}
+${difficulty ? `请将问题的难度调整为：${difficulty}。` : ""}
 
-Begin the interview naturally and professionally — like a real human interviewer. Introduce yourself and start the conversation in your own way. Avoid robotic tone.
+请自然专业地开始面试，像真正的面试官一样。介绍一下自己，然后用你自己的方式开始对话。避免机械化的语气。
 `;
 
   try {
-    const response = await generateGeminiResponse(prompt);
+    const response = await generateDeepSeekResponse(prompt);
     res.json({ message: response.trim() });
   } catch (error) {
     console.error("startInterview error:", error.message);
-    res.status(500).json({ error: "Gemini failed to respond." });
+    res.status(500).json({ error: "AI 响应失败，请稍后重试。" });
   }
 };
 
@@ -39,50 +37,39 @@ export const respondToInterview = async (req, res) => {
   const historyFormatted = chatHistory
     .slice(-10)
     .map(
-      (entry, i) => `Q${i + 1}: ${entry.question}\nA${i + 1}: ${entry.answer}`
+      (entry, i) => `问${i + 1}：${entry.question}\n答${i + 1}：${entry.answer}`
     )
     .join("\n\n");
 
   const prompt = `
-Continue conducting the interview.
+继续主持面试。
 
-You are Astha, a professional interviewer. Never mention you're an AI.
+你是艾莎，一名专业的面试官。不要提及你是 AI。
 
+${role ? `职位描述：\n${role}` : ""}
 
-
-${
-  role
-    ? `Role Description:
-${role}`
-    : ""
-}
-
-Candidate's Resume:
+候选人的简历：
 ${resume}
 
-${roundType ? `This is a ${roundType} round.` : ""}
-${topic ? `The candidate requested focus on: ${topic}.` : ""}
-${
-  difficulty
-    ? `Maintain a ${difficulty} level of difficulty in your questions.`
-    : ""
-}
+${roundType ? `这是 ${roundType} 环节。` : ""}
+${topic ? `候选人要求重点关注：${topic}。` : ""}
+${difficulty ? `请保持 ${difficulty} 的问题难度。` : ""}
 
-Conversation so far:
+到目前为止的对话：
 ${historyFormatted}
 
-Latest answer:
+最新回答：
 "${answer}"
 
-Now continue the conversation — briefly reflect on the user's answer if appropriate, and ask the next question naturally. Avoid formatting or labels. Stay fluid and humanlike.
+请继续对话——如果合适的话，简短地回顾一下候选人的回答，然后自然地提出下一个问题。避免格式或标签。保持流畅和人性化。
 `;
 
   try {
-    const responseText = await generateGeminiResponse(prompt);
+    const responseText = await generateDeepSeekResponse(prompt);
     res.json({ message: responseText.trim() });
   } catch (error) {
     console.error("respondToInterview error:", error.message);
-    res.status(500).json({ error: "Failed to get Gemini response." });
+    res.status(500).json({ error: "AI 响应失败，请稍后重试。" });
   }
 };
 
@@ -90,29 +77,29 @@ export const formatResume = async (req, res) => {
   const { resumeText } = req.body;
 
   const prompt = `
-You are a resume formatter.
+你是一个简历格式化助手。
 
-Given the following extracted resume text, organize it clearly into sections:
-- Professional Summary (if any)
-- Skills
-- Projects
-- Work Experience
-- Education
-- Certifications
-- Achievements
+请将以下提取的简历文本整理成清晰的结构，包含以下部分：
+- 个人简介（如果有）
+- 技能
+- 项目经验
+- 工作经历
+- 教育背景
+- 证书资质
+- 获奖情况
 
-Make it visually clean and readable using markdown formatting with proper headings and bullet points. Do not add any fake data.
+请使用 Markdown 格式，使用适当的标题和项目符号，使其视觉上清晰易读。不要添加任何虚假信息。
 
-Resume text:
+简历内容：
 ${resumeText}
 `;
 
   try {
-    const formatted = await generateGeminiResponse(prompt);
+    const formatted = await generateDeepSeekResponse(prompt);
     res.json({ formatted });
   } catch (error) {
     console.error("Error formatting resume:", error.message);
-    res.status(500).json({ error: "Failed to format resume" });
+    res.status(500).json({ error: "简历格式化失败" });
   }
 };
 
@@ -127,24 +114,18 @@ export const concludeInterview = async (req, res) => {
     typeOfInterview,
   } = req.body;
 
-  // if (history.length < 5) {
-  //   return res.status(400).json({ error: "Not enough data to conclude." });
-  // }
-
   const CHUNK_SIZE = 5;
 
-  // ✅ Helper to format Q&A blocks
-  // ✅ Helper to format Q&A blocks correctly from your chatHistory
   const formatBlock = (block) => {
     let result = "";
     let qCount = 1;
 
     for (let i = 0; i < block.length; i++) {
       if (block[i].type === "question") {
-        result += `Q${qCount}: ${block[i].content}\n`;
+        result += `问${qCount}：${block[i].content}\n`;
         if (i + 1 < block.length && block[i + 1].type === "answer") {
-          result += `A${qCount}: ${block[i + 1].content}\n\n`;
-          i++; // skip the answer since we already processed it
+          result += `答${qCount}：${block[i + 1].content}\n\n`;
+          i++;
         }
         qCount++;
       }
@@ -152,71 +133,64 @@ export const concludeInterview = async (req, res) => {
     return result.trim();
   };
 
-  // ✅ Split into N chunks of CHUNK_SIZE
   const chunks = [];
   for (let i = 0; i < history.length; i += CHUNK_SIZE) {
     chunks.push(history.slice(i, Math.min(i + CHUNK_SIZE, history.length)));
   }
 
-  // ✅ Generate feedbacks for each chunk
   const feedbacks = [];
 
   for (let i = 0; i < chunks.length; i++) {
     const prompt = `
-You're evaluating a candidate for the "${roundType}" round${
-      customTopic ? ` with a focus on ${customTopic}` : ""
-    }.
+请评估 "${roundType}" 环节的候选人表现${customTopic ? `，重点关注 ${customTopic}` : ""}。
 
-This is part ${i + 1} of the interview.
+这是第 ${i + 1} 部分面试。
 
-Questions & Answers:
+问答内容：
 ${formatBlock(chunks[i])}
 
-Role Summary:
+职位描述：
 ${roleSummary}
 
-Resume:
+简历：
 ${resumeText}
 
-Give clear and concise feedback for this part of the interview only.
-    `;
+请给出清晰简洁的反馈，仅针对这一部分的面试。
+`;
 
-    const feedback = await generateGeminiResponse(prompt);
+    const feedback = await generateDeepSeekResponse(prompt);
     feedbacks.push(feedback.trim());
   }
 
-  // ✅ Generate final evaluation
   const finalPrompt = `
-You have reviewed an interview split into ${chunks.length} parts.
+你已经完成了分为 ${chunks.length} 个部分的面试评审。
 
-Role: ${roleSummary}
-Difficulty: ${difficulty || "Medium"}
-Resume: ${resumeText}
+职位：${roleSummary}
+难度：${difficulty || "中等"}
+简历：${resumeText}
 
-Here are the feedbacks:
-${feedbacks.map((f, i) => `Part ${i + 1} Feedback:\n${f}`).join("\n\n")}
+以下是各部分的反馈：
+${feedbacks.map((f, i) => `第 ${i + 1} 部分反馈：\n${f}`).join("\n\n")}
 
-✅ Write a final overall summary of the candidate’s performance.
+✅ 写一份关于候选人表现的最终总体总结。
 
-✅ Then, on a new line, state clearly:
-Result: Success
-OR
-Result: Failure
+✅ 然后在新的一行中明确说明：
+结果：通过
+或者
+结果：不通过
 
-Do NOT add any explanation after Result line.
+不要在结果行之后添加任何解释。
 `;
 
-  const finalFeedback = await generateGeminiResponse(finalPrompt);
+  const finalFeedback = await generateDeepSeekResponse(finalPrompt);
 
   const resultLine = finalFeedback
     .split("\n")
-    .find((line) => line.trim().toLowerCase().startsWith("result:"));
+    .find((line) => line.trim().toLowerCase().includes("通过") || line.trim().toLowerCase().includes("不通过"));
 
-  const result = resultLine?.toLowerCase().includes("success")
-    ? "success"
-    : "failure";
+  const result = resultLine?.includes("通过") ? "success" : "failure";
   const userId = req.user.id;
-  // Save to DB
+
   const interview = new Interview({
     user: userId,
     chatHistory: history,
@@ -238,10 +212,9 @@ Do NOT add any explanation after Result line.
   });
 };
 
-// ✅ Get all interviews of the logged-in user
 export const getUserInterviews = async (req, res) => {
   try {
-    const userId = req.user.id; // from JWT
+    const userId = req.user.id;
     console.log("Fetching interviews for user:", userId);
     const interviews = await Interview.find({ user: userId }).sort({
       createdAt: -1,
@@ -249,11 +222,10 @@ export const getUserInterviews = async (req, res) => {
     res.json(interviews);
   } catch (err) {
     console.error("Error fetching interviews:", err);
-    res.status(500).json({ error: "Server error while fetching interviews" });
+    res.status(500).json({ error: "获取面试记录失败" });
   }
 };
 
-// ✅ Get a single interview by ID
 export const getInterviewById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -261,12 +233,12 @@ export const getInterviewById = async (req, res) => {
 
     const interview = await Interview.findOne({ _id: id, user: userId });
     if (!interview) {
-      return res.status(404).json({ error: "Interview not found" });
+      return res.status(404).json({ error: "面试记录不存在" });
     }
 
     res.json(interview);
   } catch (err) {
     console.error("Error fetching interview by ID:", err);
-    res.status(500).json({ error: "Server error while fetching interview" });
+    res.status(500).json({ error: "获取面试详情失败" });
   }
 };

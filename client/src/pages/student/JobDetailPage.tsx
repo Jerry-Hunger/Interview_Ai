@@ -1,4 +1,3 @@
-// src/pages/JobDetailPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
@@ -62,7 +61,7 @@ const JobDetailPage: React.FC = () => {
 
   const handleApply = async () => {
     if (hasApplied) {
-      alert("You have already applied for this job.");
+      alert("您已申请过该职位。");
       return;
     }
     setApplying(true);
@@ -78,17 +77,17 @@ const JobDetailPage: React.FC = () => {
       );
       const appsRes = await axiosInstance.get("/applications/mine");
       setApplications(appsRes.data || []);
-      alert("Applied successfully!");
+      alert("申请成功！");
     } catch (err: any) {
       console.error("Apply failed", err);
-      alert(err?.response?.data?.msg ?? "Failed to apply");
+      alert(err?.response?.data?.msg ?? "申请失败");
     } finally {
       setApplying(false);
     }
   };
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (!job) return <div className="p-6">Job not found</div>;
+  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
+  if (!job) return <div className="p-6 text-gray-600 dark:text-gray-300">职位不存在</div>;
 
   return (
     <>
@@ -110,43 +109,40 @@ const JobDetailPage: React.FC = () => {
                 <Badge
                   variant={job.status === "closed" ? "destructive" : "default"}
                 >
-                  {job.status === "closed" ? "Closed" : "Open"}
+                  {job.status === "closed" ? "已结束" : "招聘中"}
                 </Badge>
-                {job.difficulty && <Badge>{job.difficulty}</Badge>}
+                {job.difficulty && <Badge className="dark:bg-gray-700 dark:text-gray-200">{job.difficulty}</Badge>}
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Job Description */}
             <div>
               <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">
-                Description
+                职位描述
               </h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 {job.description}
               </p>
             </div>
 
-            {/* Skills */}
             <div>
               <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">
-                Skills Required
+                技能要求
               </h3>
               <div className="flex flex-wrap gap-2">
                 {(job.skills || []).map((s: string) => (
-                  <Badge key={s} className="text-sm">
+                  <Badge key={s} className="text-sm dark:bg-gray-700 dark:text-gray-200">
                     {s}
                   </Badge>
                 ))}
               </div>
             </div>
 
-            {/* Interview Rounds */}
             <div>
               <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Layers className="w-5 h-5" />
-                Interview Rounds
+                面试环节
               </h3>
               <div className="space-y-3">
                 {(job.rounds || []).map((r: Round, idx: number) => (
@@ -157,15 +153,15 @@ const JobDetailPage: React.FC = () => {
                     <div className="flex justify-between">
                       <div>
                         <div className="font-semibold text-gray-900 dark:text-white">
-                          {r.type ?? `Round ${idx + 1}`}
+                          {r.type ?? `第 ${idx + 1} 轮`}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {r.topic}
                         </div>
                       </div>
                       <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-                        <div>Difficulty: {r.difficulty}</div>
-                        <div>Duration: {r.duration ?? "-"} mins</div>
+                        <div>难度：{r.difficulty === "easy" ? "简单" : r.difficulty === "medium" ? "中等" : r.difficulty === "hard" ? "困难" : r.difficulty}</div>
+                        <div>时长：{r.duration ?? "-"} 分钟</div>
                       </div>
                     </div>
                     {r.notes && (
@@ -178,18 +174,17 @@ const JobDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <Button onClick={() => navigate(-1)} variant="outline">
-                Back
+                返回
               </Button>
               {job.status !== "closed" && (
                 <Button onClick={handleApply} disabled={applying || hasApplied}>
                   {hasApplied
-                    ? "Already Applied"
+                    ? "已申请"
                     : applying
-                    ? "Applying..."
-                    : "Apply"}
+                    ? "申请中..."
+                    : "申请职位"}
                 </Button>
               )}
             </div>

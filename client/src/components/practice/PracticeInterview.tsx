@@ -53,8 +53,8 @@ const PracticeInterview = ({
   const toggleMic = () => {
     if (!recognition) {
       toast({
-        title: "Not Supported",
-        description: "Speech recognition is not supported in this browser.",
+        title: "不支持",
+        description: "您的浏览器不支持语音识别功能。",
         variant: "destructive",
       });
       return;
@@ -101,9 +101,9 @@ const PracticeInterview = ({
       };
 
       recognition.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
+        console.error("语音识别错误：", event.error);
         toast({
-          title: "Mic Error",
+          title: "麦克风错误",
           description: event.error,
           variant: "destructive",
         });
@@ -159,13 +159,13 @@ const PracticeInterview = ({
           <Card className="col-span-3 shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg text-indigo-500 dark:text-indigo-400">
-                Interview Session
+                面试环节
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  Role
+                  职位
                 </Label>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {setupData.role}
@@ -173,7 +173,7 @@ const PracticeInterview = ({
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  Round Type
+                  面试类型
                 </Label>
                 <Badge variant="secondary" className="mt-1 dark:text-gray-400">
                   {setupData.roundType}
@@ -182,9 +182,9 @@ const PracticeInterview = ({
               <Separator />
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                    Progress
-                  </Label>
+                <Label className="text-sm font-medium text-gray-900 dark:text-white">
+                  进度
+                </Label>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     {Math.min(
                       interviewState.currentQuestion,
@@ -217,10 +217,10 @@ const PracticeInterview = ({
               <Separator />
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  Current Question #
+                  当前问题 #
                 </Label>
                 <div className="p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg text-sm text-gray-900 dark:text-white">
-                  {isLastQuestion ? "Interview Complete!" : currentQuestion}
+                  {isLastQuestion ? "面试完成！" : currentQuestion}
                 </div>
               </div>
             </CardContent>
@@ -246,7 +246,7 @@ const PracticeInterview = ({
                     />
                   </div>
                   <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                    AI Interviewer
+                    AI面试官
                   </p>
                 </div>
 
@@ -285,7 +285,7 @@ const PracticeInterview = ({
                           size={32}
                         />
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Turn on Camera
+                          开启摄像头
                         </p>
                       </div>
                     )}
@@ -308,7 +308,7 @@ const PracticeInterview = ({
                     </Button>
                   </div>
                   <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                    Candidate
+                    面试者
                   </p>
                 </div>
               </CardContent>
@@ -321,7 +321,7 @@ const PracticeInterview = ({
                   <CardTitle className="flex items-center justify-between text-indigo-500 dark:text-indigo-400">
                     <span className="flex items-center gap-2">
                       <FileText size={20} />
-                      Your Response
+                      您的回答
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
@@ -341,14 +341,14 @@ const PracticeInterview = ({
                         ) : (
                           <Play size={14} />
                         )}
-                        {interviewState.isRecording ? "Recording..." : "Record"}
+                        {interviewState.isRecording ? "录制中..." : "录制"}
                       </Button>
                     </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Textarea
-                    placeholder="Type your answer here or use voice recording..."
+                    placeholder="在此输入您的回答或使用语音录制..."
                     value={interviewState.answer}
                     onChange={(e) =>
                       setInterviewState((prev: any) => ({
@@ -374,8 +374,8 @@ const PracticeInterview = ({
                         )}
                       </Button>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Microphone{" "}
-                        {interviewState.isMicOn ? "on (listening…)" : "off"}
+                        麦克风{" "}
+                        {interviewState.isMicOn ? "开启（聆听中...）" : "关闭"}
                       </span>
                     </div>
                     <Button
@@ -384,7 +384,7 @@ const PracticeInterview = ({
                       disabled={!interviewState.answer.trim()}
                     >
                       <Send size={14} className="mr-2" />
-                      Submit Answer
+                      提交回答
                     </Button>
                   </div>
                 </CardContent>

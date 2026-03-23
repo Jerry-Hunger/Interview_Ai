@@ -26,12 +26,12 @@ const PracticeResults = ({ interview, navigate }: any) => {
       {/* Title */}
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Interview Results
+          面试结果
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
           {interview.type === "practice"
-            ? "Practice Session Summary"
-            : "Company Interview Summary"}
+            ? "练习环节总结"
+            : "企业面试总结"}
         </p>
       </div>
 
@@ -39,7 +39,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
       <Card className="mb-8 shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
         <CardHeader>
           <CardTitle className="text-indigo-500 dark:text-indigo-400">
-            Final Feedback
+            最终反馈
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -56,7 +56,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2 text-yellow-500 dark:text-yellow-400">
               <Star size={20} />
-              Result
+              结果
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -67,12 +67,12 @@ const PracticeResults = ({ interview, navigate }: any) => {
                   : "text-red-600 dark:text-red-400"
               }`}
             >
-              {isSuccess ? "Pass" : "Fail"}
+              {isSuccess ? "通过" : "未通过"}
             </div>
             <Badge
               variant={isSuccess ? ("success" as any) : ("destructive" as any)}
             >
-              {interview.difficulty?.toUpperCase() || "MEDIUM"} Level
+              {interview.difficulty === "beginner" ? "初级" : interview.difficulty === "intermediate" ? "中级" : "高级"} 难度
             </Badge>
           </CardContent>
         </Card>
@@ -81,24 +81,24 @@ const PracticeResults = ({ interview, navigate }: any) => {
         <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
           <CardHeader>
             <CardTitle className="text-indigo-500 dark:text-indigo-400">
-              Next Steps
+              下一步
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
               className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg"
-              onClick={() => navigate("/student/interview")}
+              onClick={() => navigate("/student/practice")}
             >
               <Play size={16} className="mr-2" />
-              Practice Again
+              再练一次
             </Button>
             <Button
               variant="outline"
               className="w-full text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700"
-              onClick={() => navigate("/student/companies")}
+              onClick={() => navigate("/student/jobs")}
             >
               <Building size={16} className="mr-2" />
-              Explore Companies
+              浏览职位
             </Button>
             <Button
               variant="outline"
@@ -106,7 +106,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
               onClick={() => navigate("/student/dashboard")}
             >
               <ArrowLeft size={16} className="mr-2" />
-              Back to Dashboard
+              返回仪表盘
             </Button>
           </CardContent>
         </Card>
@@ -116,7 +116,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
       <Card className="mt-8 shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
         <CardHeader>
           <CardTitle className="text-indigo-500 dark:text-indigo-400">
-            Interview Transcript
+            面试记录
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 max-h-96 overflow-y-auto">
@@ -144,7 +144,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400">
             <TrendingUp size={20} />
-            Detailed Feedbacks
+            详细反馈
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -155,7 +155,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
                   <Card className="bg-indigo-50 dark:bg-indigo-900/30 border-0 shadow-md rounded-xl">
                     <CardHeader>
                       <CardTitle className="text-indigo-600 dark:text-indigo-300 text-lg">
-                        Part {i + 1} Feedback
+                        第 {i + 1} 部分反馈
                       </CardTitle>
                     </CardHeader>
                     <CardContent>

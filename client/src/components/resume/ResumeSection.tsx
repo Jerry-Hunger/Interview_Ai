@@ -14,7 +14,7 @@ const ResumeSection = ({ user, uploading, handleResumeUpload }: any) => {
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
       <h3 className="text-lg font-semibold mb-3 text-indigo-600 dark:text-indigo-400">
-        Resume
+        简历
       </h3>
 
       {user.resume ? (
@@ -27,7 +27,7 @@ const ResumeSection = ({ user, uploading, handleResumeUpload }: any) => {
               rel="noopener noreferrer"
               className="text-indigo-600 dark:text-indigo-400 hover:underline"
             >
-              View Resume
+              查看简历
             </a>
           </div>
 
@@ -47,7 +47,7 @@ const ResumeSection = ({ user, uploading, handleResumeUpload }: any) => {
             className="flex items-center gap-1"
           >
             <Upload size={16} />
-            {uploading ? "Uploading..." : "Update"}
+            {uploading ? "上传中..." : "更新"}
           </Button>
         </div>
       ) : (
@@ -66,7 +66,7 @@ const ResumeSection = ({ user, uploading, handleResumeUpload }: any) => {
             onClick={triggerFileInput} // ✅ Trigger click
           >
             <Upload size={16} />
-            {uploading ? "Uploading..." : "Upload Resume"}
+            {uploading ? "上传中..." : "上传简历"}
           </Button>
         </div>
       )}

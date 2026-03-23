@@ -1,4 +1,3 @@
-// src/pages/student/StudentJobsPage.tsx
 import { useEffect, useState } from "react";
 import axiosInstance from "@/utils/axiosInstance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +60,6 @@ const StudentJobsPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Build set of applied job ids robustly (handles populated jobId objects)
   const appliedJobIds = new Set(
     applications.map((a) => {
       const id = (a.jobId as any)?._id ?? (a.jobId as any) ?? "";
@@ -69,7 +67,6 @@ const StudentJobsPage: React.FC = () => {
     })
   );
 
-  // Group jobs
   const openJobs = jobs.filter(
     (job) => job.status === "open" && !appliedJobIds.has(String(job._id))
   );
@@ -87,7 +84,6 @@ const StudentJobsPage: React.FC = () => {
         }
       );
 
-      // refresh applications
       const appsRes = await axiosInstance.get("/applications/mine", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -95,7 +91,7 @@ const StudentJobsPage: React.FC = () => {
     } catch (err: any) {
       console.error("Apply failed", err);
       const msg =
-        err?.response?.data?.msg ?? "Failed to apply. Please try again.";
+        err?.response?.data?.msg ?? "申请失败，请重试。";
       alert(msg);
     } finally {
       setApplyingId(null);
@@ -110,7 +106,7 @@ const StudentJobsPage: React.FC = () => {
     if (list.length === 0) {
       return (
         <p className="text-gray-600 dark:text-gray-400 italic mb-8">
-          No {label.toLowerCase()} jobs available.
+          暂无{label}职位。
         </p>
       );
     }
@@ -142,7 +138,7 @@ const StudentJobsPage: React.FC = () => {
                   }
                   className="w-fit"
                 >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === "open" ? "招聘中" : type === "applied" ? "已申请" : "已结束"}
                 </Badge>
               </CardHeader>
               <CardContent>
@@ -150,7 +146,7 @@ const StudentJobsPage: React.FC = () => {
                   {job.description}
                 </p>
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  Skills: {(job.skills || []).join(", ")}
+                  技能要求：{(job.skills || []).join(", ")}
                 </p>
                 <div className="mt-4 flex gap-2">
                   {type === "open" && (
@@ -160,17 +156,17 @@ const StudentJobsPage: React.FC = () => {
                       className="flex-1"
                     >
                       {alreadyApplied
-                        ? "Already Applied"
+                        ? "已申请"
                         : applyingId === job._id
-                        ? "Applying..."
-                        : "Apply Now"}
+                        ? "申请中..."
+                        : "立即申请"}
                     </Button>
                   )}
                   <Button
                     variant="outline"
                     onClick={() => navigate(`/student/jobs/${job._id}`)}
                   >
-                    Details
+                    查看详情
                   </Button>
                 </div>
               </CardContent>
@@ -185,29 +181,29 @@ const StudentJobsPage: React.FC = () => {
     <>
       <Navigation />
       <div className="max-w-6xl mx-auto py-10 px-4">
-        <h2 className="text-3xl font-bold mb-10 flex items-center gap-3">
-          <Briefcase className="w-8 h-8 text-blue-600" />
-          Job Openings
+        <h2 className="text-3xl font-bold mb-10 flex items-center gap-3 text-gray-900 dark:text-white">
+          <Briefcase className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          职位列表
         </h2>
 
         {loading ? (
-          <p className="text-gray-600 dark:text-gray-300">Loading jobs...</p>
+          <p className="text-gray-600 dark:text-gray-300">加载中...</p>
         ) : (
           <>
             <h3 className="text-2xl font-semibold mb-4 text-blue-600 dark:text-blue-400">
-              Open Jobs
+              招聘中的职位
             </h3>
-            {renderJobs(openJobs, "Open", "open")}
+            {renderJobs(openJobs, "招聘中", "open")}
 
             <h3 className="text-2xl font-semibold mb-4 text-green-600 dark:text-green-400">
-              Applied Jobs
+              已申请的职位
             </h3>
-            {renderJobs(appliedJobs, "Applied", "applied")}
+            {renderJobs(appliedJobs, "已申请", "applied")}
 
             <h3 className="text-2xl font-semibold mb-4 text-red-600 dark:text-red-400">
-              Closed Jobs
+              已结束的职位
             </h3>
-            {renderJobs(closedJobs, "Closed", "closed")}
+            {renderJobs(closedJobs, "已结束", "closed")}
           </>
         )}
       </div>

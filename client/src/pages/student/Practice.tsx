@@ -20,11 +20,10 @@ const Practice = () => {
   });
   const [interviewResults, setInterviewResults] = useState({});
 
-  // Interview state
   const [interviewState, setInterviewState] = useState({
     currentQuestion: 1,
     totalQuestions: 5,
-    timeRemaining: 1800, // 30 minutes
+    timeRemaining: 1800,
     isRecording: false,
     isCameraOn: true,
     isMicOn: false,
@@ -40,13 +39,7 @@ const Practice = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // assuming you have set up axios baseURL in axios instance
-  // example:
-  // const api = axios.create({ baseURL: "http://localhost:5000/api" });
-
   const handleSetupSubmit = async () => {
-    console.log(setupData);
-
     if (
       !setupData.role ||
       !setupData.difficulty ||
@@ -54,30 +47,26 @@ const Practice = () => {
       !setupData.resume
     ) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields to continue",
+        title: "信息不完整",
+        description: "请填写所有必填项以继续",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Call backend with metadata
       const res = await axiosInstance.post("/interview/start", {
         role: setupData.role,
-        resume: setupData.resume, // probably base64 or file id
+        resume: setupData.resume,
         roundType: setupData.roundType,
         topic: setupData.topic,
         difficulty: setupData.difficulty,
       });
 
-      // Response from backend (assuming it returns { question: "..." })
       const firstQuestion = res.data.message;
 
-      // Move to interview screen
       setCurrentStep("interview");
 
-      // Update interview state with question and chat history
       setInterviewState((prev) => ({
         ...prev,
         question: firstQuestion,
@@ -92,8 +81,8 @@ const Practice = () => {
     } catch (error: any) {
       console.error("Error starting interview:", error);
       toast({
-        title: "Error",
-        description: "Failed to start interview. Please try again.",
+        title: "错误",
+        description: "启动面试失败，请重试。",
         variant: "destructive",
       });
     }
@@ -102,14 +91,13 @@ const Practice = () => {
   const handleAnswerSubmit = async () => {
     if (!interviewState.answer.trim()) {
       toast({
-        title: "Answer Required",
-        description: "Please provide an answer before continuing",
+        title: "请输入回答",
+        description: "请在继续之前提供回答",
         variant: "destructive",
       });
       return;
     }
 
-    // Add current answer to chat history
     const updatedChatHistory = [
       ...interviewState.chatHistory,
       {
@@ -120,13 +108,7 @@ const Practice = () => {
     ];
 
     try {
-      // ✅ Check if last question
       if (interviewState.currentQuestion >= interviewState.totalQuestions) {
-        // 🎯 Interview conclude
-        console.log(
-          "Interview concluded. Fetching results..." +
-            localStorage.getItem("token")
-        );
         const res = await axiosInstance.post(
           "/interview/conclude",
           {
@@ -136,7 +118,7 @@ const Practice = () => {
             roundType: setupData.roundType,
             customTopic: setupData.topic,
             difficulty: setupData.difficulty,
-            typeOfInterview: "practice", // or "company"
+            typeOfInterview: "practice",
           },
           {
             headers: {
@@ -144,17 +126,11 @@ const Practice = () => {
             },
           }
         );
-        console.log("Interview results:", res.data);
         const { interview } = res.data;
 
-        // Go to results screen
         setInterviewResults(interview);
         setCurrentStep("results");
-
-        // Optionally store results somewhere (context / state)
-        // console.log("Interview Results:", { finalFeedback, result, feedbacks });
       } else {
-        // 🎯 Normal flow → get next question
         const res = await axiosInstance.post("/interview/respond", {
           chatHistory: updatedChatHistory,
           answer: interviewState.answer,
@@ -165,9 +141,8 @@ const Practice = () => {
           difficulty: setupData.difficulty,
         });
 
-        const nextQuestion = res.data.message; // assume backend returns { message: "..." }
+        const nextQuestion = res.data.message;
 
-        // Append next question to history
         updatedChatHistory.push({
           type: "question",
           content: nextQuestion,
@@ -185,8 +160,8 @@ const Practice = () => {
     } catch (error: any) {
       console.error("Error in interview flow:", error);
       toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "错误",
+        description: "出错了，请重试。",
         variant: "destructive",
       });
     }
@@ -197,12 +172,6 @@ const Practice = () => {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
-
-  // const getScoreColor = (score: number) => {
-  //   if (score >= 85) return "text-green-500 dark:text-green-400";
-  //   if (score >= 70) return "text-yellow-500 dark:text-yellow-400";
-  //   return "text-red-500 dark:text-red-400";
-  // };
 
   if (currentStep === "setup") {
     return (
@@ -221,7 +190,6 @@ const Practice = () => {
   if (currentStep === "interview") {
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
-        {/* <Navigation /> */}
         <PracticeInterview
           setupData={setupData}
           interviewState={interviewState}

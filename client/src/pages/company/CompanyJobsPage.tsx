@@ -33,7 +33,7 @@ const CompanyJobsPage: React.FC = () => {
         });
         setJobs(res.data || []);
       } catch (err) {
-        console.error("Error fetching company jobs", err);
+        console.error("获取职位列表失败", err);
       } finally {
         setLoading(false);
       }
@@ -41,7 +41,7 @@ const CompanyJobsPage: React.FC = () => {
     fetchJobs();
   }, []);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
 
   return (
     <>
@@ -49,12 +49,12 @@ const CompanyJobsPage: React.FC = () => {
       <div className="max-w-6xl mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
           <Briefcase className="w-7 h-7" />
-          My Posted Jobs
+          我的发布职位
         </h1>
 
         {jobs.length === 0 ? (
           <div className="text-gray-600 dark:text-gray-400">
-            You haven’t posted any jobs yet.
+            您还没有发布任何职位
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -80,12 +80,12 @@ const CompanyJobsPage: React.FC = () => {
 
                   <div className="flex flex-wrap gap-2 mb-3">
                     {(job.skills || []).slice(0, 3).map((s) => (
-                      <Badge key={s} className="text-xs">
+                      <Badge key={s} className="text-xs dark:bg-gray-700 dark:text-gray-200">
                         {s}
                       </Badge>
                     ))}
                     {job.skills && job.skills.length > 3 && (
-                      <Badge className="text-xs">
+                      <Badge className="text-xs dark:bg-gray-700 dark:text-gray-200">
                         +{job.skills.length - 3}
                       </Badge>
                     )}
@@ -97,10 +97,10 @@ const CompanyJobsPage: React.FC = () => {
                         job.status === "closed" ? "destructive" : "default"
                       }
                     >
-                      {job.status === "closed" ? "Closed" : "Open"}
+                      {job.status === "closed" ? "已结束" : "招聘中"}
                     </Badge>
                     {job.difficulty && (
-                      <Badge className="text-xs">{job.difficulty}</Badge>
+                      <Badge className="text-xs dark:bg-gray-700 dark:text-gray-200">{job.difficulty}</Badge>
                     )}
                   </div>
                 </CardContent>
@@ -111,7 +111,7 @@ const CompanyJobsPage: React.FC = () => {
 
         <div className="mt-8">
           <Button onClick={() => navigate("/company/job/new")}>
-            Post a New Job
+            发布新职位
           </Button>
         </div>
       </div>

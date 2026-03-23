@@ -20,11 +20,11 @@ type Application = {
 };
 
 const statusLabels: Record<Application["status"], string> = {
-  applied: "Applied",
-  "in-progress": "In Progress",
-  selected: "Selected",
-  "final-selected": "Final Selected",
-  rejected: "Rejected",
+  applied: "已申请",
+  "in-progress": "面试中",
+  selected: "已通过",
+  "final-selected": "最终通过",
+  rejected: "已拒绝",
 };
 
 const statusColors: Record<Application["status"], string> = {
@@ -62,7 +62,6 @@ const StudentApplicationsPage: React.FC = () => {
     fetchApplications();
   }, []);
 
-  // Group by status
   const groupedApps: Record<Application["status"], Application[]> = {
     applied: [],
     "in-progress": [],
@@ -83,7 +82,7 @@ const StudentApplicationsPage: React.FC = () => {
     }));
   };
 
-  if (loading) return <div className="p-6">Loading applications...</div>;
+  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
 
   return (
     <>
@@ -91,7 +90,7 @@ const StudentApplicationsPage: React.FC = () => {
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
         <h2 className="text-3xl font-bold flex items-center gap-2 mb-6">
           <Briefcase className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-          My Applications
+          我的申请
         </h2>
 
         {Object.entries(groupedApps).map(([status, apps]) => (
@@ -116,7 +115,7 @@ const StudentApplicationsPage: React.FC = () => {
               <CardContent className="space-y-4">
                 {apps.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    No applications in this category.
+                    暂无此类申请。
                   </p>
                 ) : (
                   apps.map((app) => (
@@ -136,12 +135,11 @@ const StudentApplicationsPage: React.FC = () => {
                         </Badge>
                       </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        Applied on:{" "}
-                        {new Date(app.createdAt).toLocaleDateString()}
+                        申请时间：{new Date(app.createdAt).toLocaleDateString()}
                       </p>
                       {app.currentRound !== undefined && (
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Current Round: {app.currentRound}
+                          当前轮次：第 {app.currentRound + 1} 轮
                         </p>
                       )}
                     </div>

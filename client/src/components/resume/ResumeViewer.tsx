@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import MarkdownText from "./MarkdownText";
 import axiosInstance from "@/utils/axiosInstance";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface FormattedResumeModalProps {
   resumeText: string;
@@ -24,8 +25,8 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
         const data = await res.data;
         setFormattedResume(data.formatted);
       } catch (err) {
-        console.error("❌ Failed to fetch formatted resume", err);
-        setFormattedResume("⚠️ Error loading formatted resume.");
+        console.error("❌ 获取格式化简历失败", err);
+        setFormattedResume("⚠️ 加载格式化简历时出错。");
       } finally {
         setLoading(false);
       }
@@ -40,13 +41,13 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-[#1a1c29] border-b border-gray-200 dark:border-gray-700 px-6 py-4 rounded-t-2xl">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            📄 Resume Preview
+            📄 简历预览
           </h2>
           {/* Close Button */}
 
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-gray-200 
+            className="cursor-pointer absolute top-4 right-4 p-2 rounded-full bg-gray-200 
              hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 
              text-gray-700 dark:text-gray-200 transition"
             aria-label="Close"
@@ -54,16 +55,21 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
             <X className="w-5 h-5" />
           </button>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Extracted and auto-formatted for readability
+            {loading ? "正在处理中，请稍候..." : "已提取并自动格式化以便于阅读"}
           </p>
         </div>
 
         {/* Body */}
         <div className="px-8 py-6 leading-relaxed text-gray-800 dark:text-gray-200">
           {loading ? (
-            <p className="text-indigo-500 animate-pulse">
-              ⏳ Formatting resume...
-            </p>
+            <div className="space-y-3 py-8">
+              <div className="flex items-center justify-center gap-2 text-indigo-500">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">正在格式化简历...</span>
+              </div>
+              <Progress value={undefined} className="w-full [&>div]:bg-gradient-to-r [&>div]:from-indigo-500 [&>div]:to-purple-500 [&>div]:animate-pulse" />
+              <p className="text-xs text-center text-gray-400">AI 正在整理您的简历结构</p>
+            </div>
           ) : (
             <MarkdownText content={formattedResume} />
           )}
