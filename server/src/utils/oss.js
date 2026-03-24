@@ -31,6 +31,16 @@ export const generateResumePath = (userId, ext) => {
   return `resumes/${userId}/${timestamp}.${ext}`;
 };
 
+export const generateLogoPath = (userId, ext) => {
+  const timestamp = Date.now();
+  return `logos/${userId}/${timestamp}.${ext}`;
+};
+
+export const generatePhotoPath = (userId, ext, index) => {
+  const timestamp = Date.now();
+  return `photos/${userId}/${timestamp}_${index}.${ext}`;
+};
+
 export const getFileExtension = (filename) => {
   return filename.split('.').pop().toLowerCase();
 };

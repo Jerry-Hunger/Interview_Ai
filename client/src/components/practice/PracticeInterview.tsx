@@ -19,6 +19,70 @@ import {
 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 
+type SetupData = {
+  resume: string;
+  role: string;
+  difficulty: string;
+  roundType: string;
+  topic: string;
+};
+
+type ChatMessage = {
+  type: "question" | "answer";
+  content: string;
+  timestamp: string;
+};
+
+type InterviewState = {
+  currentQuestion: number;
+  totalQuestions: number;
+  timeRemaining: number;
+  isRecording: boolean;
+  isCameraOn: boolean;
+  isMicOn: boolean;
+  answer: string;
+  question: string;
+  chatHistory: ChatMessage[];
+};
+
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: {
+    isFinal: boolean;
+    [index: number]: { transcript: string };
+  }[];
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+}
+
+type ToastFunc = {
+  (props: { title: string; description?: string; variant?: string }): void;
+};
+
+type PracticeInterviewProps = {
+  setupData: SetupData;
+  interviewState: InterviewState;
+  setInterviewState: React.Dispatch<React.SetStateAction<InterviewState>>;
+  handleAnswerSubmit: () => void;
+  formatTime: (seconds: number) => string;
+  toast: ToastFunc;
+};
+
 const PracticeInterview = ({
   setupData,
   interviewState,
@@ -26,7 +90,7 @@ const PracticeInterview = ({
   handleAnswerSubmit,
   formatTime,
   toast,
-}: any) => {
+}: PracticeInterviewProps) => {
   const currentQuestion = interviewState.question;
   const isLastQuestion =
     interviewState.currentQuestion > interviewState.totalQuestions;
@@ -37,14 +101,12 @@ const PracticeInterview = ({
   });
 
   // Web Speech API
-  const SpeechRecognition =
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition;
+  const SpeechRecognitionConstructor = (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
 
-  let recognition: any;
+  let recognition: SpeechRecognitionInstance | null = null;
 
-  if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
+  if (SpeechRecognitionConstructor) {
+    recognition = new SpeechRecognitionConstructor();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
@@ -65,7 +127,7 @@ const PracticeInterview = ({
       recognition.stop();
 
       // Save transcript as final answer
-      setInterviewState((prev: any) => ({
+      setInterviewState((prev) => ({
         ...prev,
         isMicOn: false,
         answer: fullTranscript.trim(),
@@ -81,7 +143,7 @@ const PracticeInterview = ({
       setFullTranscript("");
       recognition.start();
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         let newTranscript = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -93,14 +155,14 @@ const PracticeInterview = ({
 
         if (newTranscript) {
           setFullTranscript((prev) => (prev + " " + newTranscript).trim());
-          setInterviewState((prev: any) => ({
+          setInterviewState((prev) => ({
             ...prev,
             answer: (prev.answer + " " + newTranscript).trim(),
           }));
         }
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("语音识别错误：", event.error);
         toast({
           title: "麦克风错误",
@@ -111,10 +173,10 @@ const PracticeInterview = ({
 
       recognition.onend = () => {
         // ✅ restart automatically until mic is off
-        if (interviewState.isMicOn) recognition.start();
+        if (interviewState.isMicOn) recognition?.start();
       };
 
-      setInterviewState((prev: any) => ({ ...prev, isMicOn: true }));
+      setInterviewState((prev) => ({ ...prev, isMicOn: true }));
     }
   };
   useEffect(() => {
@@ -294,7 +356,7 @@ const PracticeInterview = ({
                       size="sm"
                       className="absolute bottom-2 right-2 text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700"
                       onClick={() =>
-                        setInterviewState((prev: any) => ({
+                        setInterviewState((prev) => ({
                           ...prev,
                           isCameraOn: !prev.isCameraOn,
                         }))
@@ -330,7 +392,7 @@ const PracticeInterview = ({
                         }
                         size="sm"
                         onClick={() =>
-                          setInterviewState((prev: any) => ({
+                          setInterviewState((prev) => ({
                             ...prev,
                             isRecording: !prev.isRecording,
                           }))
@@ -351,7 +413,7 @@ const PracticeInterview = ({
                     placeholder="在此输入您的回答或使用语音录制..."
                     value={interviewState.answer}
                     onChange={(e) =>
-                      setInterviewState((prev: any) => ({
+                      setInterviewState((prev) => ({
                         ...prev,
                         answer: e.target.value,
                       }))

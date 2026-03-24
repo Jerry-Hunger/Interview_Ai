@@ -29,6 +29,9 @@ const jobOpeningSchema = new mongoose.Schema(
     skills: [{ type: String }],
     rounds: [roundSchema],
     status: { type: String, enum: ["open", "closed"], default: "open" },
+    companyLogoUrl: { type: String },
+    companyName: { type: String },
+    companyLocation: { type: String },
   },
   { timestamps: true }
 );

@@ -18,7 +18,27 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-const PracticeResults = ({ interview, navigate }: any) => {
+type Interview = {
+  _id: string;
+  type: "practice" | "company";
+  role: string;
+  difficulty: string;
+  roundType: string;
+  result: "success" | "failure" | "Quit";
+  feedback: string;
+  transcript: { role: string; content: string }[];
+  createdAt: string;
+  finalFeedback?: string;
+  chatHistory?: { type: string; content: string; timestamp: string }[];
+  feedbacks?: string[];
+};
+
+type PracticeResultsProps = {
+  interview: Interview;
+  navigate: (path: string) => void;
+};
+
+const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
   const isSuccess = interview.result === "success";
 
   return (
@@ -70,7 +90,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
               {isSuccess ? "通过" : "未通过"}
             </div>
             <Badge
-              variant={isSuccess ? ("success" as any) : ("destructive" as any)}
+              variant={isSuccess ? "default" : "destructive"}
             >
               {interview.difficulty === "beginner" ? "初级" : interview.difficulty === "intermediate" ? "中级" : "高级"} 难度
             </Badge>
@@ -120,7 +140,7 @@ const PracticeResults = ({ interview, navigate }: any) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-          {interview.chatHistory.map((entry: any, idx: number) => (
+          {interview.chatHistory?.map((entry: { type: string; content: string; timestamp: string }, idx: number) => (
             <div
               key={idx}
               className={`p-3 rounded-xl ${

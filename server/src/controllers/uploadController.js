@@ -5,6 +5,8 @@ import {
   uploadFile,
   generateAvatarPath,
   generateResumePath,
+  generateLogoPath,
+  generatePhotoPath,
   getFileExtension,
   isValidImageType,
   isValidResumeType,
@@ -111,6 +113,84 @@ export const uploadResume = async (req, res) => {
     });
   } catch (err) {
     console.error("上传简历失败:", err);
+    res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
+  }
+};
+
+export const uploadLogo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: "请选择图片文件" });
+    }
+
+    const file = req.file;
+    const userId = req.user.id;
+
+    const ext = getFileExtension(file.originalname);
+    if (!isValidImageType(ext)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "不支持的图片格式，仅支持 jpg、png、webp" });
+    }
+
+    if (file.size > MAX_AVATAR_SIZE) {
+      return res
+        .status(400)
+        .json({ success: false, error: "图片大小不能超过 2MB" });
+    }
+
+    const path = generateLogoPath(userId, ext);
+    const url = await uploadFile(file, path);
+
+    await User.findByIdAndUpdate(userId, { companyLogoUrl: url });
+
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error("上传 Logo 失败:", err);
+    res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
+  }
+};
+
+export const uploadPhotos = async (req, res) => {
+  try {
+    if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: "请选择图片文件" });
+    }
+
+    const files = req.files;
+    const userId = req.user.id;
+
+    const urls = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = getFileExtension(file.originalname);
+      
+      if (!isValidImageType(ext)) {
+        return res
+          .status(400)
+          .json({ success: false, error: `第 ${i + 1} 张图片格式不支持，仅支持 jpg、png、webp` });
+      }
+
+      if (file.size > MAX_RESUME_SIZE) {
+        return res
+          .status(400)
+          .json({ success: false, error: `第 ${i + 1} 张图片大小不能超过 5MB` });
+      }
+
+      const path = generatePhotoPath(userId, ext, i);
+      const url = await uploadFile(file, path);
+      urls.push(url);
+    }
+
+    const user = await User.findById(userId);
+    const existingPhotos = user.companyPhotos || [];
+    const updatedPhotos = [...existingPhotos, ...urls].slice(0, 10);
+    
+    await User.findByIdAndUpdate(userId, { companyPhotos: updatedPhotos });
+
+    res.json({ success: true, urls });
+  } catch (err) {
+    console.error("上传照片失败:", err);
     res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
   }
 };

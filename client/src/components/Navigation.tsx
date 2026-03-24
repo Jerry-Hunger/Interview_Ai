@@ -68,6 +68,7 @@ const Navigation = () => {
     { name: "仪表盘", path: "/company/dashboard", icon: Home },
     { name: "发布职位", path: "/company/job/new", icon: FilePlus },
     { name: "职位列表", path: "/company/jobs", icon: Briefcase },
+    { name: "公司资料", path: "/company/profile", icon: Building },
   ];
 
   let navItems = publicNavItems;

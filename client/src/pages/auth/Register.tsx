@@ -106,12 +106,13 @@ const Register = () => {
       navigate(
         role === "student" ? "/student/dashboard" : "/company/dashboard"
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
       toast({
         title: "注册失败",
         description:
-          error.response?.data?.message ||
-          error.message ||
+          axiosError.response?.data?.message ||
+          axiosError.message ||
           "出错了，请重试。",
         variant: "destructive",
       });
@@ -390,16 +391,16 @@ const Register = () => {
                         <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                           <SelectValue placeholder="选择行业" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="technology">科技</SelectItem>
-                          <SelectItem value="finance">金融</SelectItem>
-                          <SelectItem value="healthcare">医疗</SelectItem>
-                          <SelectItem value="education">教育</SelectItem>
-                          <SelectItem value="retail">零售</SelectItem>
-                          <SelectItem value="manufacturing">
+                        <SelectContent className="bg-white dark:bg-[#23263A] text-gray-900 dark:text-white">
+                          <SelectItem value="technology" className="dark:focus:bg-purple-900 dark:focus:text-white">科技</SelectItem>
+                          <SelectItem value="finance" className="dark:focus:bg-purple-900 dark:focus:text-white">金融</SelectItem>
+                          <SelectItem value="healthcare" className="dark:focus:bg-purple-900 dark:focus:text-white">医疗</SelectItem>
+                          <SelectItem value="education" className="dark:focus:bg-purple-900 dark:focus:text-white">教育</SelectItem>
+                          <SelectItem value="retail" className="dark:focus:bg-purple-900 dark:focus:text-white">零售</SelectItem>
+                          <SelectItem value="manufacturing" className="dark:focus:bg-purple-900 dark:focus:text-white">
                             制造业
                           </SelectItem>
-                          <SelectItem value="other">其他</SelectItem>
+                          <SelectItem value="other" className="dark:focus:bg-purple-900 dark:focus:text-white">其他</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -420,16 +421,16 @@ const Register = () => {
                         <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                           <SelectValue placeholder="选择规模" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1-10">1-10 人</SelectItem>
-                          <SelectItem value="11-50">11-50 人</SelectItem>
-                          <SelectItem value="51-200">
+                        <SelectContent className="bg-white dark:bg-[#23263A] text-gray-900 dark:text-white">
+                          <SelectItem value="1-10" className="dark:focus:bg-purple-900 dark:focus:text-white">1-10 人</SelectItem>
+                          <SelectItem value="11-50" className="dark:focus:bg-purple-900 dark:focus:text-white">11-50 人</SelectItem>
+                          <SelectItem value="51-200" className="dark:focus:bg-purple-900 dark:focus:text-white">
                             51-200 人
                           </SelectItem>
-                          <SelectItem value="201-1000">
+                          <SelectItem value="201-1000" className="dark:focus:bg-purple-900 dark:focus:text-white">
                             201-1000 人
                           </SelectItem>
-                          <SelectItem value="1000+">1000+ 人</SelectItem>
+                          <SelectItem value="1000+" className="dark:focus:bg-purple-900 dark:focus:text-white">1000+ 人</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

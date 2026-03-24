@@ -214,8 +214,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
             return;
           }
           const page = await pdf.getPage(i);
-          const content: any = await page.getTextContent();
-          const strings = content.items.map((item: any) => item.str);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item: { str: string }) => item.str);
           fullText += strings.join(" ") + "\n";
         }
 
@@ -246,8 +246,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
             await dataChanged({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
 
             setTimeout(resetStates, 1000);
-          } catch (ocrErr: any) {
-            if (ocrErr.message === "已取消" || ocrErr.message === "Cancelled") {
+          } catch (ocrErr: unknown) {
+            const err = ocrErr as { message?: string };
+            if (err.message === "已取消" || err.message === "Cancelled") {
               setStatus("已取消");
             } else {
               console.error("OCR 失败:", ocrErr);
@@ -293,8 +294,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
           setFileName(file.name);
           await dataChanged({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
-        } catch (ocrErr: any) {
-          if (ocrErr.message === "已取消" || ocrErr.message === "Cancelled") {
+        } catch (ocrErr: unknown) {
+          const err = ocrErr as { message?: string };
+          if (err.message === "已取消" || err.message === "Cancelled") {
             setStatus("已取消");
           } else {
             console.error("OCR 失败:", pdfErr);

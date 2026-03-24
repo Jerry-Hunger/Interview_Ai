@@ -21,13 +21,29 @@ import { Target, Play, CheckCircle, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import ResumeUploader from "./ResumeUploader";
 
+type SetupData = {
+  resume: string;
+  role: string;
+  difficulty: string;
+  roundType: string;
+  topic: string;
+};
+
+type PracticeSetupProps = {
+  setupData: SetupData;
+  setSetupData: React.Dispatch<React.SetStateAction<SetupData>>;
+  handleSetupSubmit: () => void;
+  navigate: (path: string) => void;
+  isStarting: boolean;
+};
+
 const PracticeSetup = ({
   setupData,
   setSetupData,
   handleSetupSubmit,
   navigate,
   isStarting,
-}: any) => (
+}: PracticeSetupProps) => (
   <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div className="mb-8">
       <Button
@@ -75,7 +91,7 @@ const PracticeSetup = ({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setSetupData((prev: any) => ({ ...prev, resume: null }))
+                      setSetupData((prev) => ({ ...prev, resume: "" }))
                     }
                   >
                     Remove
@@ -96,12 +112,13 @@ const PracticeSetup = ({
                     onClick={async () => {
                       try {
                         const { file, text } = await pickResumeFile();
-                        setSetupData((prev: any) => ({
+                        setSetupData((prev) => ({
                           ...prev,
                           resume: { file, text },
                         }));
-                      } catch (error: any) {
-                        alert(error.message);
+                      } catch (error: unknown) {
+                        const err = error as { message?: string };
+                        alert(err.message || "Error");
                       }
                     }}
                   >
@@ -112,8 +129,8 @@ const PracticeSetup = ({
             </div>
           </div> */}
           <ResumeUploader
-            dataChanged={(data) => {
-              setSetupData((prev: any) => ({ ...prev, resume: data }));
+            dataChanged={(data: { resumeText: string }) => {
+              setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
             }}
           />
           {/* Role Selection */}
@@ -126,7 +143,7 @@ const PracticeSetup = ({
               placeholder="例如：软件工程师、产品经理"
               value={setupData.role}
               onChange={(e) =>
-                setSetupData((prev: any) => ({ ...prev, role: e.target.value }))
+                setSetupData((prev) => ({ ...prev, role: e.target.value }))
               }
               className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
@@ -141,7 +158,7 @@ const PracticeSetup = ({
             </Label>
             <Select
               onValueChange={(value) =>
-                setSetupData((prev: any) => ({ ...prev, difficulty: value }))
+                setSetupData((prev) => ({ ...prev, difficulty: value }))
               }
             >
               <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
@@ -166,7 +183,7 @@ const PracticeSetup = ({
             </Label>
             <Select
               onValueChange={(value) =>
-                setSetupData((prev: any) => ({ ...prev, roundType: value }))
+                setSetupData((prev) => ({ ...prev, roundType: value }))
               }
             >
               <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
@@ -191,7 +208,7 @@ const PracticeSetup = ({
               placeholder="您想重点练习哪些特定话题？"
               value={setupData.topic}
               onChange={(e) =>
-                setSetupData((prev: any) => ({
+                setSetupData((prev) => ({
                   ...prev,
                   topic: e.target.value,
                 }))

@@ -2,7 +2,17 @@ import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, User } from "lucide-react";
 
-const ChatWindow = ({ chatHistory }: any) => {
+type ChatMessage = {
+  type: "question" | "answer";
+  content: string;
+  timestamp: string;
+};
+
+type ChatWindowProps = {
+  chatHistory: ChatMessage[];
+};
+
+const ChatWindow = ({ chatHistory }: ChatWindowProps) => {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ Auto-scroll to latest chat
@@ -21,7 +31,7 @@ const ChatWindow = ({ chatHistory }: any) => {
       </CardHeader>
       <CardContent className="p-0">
         <div className="h-[500px] overflow-y-auto px-4 pb-4 space-y-4 custom-scrollbar">
-          {chatHistory.map((chat: any, index: number) => (
+          {chatHistory.map((chat: ChatMessage, index: number) => (
             <div
               key={index}
               className={`p-4 rounded-2xl shadow-sm transition-all duration-200 ${

@@ -1,5 +1,7 @@
 import Job from "../models/JobOpening.js";
+import JobOpening from "../models/JobOpening.js";
 import Application from "../models/Application.js";
+import User from "../models/User.js";
 
 export const getCompanyDashboard = async (req, res) => {
   try {
@@ -41,5 +43,76 @@ export const getCompanyDashboard = async (req, res) => {
     res
       .status(500)
       .json({ message: "获取仪表盘数据失败", error: err.message });
+  }
+};
+
+export const getCompanyProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ error: "用户不存在" });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error("获取企业信息失败:", err);
+    res.status(500).json({ error: "服务器错误" });
+  }
+};
+
+export const updateCompanyProfile = async (req, res) => {
+  try {
+    const {
+      companyName,
+      companyDescription,
+      companyLocation,
+      companyLocationCoords,
+      companyWebsite,
+    } = req.body;
+
+    const updateData = {};
+    if (companyName !== undefined) updateData.companyName = companyName;
+    if (companyDescription !== undefined) updateData.companyDescription = companyDescription;
+    if (companyLocation !== undefined) updateData.companyLocation = companyLocation;
+    if (companyLocationCoords !== undefined) updateData.companyLocationCoords = companyLocationCoords;
+    if (companyWebsite !== undefined) updateData.companyWebsite = companyWebsite;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true }
+    ).select("-password");
+
+    await JobOpening.updateMany(
+      { companyId: req.user.id },
+      {
+        companyName: user.companyName,
+        companyLocation: user.companyLocation,
+        companyLogoUrl: user.companyLogoUrl,
+      }
+    );
+
+    res.json(user);
+  } catch (err) {
+    console.error("更新企业信息失败:", err);
+    res.status(500).json({ error: "服务器错误" });
+  }
+};
+
+export const deleteCompanyPhoto = async (req, res) => {
+  try {
+    const { url } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ error: "用户不存在" });
+    }
+
+    const photos = (user.companyPhotos || []).filter(p => p !== url);
+    await User.findByIdAndUpdate(req.user.id, { companyPhotos: photos });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("删除照片失败:", err);
+    res.status(500).json({ error: "服务器错误" });
   }
 };

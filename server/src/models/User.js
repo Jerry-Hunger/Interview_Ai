@@ -42,6 +42,15 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Resume',
     },
+    phone: {
+      type: String,
+    },
+    location: {
+      type: String,
+    },
+    expectedSalary: {
+      type: String,
+    },
     // Company fields
     companyName: {
       type: String,
@@ -56,6 +65,25 @@ const userSchema = new mongoose.Schema(
     },
     industry: {
       type: String, // e.g., "Software", "Mechanical", "Automobile"
+    },
+    companyLogoUrl: {
+      type: String,
+    },
+    companyPhotos: [{
+      type: String,
+    }],
+    companyDescription: {
+      type: String,
+    },
+    companyLocation: {
+      type: String,
+    },
+    companyLocationCoords: {
+      lat: { type: Number },
+      lng: { type: Number },
+    },
+    companyWebsite: {
+      type: String,
     },
   },
   { timestamps: true }

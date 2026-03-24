@@ -9,12 +9,21 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Trash } from "lucide-react";
 import Navigation from "@/components/Navigation";
 
+type Round = {
+  roundNumber: number;
+  type: string;
+  difficulty: string;
+  topic: string;
+  duration: number;
+  notes: string;
+};
+
 const CompanyJobForm = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
-  const [rounds, setRounds] = useState<any[]>([]);
+  const [rounds, setRounds] = useState<Round[]>([]);
 
   const addRound = () => {
     setRounds([
@@ -30,9 +39,9 @@ const CompanyJobForm = () => {
     ]);
   };
 
-  const updateRound = (index: number, field: string, value: any) => {
+  const updateRound = (index: number, field: keyof Round, value: string | number) => {
     const newRounds = [...rounds];
-    newRounds[index][field] = value;
+    newRounds[index] = { ...newRounds[index], [field]: value };
     setRounds(newRounds);
   };
 

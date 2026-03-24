@@ -23,6 +23,7 @@ import CompanyJobApplicationsPage from "./pages/company/CompanyJobApplicationsPa
 import ApplicationDetailPage from "./pages/company/ApplicationDetailPage";
 import StudentApplicationsPage from "./pages/student/StudentApplicationsPage";
 import StudentApplicationDetailPage from "./pages/student/StudentApplicationDetailPage";
+import CompanyProfilePage from "./pages/company/CompanyProfile";
 
 // inside <Routes>
 
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/student/profile" element={<StudentProfile />} />
               <Route path="/student/jobs/:id" element={<JobDetailPage />} />
               <Route path="/company/jobs" element={<CompanyJobsPage />} />
+              <Route path="/company/profile" element={<CompanyProfilePage />} />
               <Route
                 path="/company/job/:id"
                 element={<CompanyJobApplicationsPage />}

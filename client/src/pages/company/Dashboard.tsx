@@ -16,10 +16,33 @@ const statusLabels: Record<string, string> = {
   rejected: "已拒绝",
 };
 
+type Stats = {
+  applied?: number;
+  inProgress?: number;
+  selected?: number;
+  finalSelected?: number;
+  rejected?: number;
+  totalJobs?: number;
+  totalApplications?: number;
+};
+
+type Job = {
+  _id: string;
+  title: string;
+  description: string;
+};
+
+type Application = {
+  _id: string;
+  jobId: { _id: string; title: string } | null;
+  candidateId: { name: string } | null;
+  status: string;
+};
+
 const CompanyDashboard = () => {
-  const [stats, setStats] = useState<any>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [recentApps, setRecentApps] = useState<any[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [recentApps, setRecentApps] = useState<Application[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -108,25 +131,32 @@ const CompanyDashboard = () => {
           <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
             申请流程
           </h2>
-          <PieChart width={400} height={300}>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              dataKey="value"
-              label
-            >
-              {chartData.map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+          {stats && (stats.applied > 0 || stats.inProgress > 0 || stats.selected > 0 || stats.finalSelected > 0 || stats.rejected > 0) ? (
+            <PieChart width={400} height={300}>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                dataKey="value"
+                label
+              >
+                {chartData.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+              <p className="text-lg mb-2">暂无申请数据</p>
+              <p className="text-sm">发布职位后，将显示申请流程统计</p>
+            </div>
+          )}
         </div>
 
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">

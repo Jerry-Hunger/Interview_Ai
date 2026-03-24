@@ -8,15 +8,62 @@ import { useToast } from "@/hooks/use-toast";
 
 type Step = "waiting" | "interview" | "results";
 
+type RoundHistory = {
+  roundNumber: number;
+  result: string;
+  feedback?: string;
+};
+
+type ApplicationType = {
+  _id: string;
+  jobId: { title: string; description: string; difficulty: string; rounds: { type?: string; description?: string }[] };
+  resumeText: string;
+  status: string;
+  currentRound: number;
+  history?: RoundHistory[];
+};
+
+type JobType = {
+  title: string;
+  description: string;
+  difficulty: string;
+  rounds: { type?: string; description?: string }[];
+  company?: { name: string };
+};
+
+type ChatMessage = {
+  type: "question" | "answer";
+  content: string;
+  timestamp: string;
+};
+
+type InterviewState = {
+  currentQuestion: number;
+  totalQuestions: number;
+  timeRemaining: number;
+  isRecording: boolean;
+  isCameraOn: boolean;
+  isMicOn: boolean;
+  answer: string;
+  question: string;
+  chatHistory: ChatMessage[];
+};
+
+type InterviewResult = {
+  _id: string;
+  result: string;
+  finalFeedback?: string;
+};
+
 const ApplicationDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
 
-  const [application, setApplication] = useState<any>(null);
-  const [job, setJob] = useState<any>(null);
+  const [application, setApplication] = useState<ApplicationType | null>(null);
+  const [job, setJob] = useState<JobType | null>(null);
 
   const [currentStep, setCurrentStep] = useState<Step>("waiting");
-  const [interviewState, setInterviewState] = useState<any>({
+  const [interviewState, setInterviewState] = useState<InterviewState>({
     currentQuestion: 1,
     totalQuestions: 5,
     timeRemaining: 1800,
@@ -27,7 +74,7 @@ const ApplicationDetail = () => {
     question: "",
     chatHistory: [],
   });
-  const [interviewResults, setInterviewResults] = useState<any>(null);
+  const [interviewResults, setInterviewResults] = useState<InterviewResult | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,7 +84,7 @@ const ApplicationDetail = () => {
         });
         setApplication(res.data);
         setJob(res.data.jobId);
-      } catch (err) {
+      } catch {
         toast({
           title: "错误",
           description: "加载申请详情失败",
@@ -46,6 +93,7 @@ const ApplicationDetail = () => {
       }
     };
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleStartInterview = async () => {
@@ -60,7 +108,7 @@ const ApplicationDetail = () => {
 
       const firstQuestion = res.data.message;
 
-      setInterviewState((prev: any) => ({
+      setInterviewState((prev: InterviewState) => ({
         ...prev,
         question: firstQuestion,
         chatHistory: [
@@ -73,7 +121,7 @@ const ApplicationDetail = () => {
       }));
 
       setCurrentStep("interview");
-    } catch (err) {
+      } catch {
       toast({
         title: "错误",
         description: "启动面试失败",
@@ -159,7 +207,7 @@ const ApplicationDetail = () => {
           timestamp: new Date().toLocaleTimeString(),
         });
 
-        setInterviewState((prev: any) => ({
+        setInterviewState((prev: InterviewState) => ({
           ...prev,
           chatHistory: updatedChatHistory,
           currentQuestion: prev.currentQuestion + 1,
@@ -167,8 +215,8 @@ const ApplicationDetail = () => {
           answer: "",
         }));
       }
-    } catch (error) {
-      console.error("Error in interview flow:", error);
+    } catch {
+      console.error("Error in interview flow");
       toast({
         title: "错误",
         description: "面试过程中出错了",
@@ -250,7 +298,7 @@ const ApplicationDetail = () => {
                 已完成的面试
               </h2>
               <ul className="space-y-4">
-                {application.history.map((round: any, idx: number) => (
+                {application.history?.map((round: RoundHistory, idx: number) => (
                   <li
                     key={idx}
                     className="p-3 border rounded-lg bg-gray-50 dark:bg-[#23263A] dark:border-gray-700"

@@ -16,11 +16,27 @@ type Round = {
   notes?: string;
 };
 
+type JobType = {
+  _id: string;
+  title: string;
+  description: string;
+  skills: string[];
+  rounds: Round[];
+  difficulty: string;
+  status: string;
+  createdAt: string;
+};
+
+type ApplicationType = {
+  _id: string;
+  jobId: { _id: string } | string;
+};
+
 const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [job, setJob] = useState<any>(null);
-  const [applications, setApplications] = useState<any[]>([]);
+  const [job, setJob] = useState<JobType | null>(null);
+  const [applications, setApplications] = useState<ApplicationType[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
 
@@ -52,10 +68,8 @@ const JobDetailPage: React.FC = () => {
   }, [id]);
 
   const hasApplied = applications.some((a) => {
-    const jid =
-      typeof a.jobId === "object" && a.jobId !== null
-        ? (a.jobId as any)._id
-        : a.jobId;
+    const jobId = a.jobId;
+    const jid = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
     return jid?.toString() === id?.toString();
   });
 
@@ -78,9 +92,10 @@ const JobDetailPage: React.FC = () => {
       const appsRes = await axiosInstance.get("/applications/mine");
       setApplications(appsRes.data || []);
       alert("申请成功！");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Apply failed", err);
-      alert(err?.response?.data?.msg ?? "申请失败");
+      const axiosError = err as { response?: { data?: { msg?: string } } };
+      alert(axiosError.response?.data?.msg ?? "申请失败");
     } finally {
       setApplying(false);
     }

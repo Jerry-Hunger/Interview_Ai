@@ -9,19 +9,57 @@ import PracticeResults from "@/components/practice/PracticeResults";
 
 type Step = "setup" | "interview" | "results";
 
+type SetupData = {
+  resume: string;
+  role: string;
+  difficulty: string;
+  roundType: string;
+  topic: string;
+};
+
+type ChatMessage = {
+  type: "question" | "answer";
+  content: string;
+  timestamp: string;
+};
+
+type InterviewState = {
+  currentQuestion: number;
+  totalQuestions: number;
+  timeRemaining: number;
+  isRecording: boolean;
+  isCameraOn: boolean;
+  isMicOn: boolean;
+  answer: string;
+  question: string;
+  chatHistory: ChatMessage[];
+};
+
+type Interview = {
+  _id: string;
+  type: "practice" | "company";
+  role: string;
+  difficulty: string;
+  roundType: string;
+  result: "success" | "failure" | "Quit";
+  feedback: string;
+  transcript: { role: string; content: string }[];
+  createdAt: string;
+};
+
 const Practice = () => {
   const [currentStep, setCurrentStep] = useState<Step>("setup");
   const [isStarting, setIsStarting] = useState(false);
-  const [setupData, setSetupData] = useState({
+  const [setupData, setSetupData] = useState<SetupData>({
     resume: "",
     role: "",
     difficulty: "",
     roundType: "",
     topic: "",
   });
-  const [interviewResults, setInterviewResults] = useState({});
+  const [interviewResults, setInterviewResults] = useState<Interview | null>(null);
 
-  const [interviewState, setInterviewState] = useState({
+  const [interviewState, setInterviewState] = useState<InterviewState>({
     currentQuestion: 1,
     totalQuestions: 5,
     timeRemaining: 1800,
@@ -30,15 +68,15 @@ const Practice = () => {
     isMicOn: false,
     answer: "",
     question: "",
-    chatHistory: [] as {
-      type: "question" | "answer";
-      content: string;
-      timestamp: string;
-    }[],
+    chatHistory: [],
   });
 
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    console.log(setupData);
+  }, [setupData]);
 
   const handleSetupSubmit = async () => {
     if (
@@ -81,7 +119,7 @@ const Practice = () => {
           },
         ],
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting interview:", error);
       toast({
         title: "错误",
@@ -162,7 +200,7 @@ const Practice = () => {
           answer: "",
         }));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error in interview flow:", error);
       toast({
         title: "错误",
@@ -215,10 +253,6 @@ const Practice = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    console.log(setupData);
-  }, [setupData]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#101322]">

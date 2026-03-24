@@ -1,7 +1,6 @@
 // client/src/components/ui/AvatarUploader.tsx
 import { useState, useRef } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
 

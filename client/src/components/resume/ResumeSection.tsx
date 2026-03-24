@@ -2,7 +2,13 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText } from "lucide-react";
 
-const ResumeSection = ({ user, uploading, handleResumeUpload }: any) => {
+type ResumeSectionProps = {
+  user: { resume?: string };
+  uploading: boolean;
+  handleResumeUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+};
+
+const ResumeSection = ({ user, uploading, handleResumeUpload }: ResumeSectionProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const triggerFileInput = () => {

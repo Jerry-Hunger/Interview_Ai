@@ -17,6 +17,9 @@ export const createJob = async (req, res) => {
         .status(400)
         .json({ msg: "至少需要添加一个面试环节" });
     }
+
+    const company = await User.findById(req.user.id);
+
     const job = new JobOpening({
       companyId: req.user.id,
       title,
@@ -24,6 +27,9 @@ export const createJob = async (req, res) => {
       skills: skills || [],
       rounds,
       status: status || "open",
+      companyLogoUrl: company.companyLogoUrl,
+      companyName: company.companyName,
+      companyLocation: company.companyLocation,
     });
 
     await job.save();
@@ -40,7 +46,32 @@ export const createJob = async (req, res) => {
 
 export const listJobs = async (req, res) => {
   try {
-    const jobs = await JobOpening.find();
+    const { company, rounds, type, status } = req.query;
+    
+    const filter = {};
+    
+    if (company) {
+      filter.companyName = new RegExp(company, 'i');
+    }
+    
+    if (rounds) {
+      if (rounds === '4+') {
+        filter['rounds'] = { $size: { $gte: 4 } };
+      } else {
+        filter['rounds'] = { $size: parseInt(rounds) };
+      }
+    }
+    
+    if (type) {
+      const types = type.split(',');
+      filter['rounds.type'] = { $in: types };
+    }
+    
+    if (status) {
+      filter.status = status;
+    }
+
+    const jobs = await JobOpening.find(filter).sort({ createdAt: -1 });
     res.json(jobs);
   } catch (err) {
     res.status(500).json({ msg: "获取职位列表失败" });
