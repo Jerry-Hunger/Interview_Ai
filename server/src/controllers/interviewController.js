@@ -31,7 +31,7 @@ ${difficulty ? `请将问题的难度调整为：${difficulty}。` : ""}
 };
 
 export const respondToInterview = async (req, res) => {
-  const { chatHistory, answer, resume, role, roundType, topic, difficulty } =
+  const { chatHistory, answer, resume, role, roundType, topic, difficulty, isLastQuestion } =
     req.body;
 
   const historyFormatted = chatHistory
@@ -41,28 +41,52 @@ export const respondToInterview = async (req, res) => {
     )
     .join("\n\n");
 
-  const prompt = `
-继续主持面试。
+  let prompt;
+  if (isLastQuestion) {
+    prompt = `
+    面试即将结束。
 
-你是艾莎，一名专业的面试官。不要提及你是 AI。
+    你是艾莎，一名专业的面试官。不要提及你是 AI。
 
-${role ? `职位描述：\n${role}` : ""}
+    ${role ? `职位描述：\n${role}` : ""}
 
-候选人的简历：
-${resume}
+    候选人的简历：
+    ${resume}
 
-${roundType ? `这是 ${roundType} 环节。` : ""}
-${topic ? `候选人要求重点关注：${topic}。` : ""}
-${difficulty ? `请保持 ${difficulty} 的问题难度。` : ""}
+    ${roundType ? `这是 ${roundType} 环节。` : ""}
 
-到目前为止的对话：
-${historyFormatted}
+    到目前为止的对话：
+    ${historyFormatted}
 
-最新回答：
-"${answer}"
+    候选人的最后一个回答：
+    "${answer}"
 
-请继续对话——如果合适的话，简短地回顾一下候选人的回答，然后自然地提出下一个问题。避免格式或标签。保持流畅和人性化。
-`;
+    请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人面试到此结束，感谢他们的参与。不要再问任何问题。
+    `;
+  } else {
+    prompt = `
+    继续主持面试。
+
+    你是艾莎，一名专业的面试官。不要提及你是 AI。
+
+    ${role ? `职位描述：\n${role}` : ""}
+
+    候选人的简历：
+    ${resume}
+
+    ${roundType ? `这是 ${roundType} 环节。` : ""}
+    ${topic ? `候选人要求重点关注：${topic}。` : ""}
+    ${difficulty ? `请保持 ${difficulty} 的问题难度。` : ""}
+
+    到目前为止的对话：
+    ${historyFormatted}
+
+    最新回答：
+    "${answer}"
+
+    请继续对话——如果合适的话，简短地回顾一下候选人的回答，然后自然地提出下一个问题。避免格式或标签。保持流畅和人性化。
+    `;
+  }
 
   try {
     const responseText = await generateDeepSeekResponse(prompt);
@@ -186,9 +210,9 @@ ${feedbacks.map((f, i) => `第 ${i + 1} 部分反馈：\n${f}`).join("\n\n")}
 
   const resultLine = finalFeedback
     .split("\n")
-    .find((line) => line.trim().toLowerCase().includes("通过") || line.trim().toLowerCase().includes("不通过"));
+    .find((line) => line.includes("结果：通过") || line.includes("结果:通过") || line.includes("结果：不通过") || line.includes("结果:不通过"));
 
-  const result = resultLine?.includes("通过") ? "success" : "failure";
+  const result = resultLine?.includes("不通过") ? "failure" : "success";
   const userId = req.user.id;
 
   const interview = new Interview({

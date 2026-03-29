@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    githubId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
 
     // Student fields
     fullName: {

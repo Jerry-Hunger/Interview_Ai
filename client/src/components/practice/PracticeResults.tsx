@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   MessageSquare,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import {
   Carousel,
@@ -62,10 +64,42 @@ const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
             最终反馈
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || "");
+                const isInline = !match && !className;
+                return isInline ? (
+                  <code
+                    className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-sm font-mono"
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                ) : (
+                  <code
+                    className={`block p-4 rounded-lg bg-gray-900 dark:bg-gray-800 text-gray-100 text-sm font-mono overflow-x-auto ${className || ""}`}
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                );
+              },
+              h1: ({ children }) => <h1 className="text-2xl font-bold mb-4">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-xl font-bold mb-3 mt-6">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-lg font-semibold mb-2 mt-4">{children}</h3>,
+              p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-1">{children}</ol>,
+              li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
+              em: ({ children }) => <em className="italic">{children}</em>,
+            }}
+          >
             {interview.finalFeedback}
-          </p>
+          </ReactMarkdown>
         </CardContent>
       </Card>
 
@@ -178,10 +212,38 @@ const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
                         第 {i + 1} 部分反馈
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                    <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || "");
+                            const isInline = !match && !className;
+                            return isInline ? (
+                              <code
+                                className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs font-mono"
+                                {...props}
+                              >
+                                {children}
+                              </code>
+                            ) : (
+                              <code
+                                className={`block p-3 rounded bg-gray-900 dark:bg-gray-800 text-gray-100 text-xs font-mono overflow-x-auto ${className || ""}`}
+                                {...props}
+                              >
+                                {children}
+                              </code>
+                            );
+                          },
+                          p: ({ children }) => <p className="mb-3 leading-relaxed text-sm">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1 text-sm">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1 text-sm">{children}</ol>,
+                          li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
+                        }}
+                      >
                         {fb}
-                      </p>
+                      </ReactMarkdown>
                     </CardContent>
                   </Card>
                 </CarouselItem>

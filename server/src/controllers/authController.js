@@ -16,25 +16,39 @@ export const githubLogin = (req, res) => {
 export const githubCallback = async (req, res) => {
   try {
     const { code } = req.query;
-    
+
     if (!code) {
       return res.status(400).json({ error: "No code provided" });
     }
 
-    const tokenResponse = await axios.post(
-      "https://github.com/login/oauth/access_token",
-      {
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
-        code,
-      },
-      { headers: { Accept: "application/json" } }
-    );
+    let tokenResponse;
+    try {
+      tokenResponse = await axios.post(
+        "https://github.com/login/oauth/access_token",
+        {
+          client_id: GITHUB_CLIENT_ID,
+          client_secret: GITHUB_CLIENT_SECRET,
+          code,
+        },
+        { 
+          headers: { Accept: "application/json" },
+          timeout: 10000 
+        }
+      );
+    } catch (err) {
+      console.error("Token exchange failed:", err.message);
+      return res.status(500).json({ error: "网络连接失败，请重试" });
+    }
 
     const accessToken = tokenResponse.data.access_token;
 
+    if (!accessToken) {
+      return res.status(400).json({ error: "无法获取访问令牌" });
+    }
+
     const userResponse = await axios.get("https://api.github.com/user", {
       headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 10000,
     });
 
     const { id: githubId, login: githubLogin, email, avatar_url: avatarUrl, name } = userResponse.data;
@@ -45,12 +59,13 @@ export const githubCallback = async (req, res) => {
       if (!email) {
         const emailsResponse = await axios.get("https://api.github.com/user/emails", {
           headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 10000,
         });
         const primaryEmail = emailsResponse.data.find(e => e.primary)?.email;
         if (!primaryEmail) {
           return res.status(400).json({ error: "无法获取邮箱，请设置 GitHub 公开邮箱" });
         }
-        
+
         const existingUser = await User.findOne({ email: primaryEmail });
         if (existingUser) {
           existingUser.githubId = githubId;
@@ -68,14 +83,22 @@ export const githubCallback = async (req, res) => {
           });
         }
       } else {
-        user = await User.create({
-          role: "student",
-          email,
-          password: await bcrypt.hash(Math.random().toString(36), 10),
-          githubId,
-          fullName: name || githubLogin,
-          avatarUrl,
-        });
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+          existingUser.githubId = githubId;
+          existingUser.avatarUrl = avatarUrl || existingUser.avatarUrl;
+          await existingUser.save();
+          user = existingUser;
+        } else {
+          user = await User.create({
+            role: "student",
+            email,
+            password: await bcrypt.hash(Math.random().toString(36), 10),
+            githubId,
+            fullName: name || githubLogin,
+            avatarUrl,
+          });
+        }
       }
     }
 
@@ -85,10 +108,10 @@ export const githubCallback = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    res.redirect(`/auth/callback?token=${token}&role=${user.role}`);
+    res.redirect(`http://localhost:5173/login?token=${token}&role=${user.role}`);
   } catch (err) {
-    console.error("GitHub OAuth error:", err);
-    res.status(500).json({ error: "GitHub 登录失败" });
+    console.error("GitHub OAuth error:", err.message);
+    res.status(500).json({ error: "GitHub 登录失败，请重试" });
   }
 };
 

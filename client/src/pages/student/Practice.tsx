@@ -8,6 +8,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import PracticeResults from "@/components/practice/PracticeResults";
 
 type Step = "setup" | "interview" | "results";
+type InterviewPhase = "answering" | "ended";
 
 type SetupData = {
   resume: string;
@@ -50,6 +51,8 @@ type Interview = {
 const Practice = () => {
   const [currentStep, setCurrentStep] = useState<Step>("setup");
   const [isStarting, setIsStarting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [interviewPhase, setInterviewPhase] = useState<InterviewPhase>("answering");
   const [setupData, setSetupData] = useState<SetupData>({
     resume: "",
     role: "",
@@ -151,28 +154,37 @@ const Practice = () => {
     ];
 
     try {
-      if (interviewState.currentQuestion >= interviewState.totalQuestions) {
-        const res = await axiosInstance.post(
-          "/interview/conclude",
-          {
-            history: updatedChatHistory,
-            resumeText: setupData.resume,
-            roleSummary: setupData.role,
-            roundType: setupData.roundType,
-            customTopic: setupData.topic,
-            difficulty: setupData.difficulty,
-            typeOfInterview: "practice",
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        const { interview } = res.data;
+      const isLastQuestion = interviewState.currentQuestion >= interviewState.totalQuestions;
 
-        setInterviewResults(interview);
-        setCurrentStep("results");
+      if (isLastQuestion) {
+        setIsLoading(true);
+        const res = await axiosInstance.post("/interview/respond", {
+          chatHistory: updatedChatHistory,
+          answer: interviewState.answer,
+          resume: setupData.resume,
+          role: setupData.role,
+          roundType: setupData.roundType,
+          topic: setupData.topic,
+          difficulty: setupData.difficulty,
+          isLastQuestion: true,
+        });
+
+        const lastResponse = res.data.message;
+
+        updatedChatHistory.push({
+          type: "question",
+          content: lastResponse,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+
+        setInterviewState((prev) => ({
+          ...prev,
+          chatHistory: updatedChatHistory,
+          answer: "",
+        }));
+
+        setIsLoading(false);
+        setInterviewPhase("ended");
       } else {
         const res = await axiosInstance.post("/interview/respond", {
           chatHistory: updatedChatHistory,
@@ -210,6 +222,41 @@ const Practice = () => {
     }
   };
 
+  const handleEndInterview = async () => {
+    setIsLoading(true);
+    try {
+      const res = await axiosInstance.post(
+        "/interview/conclude",
+        {
+          history: interviewState.chatHistory,
+          resumeText: setupData.resume,
+          roleSummary: setupData.role,
+          roundType: setupData.roundType,
+          customTopic: setupData.topic,
+          difficulty: setupData.difficulty,
+          typeOfInterview: "practice",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const { interview } = res.data;
+
+      setInterviewResults(interview);
+      setCurrentStep("results");
+    } catch (error: unknown) {
+      console.error("Error ending interview:", error);
+      toast({
+        title: "错误",
+        description: "生成反馈失败，请重试。",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -239,8 +286,11 @@ const Practice = () => {
           interviewState={interviewState}
           setInterviewState={setInterviewState}
           handleAnswerSubmit={handleAnswerSubmit}
+          handleEndInterview={handleEndInterview}
           formatTime={formatTime}
           toast={toast}
+          isLoading={isLoading}
+          interviewPhase={interviewPhase}
         />
       </div>
     );

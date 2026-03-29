@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,8 +78,11 @@ type PracticeInterviewProps = {
   interviewState: InterviewState;
   setInterviewState: React.Dispatch<React.SetStateAction<InterviewState>>;
   handleAnswerSubmit: () => void;
+  handleEndInterview: () => void;
   formatTime: (seconds: number) => string;
   toast: ToastFunc;
+  isLoading?: boolean;
+  interviewPhase?: "answering" | "ended";
 };
 
 const PracticeInterview = ({
@@ -88,12 +90,15 @@ const PracticeInterview = ({
   interviewState,
   setInterviewState,
   handleAnswerSubmit,
+  handleEndInterview,
   formatTime,
   toast,
+  isLoading = false,
+  interviewPhase = "answering",
 }: PracticeInterviewProps) => {
   const currentQuestion = interviewState.question;
   const isLastQuestion =
-    interviewState.currentQuestion > interviewState.totalQuestions;
+    interviewState.currentQuestion >= interviewState.totalQuestions;
   const [fullTranscript, setFullTranscript] = useState("");
   const [speaking, setSpeaking] = useState({
     ai: false,
@@ -242,30 +247,56 @@ const PracticeInterview = ({
                 </Badge>
               </div>
               <Separator />
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="space-y-3">
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  进度
+                  面试轮次
                 </Label>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {Math.min(
-                      interviewState.currentQuestion,
-                      interviewState.totalQuestions
-                    )}
-                    /{interviewState.totalQuestions}
-                  </span>
+                <div className="flex items-center justify-between gap-1">
+                  {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
+                    const roundNum = i + 1;
+                    const isCompleted = roundNum < interviewState.currentQuestion;
+                    const isCurrent = roundNum === interviewState.currentQuestion;
+
+                    return (
+                      <div key={roundNum} className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                            isCompleted
+                              ? "bg-green-500 text-white"
+                              : isCurrent
+                              ? "bg-indigo-500 text-white animate-pulse shadow-lg shadow-indigo-400/50"
+                              : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                          }`}
+                        >
+                          {isCompleted ? "✓" : roundNum}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <Progress
-                  value={
-                    (Math.min(
-                      interviewState.currentQuestion,
-                      interviewState.totalQuestions
-                    ) /
-                      interviewState.totalQuestions) *
-                    100
-                  }
-                  className="bg-indigo-200 dark:bg-indigo-900"
-                />
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
+                    const roundNum = i + 1;
+                    const isCompleted = roundNum < interviewState.currentQuestion;
+                    const isCurrent = roundNum === interviewState.currentQuestion;
+
+                    return (
+                      <div
+                        key={`bar-${roundNum}`}
+                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                          isCompleted
+                            ? "bg-green-500"
+                            : isCurrent
+                            ? "bg-indigo-500"
+                            : "bg-gray-300 dark:bg-gray-600"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                  第 {Math.min(interviewState.currentQuestion, interviewState.totalQuestions)} / {interviewState.totalQuestions} 轮
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Clock
@@ -377,7 +408,36 @@ const PracticeInterview = ({
             </Card>
 
             {/* Answer Input */}
-            {!isLastQuestion && (
+            {interviewPhase === "ended" ? (
+              <Card className="shadow-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-900/30 dark:to-purple-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                <CardContent className="py-8 text-center">
+                  <div className="text-5xl mb-4">✅</div>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    面试已结束
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    您已完成所有面试问题，点击下方按钮查看面试反馈
+                  </p>
+                  <Button
+                    onClick={handleEndInterview}
+                    disabled={isLoading}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg px-8 py-3 text-lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        生成中...
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={18} className="mr-2" />
+                        查看面试反馈
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
               <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-indigo-500 dark:text-indigo-400">
@@ -443,10 +503,10 @@ const PracticeInterview = ({
                     <Button
                       onClick={handleAnswerSubmit}
                       className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg"
-                      disabled={!interviewState.answer.trim()}
+                      disabled={!interviewState.answer.trim() || isLoading}
                     >
                       <Send size={14} className="mr-2" />
-                      提交回答
+                      {isLastQuestion ? "提交最后一题" : "提交回答"}
                     </Button>
                   </div>
                 </CardContent>
