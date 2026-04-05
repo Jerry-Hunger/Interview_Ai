@@ -2,6 +2,7 @@ import express from "express";
 import {
   startInterview,
   respondToInterview,
+  respondToInterviewStream,
   formatResume,
   concludeInterview,
   getUserInterviews,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.post("/start", startInterview);
 router.post("/respond", respondToInterview);
+router.post("/respond-stream", respondToInterviewStream);
 router.post("/summarize-role", async (req, res) => {
   const { prompt } = req.body;
 

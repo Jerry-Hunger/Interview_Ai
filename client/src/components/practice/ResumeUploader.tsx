@@ -9,16 +9,21 @@ import axiosInstance from "@/utils/axiosInstance";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type ResumeUploaderProps = {
-  dataChanged: (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => void;
+  handleDataChanged: (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => void;
   onUploadSuccess?: (data: { resumeId: string; fileUrl: string; fileName: string }) => void;
+  initialResumeText?: string;
 };
 
-const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSuccess }) => {
+const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUploadSuccess, initialResumeText }) => {
   const [fileName, setFileName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [estimatedTime, setEstimatedTime] = useState<number>(0);
+
+  const handleDataChange = useCallback((data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => {
+    handleDataChanged(data);
+  }, [handleDataChanged]);
 
   const cancelRef = useRef<boolean>(false);
   const timerRef = useRef<number | null>(null);
@@ -243,7 +248,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
             setStatus("处理完成！");
             setProgress(100);
             setFileName(file.name);
-            await dataChanged({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
+            await handleDataChange({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
 
             setTimeout(resetStates, 1000);
           } catch (ocrErr: unknown) {
@@ -261,7 +266,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
           setStatus("处理完成！");
           setProgress(100);
           setFileName(file.name);
-          await dataChanged({ resumeText: trimmedText, resumeId, fileUrl, fileName: file.name });
+          await handleDataChange({ resumeText: trimmedText, resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
         }
       } catch (pdfErr) {
@@ -292,7 +297,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
           setStatus("处理完成！");
           setProgress(100);
           setFileName(file.name);
-          await dataChanged({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
+          await handleDataChange({ resumeText: ocrText, resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
         } catch (ocrErr: unknown) {
           const err = ocrErr as { message?: string };
@@ -338,7 +343,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
           setStatus("处理完成！");
           setProgress(100);
           setFileName(file.name);
-          await dataChanged({ resumeText: result.value.trim(), resumeId, fileUrl, fileName: file.name });
+          await handleDataChange({ resumeText: result.value.trim(), resumeId, fileUrl, fileName: file.name });
           setTimeout(resetStates, 1000);
         } catch (err) {
           console.error("DOCX 提取失败:", err);
@@ -446,8 +451,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ dataChanged, onUploadSu
                 d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 8l-3-3m3 3l3-3"
               />
             </svg>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {fileName ? "替换简历 (PDF/DOCX)" : "上传简历 (PDF/DOCX)"}
+            <p className={`text-sm ${fileName ? "text-gray-600 dark:text-gray-300" : initialResumeText ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-gray-300"}`}>
+              {fileName ? "替换简历 (PDF/DOCX)" : initialResumeText ? "已加载简历，可重新上传" : "上传简历 (PDF/DOCX)"}
             </p>
             {!loading && !status && (
               <p className="text-xs text-gray-400">支持扫描件 PDF、图片和 DOCX 文件</p>

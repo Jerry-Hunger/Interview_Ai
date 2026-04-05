@@ -25,7 +25,7 @@ const PracticeResultPage = () => {
       <Navigation />
       <div className="min-h-screen bg-white dark:bg-[#101322]">
         <div className="max-w-5xl mx-auto px-6 py-10">
-          <PracticeResult interview={interview} />
+          <PracticeResult interview={interview} navigate={navigate} />
         </div>
       </div>
     </>

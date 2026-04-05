@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import aiInterviewer from "@/assets/ai_interviewer.jpg";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Clock,
   FileText,
   Play,
   Pause,
@@ -79,10 +78,10 @@ type PracticeInterviewProps = {
   setInterviewState: React.Dispatch<React.SetStateAction<InterviewState>>;
   handleAnswerSubmit: () => void;
   handleEndInterview: () => void;
-  formatTime: (seconds: number) => string;
   toast: ToastFunc;
   isLoading?: boolean;
   interviewPhase?: "answering" | "ended";
+  streamingMessage?: string;
 };
 
 const PracticeInterview = ({
@@ -91,10 +90,10 @@ const PracticeInterview = ({
   setInterviewState,
   handleAnswerSubmit,
   handleEndInterview,
-  formatTime,
   toast,
   isLoading = false,
   interviewPhase = "answering",
+  streamingMessage,
 }: PracticeInterviewProps) => {
   const currentQuestion = interviewState.question;
   const isLastQuestion =
@@ -230,7 +229,7 @@ const PracticeInterview = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
+                <div>
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
                   职位
                 </Label>
@@ -242,9 +241,14 @@ const PracticeInterview = ({
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
                   面试类型
                 </Label>
-                <Badge variant="secondary" className="mt-1 dark:text-gray-400">
-                  {setupData.roundType}
-                </Badge>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {setupData.roundType === "behavioral" ? "行为面试" :
+                   setupData.roundType === "technical" ? "技术面试" :
+                   setupData.roundType === "system-design" ? "系统设计" :
+                   setupData.roundType === "coding" ? "编程挑战" :
+                   setupData.roundType === "mixed" ? "综合面试" :
+                   setupData.roundType}
+                </p>
               </div>
               <Separator />
               <div className="space-y-3">
@@ -254,8 +258,8 @@ const PracticeInterview = ({
                 <div className="flex items-center justify-between gap-1">
                   {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
                     const roundNum = i + 1;
-                    const isCompleted = roundNum < interviewState.currentQuestion;
-                    const isCurrent = roundNum === interviewState.currentQuestion;
+                    const isCompleted = interviewPhase === "ended" || roundNum < interviewState.currentQuestion;
+                    const isCurrent = interviewPhase !== "ended" && roundNum === interviewState.currentQuestion;
 
                     return (
                       <div key={roundNum} className="flex flex-col items-center">
@@ -277,8 +281,8 @@ const PracticeInterview = ({
                 <div className="flex items-center justify-center gap-1 mt-1">
                   {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
                     const roundNum = i + 1;
-                    const isCompleted = roundNum < interviewState.currentQuestion;
-                    const isCurrent = roundNum === interviewState.currentQuestion;
+                    const isCompleted = interviewPhase === "ended" || roundNum < interviewState.currentQuestion;
+                    const isCurrent = interviewPhase !== "ended" && roundNum === interviewState.currentQuestion;
 
                     return (
                       <div
@@ -295,25 +299,16 @@ const PracticeInterview = ({
                   })}
                 </div>
                 <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                  第 {Math.min(interviewState.currentQuestion, interviewState.totalQuestions)} / {interviewState.totalQuestions} 轮
+                  第 {interviewPhase === "ended" ? interviewState.totalQuestions : Math.min(interviewState.currentQuestion, interviewState.totalQuestions)} / {interviewState.totalQuestions} 轮
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock
-                  size={16}
-                  className="text-indigo-500 dark:text-indigo-400"
-                />
-                <span className="text-sm font-mono text-gray-900 dark:text-white">
-                  {formatTime(interviewState.timeRemaining)}
-                </span>
               </div>
               <Separator />
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  当前问题 #
+                  当前问题 #{interviewState.currentQuestion}
                 </Label>
                 <div className="p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg text-sm text-gray-900 dark:text-white">
-                  {isLastQuestion ? "面试完成！" : currentQuestion}
+                  {streamingMessage || currentQuestion}
                 </div>
               </div>
             </CardContent>
@@ -333,7 +328,7 @@ const PracticeInterview = ({
                 >
                   <div className="w-48 h-48 bg-gray-200 dark:bg-[#23263A] rounded-lg overflow-hidden shadow-md flex items-center justify-center">
                     <img
-                      src="https://images.unsplash.com/photo-1698047681452-08eba22d0c64?w=600&auto=format&fit=crop&q=60" // <-- replace with your AI interviewer image
+                      src={aiInterviewer}
                       alt="AI Interviewer"
                       className="w-full h-full object-cover"
                     />
@@ -516,7 +511,7 @@ const PracticeInterview = ({
 
           {/* Right Sidebar - Chat History */}
           {/* <div className="col-span-4"> */}
-          <ChatWindow chatHistory={interviewState.chatHistory} />
+          <ChatWindow chatHistory={interviewState.chatHistory} streamingMessage={streamingMessage} />
           {/* </div> */}
         </div>
       </div>

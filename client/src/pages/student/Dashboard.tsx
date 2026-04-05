@@ -177,7 +177,7 @@ const StudentDashboard = () => {
                 {status}的面试
               </h2>
               <Carousel>
-                {items.map((i) => (
+                {items.map((i, index) => (
                   <Card
                     key={i._id}
                     onClick={() =>
@@ -199,7 +199,7 @@ const StudentDashboard = () => {
                     <CardHeader className="relative z-10">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-base font-semibold dark:text-white">
-                          {i.type === "practice" ? "练习面试" : "企业面试"}
+                          {i.type === "practice" ? `练习面试 ${items.length - index}` : "企业面试"}
                         </CardTitle>
 
                         {(() => {

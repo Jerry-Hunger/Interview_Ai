@@ -212,35 +212,42 @@ export function ThemeProvider({ children, ...props }) {
 ```
 /client
 ├── src/
+│   ├── assets/           # Static assets
 │   ├── components/       # Shared UI components
-│   │   └── ui/           # shadcn/ui components
+│   │   ├── ui/           # shadcn/ui components (accordion, alert, alert-dialog, etc.)
+│   │   ├── practice/     # Practice interview components
+│   │   └── resume/       # Resume-related components
 │   ├── contexts/         # React context providers
 │   ├── hooks/            # Custom React hooks
-│   ├── lib/              # Utility functions
-│   ├── pages/            # Page components
-│   │   ├── auth/
-│   │   ├── student/
-│   │   └── company/
-│   ├── utils/            # Helper utilities
+│   ├── lib/               # Utility functions (utils.ts)
+│   ├── pages/             # Page components
+│   │   ├── auth/          # Login, Register
+│   │   ├── student/       # Dashboard, Practice, Jobs, Applications
+│   │   ├── company/       # Dashboard, Jobs, Applications, Profile
+│   │   └── Index.tsx, NotFound.tsx
+│   ├── utils/             # Helper utilities (axiosInstance, resumeExtractor)
 │   ├── App.tsx
-│   └── main.tsx
+│   ├── App.css
+│   ├── main.tsx
+│   └── index.css
 ├── public/
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.js
-└── tsconfig.app.json
+├── tsconfig.app.json
+└── tsconfig.json
 
 /server
 ├── src/
-│   ├── config/           # DB config
-│   ├── controllers/      # Route handlers
-│   ├── middlewares/      # Express middleware
-│   ├── models/            # Mongoose schemas
-│   ├── routes/           # Express routes
-│   ├── utils/            # Server utilities
-│   └── index.js          # Entry point
+│   ├── config/            # db.js - MongoDB connection
+│   ├── controllers/       # Route handlers (auth, company, interview, job, application, resume, upload)
+│   ├── middlewares/       # authMiddleware.js
+│   ├── models/            # Mongoose schemas (User, JobOpening, Interview, Application, Resume)
+│   ├── routes/            # Express routes (auth, company, interview, job, application, resume, upload)
+│   ├── utils/             # Server utilities (oss.js, deepseek.js)
+│   └── index.js           # Entry point
 ├── package.json
-└── .env                  # Environment variables
+└── .env                   # Environment variables
 ```
 
 ---

@@ -16,6 +16,7 @@ type SetupData = {
   difficulty: string;
   roundType: string;
   topic: string;
+  rounds: number;
 };
 
 type ChatMessage = {
@@ -59,12 +60,14 @@ const Practice = () => {
     difficulty: "",
     roundType: "",
     topic: "",
+    rounds: 5,
   });
   const [interviewResults, setInterviewResults] = useState<Interview | null>(null);
+  const [streamingMessage, setStreamingMessage] = useState("");
 
   const [interviewState, setInterviewState] = useState<InterviewState>({
     currentQuestion: 1,
-    totalQuestions: 5,
+    totalQuestions: setupData.rounds || 5,
     timeRemaining: 1800,
     isRecording: false,
     isCameraOn: true,
@@ -78,8 +81,28 @@ const Practice = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log(setupData);
-  }, [setupData]);
+    const fetchUserResume = async () => {
+      try {
+        const res = await axiosInstance.get("/auth/me", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        const userResumeText = res.data.user?.resumeText;
+        if (userResumeText) {
+          setSetupData((prev) => ({ ...prev, resume: userResumeText }));
+        }
+      } catch (err) {
+        console.error("获取用户简历失败:", err);
+      }
+    };
+    fetchUserResume();
+  }, []);
+
+  useEffect(() => {
+    setInterviewState((prev) => ({
+      ...prev,
+      totalQuestions: setupData.rounds,
+    }));
+  }, [setupData.rounds]);
 
   const handleSetupSubmit = async () => {
     if (
@@ -155,62 +178,63 @@ const Practice = () => {
 
     try {
       const isLastQuestion = interviewState.currentQuestion >= interviewState.totalQuestions;
+      setStreamingMessage("");
+      const fullResponse: string[] = [];
 
-      if (isLastQuestion) {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/respond-stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatHistory: updatedChatHistory,
+          answer: interviewState.answer,
+          resume: setupData.resume,
+          role: setupData.role,
+          roundType: setupData.roundType,
+          topic: setupData.topic,
+          difficulty: setupData.difficulty,
+          isLastQuestion,
+        }),
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
         setIsLoading(true);
-        const res = await axiosInstance.post("/interview/respond", {
-          chatHistory: updatedChatHistory,
-          answer: interviewState.answer,
-          resume: setupData.resume,
-          role: setupData.role,
-          roundType: setupData.roundType,
-          topic: setupData.topic,
-          difficulty: setupData.difficulty,
-          isLastQuestion: true,
-        });
-
-        const lastResponse = res.data.message;
-
-        updatedChatHistory.push({
-          type: "question",
-          content: lastResponse,
-          timestamp: new Date().toLocaleTimeString(),
-        });
-
-        setInterviewState((prev) => ({
-          ...prev,
-          chatHistory: updatedChatHistory,
-          answer: "",
-        }));
-
+        let done = false;
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            const chunk = decoder.decode(value, { stream: !done });
+            fullResponse.push(chunk);
+            setStreamingMessage(fullResponse.join(""));
+          }
+        }
         setIsLoading(false);
-        setInterviewPhase("ended");
-      } else {
-        const res = await axiosInstance.post("/interview/respond", {
-          chatHistory: updatedChatHistory,
-          answer: interviewState.answer,
-          resume: setupData.resume,
-          role: setupData.role,
-          roundType: setupData.roundType,
-          topic: setupData.topic,
-          difficulty: setupData.difficulty,
-        });
 
-        const nextQuestion = res.data.message;
+        const finalResponse = fullResponse.join("").trim();
 
         updatedChatHistory.push({
           type: "question",
-          content: nextQuestion,
+          content: finalResponse,
           timestamp: new Date().toLocaleTimeString(),
         });
 
+        setStreamingMessage("");
         setInterviewState((prev) => ({
           ...prev,
           chatHistory: updatedChatHistory,
-          currentQuestion: prev.currentQuestion + 1,
-          question: nextQuestion,
           answer: "",
+          question: finalResponse,
+          ...(isLastQuestion ? {} : { currentQuestion: prev.currentQuestion + 1 }),
         }));
+
+        if (isLastQuestion) {
+          setInterviewPhase("ended");
+        }
       }
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
@@ -257,12 +281,6 @@ const Practice = () => {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   if (currentStep === "setup") {
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
@@ -287,10 +305,10 @@ const Practice = () => {
           setInterviewState={setInterviewState}
           handleAnswerSubmit={handleAnswerSubmit}
           handleEndInterview={handleEndInterview}
-          formatTime={formatTime}
           toast={toast}
           isLoading={isLoading}
           interviewPhase={interviewPhase}
+          streamingMessage={streamingMessage}
         />
       </div>
     );

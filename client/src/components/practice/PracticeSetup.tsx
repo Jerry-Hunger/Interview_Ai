@@ -27,6 +27,7 @@ type SetupData = {
   difficulty: string;
   roundType: string;
   topic: string;
+  rounds: number;
 };
 
 type PracticeSetupProps = {
@@ -47,9 +48,9 @@ const PracticeSetup = ({
   <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div className="mb-8">
       <Button
-        variant="ghost"
+        variant="outline"
         onClick={() => navigate("/student/dashboard")}
-        className="mb-4 text-indigo-500 dark:text-indigo-400"
+        className="mb-4 text-indigo-500 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950"
       >
         返回仪表盘
       </Button>
@@ -132,6 +133,7 @@ const PracticeSetup = ({
             dataChanged={(data: { resumeText: string }) => {
               setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
             }}
+            initialResumeText={setupData.resume}
           />
           {/* Role Selection */}
           <div className="space-y-2">
@@ -145,7 +147,7 @@ const PracticeSetup = ({
               onChange={(e) =>
                 setSetupData((prev) => ({ ...prev, role: e.target.value }))
               }
-              className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+              className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
             />
           </div>
           {/* Difficulty */}
@@ -161,15 +163,15 @@ const PracticeSetup = ({
                 setSetupData((prev) => ({ ...prev, difficulty: value }))
               }
             >
-              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
                 <SelectValue placeholder="选择难度" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
-                <SelectItem value="beginner">初级（0-2年）</SelectItem>
-                <SelectItem value="intermediate">
+                <SelectItem value="beginner" className="text-gray-900 dark:text-gray-100">初级（0-2年）</SelectItem>
+                <SelectItem value="intermediate" className="text-gray-900 dark:text-gray-100">
                   中级（2-5年）
                 </SelectItem>
-                <SelectItem value="senior">高级（5年以上）</SelectItem>
+                <SelectItem value="senior" className="text-gray-900 dark:text-gray-100">高级（5年以上）</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -186,15 +188,41 @@ const PracticeSetup = ({
                 setSetupData((prev) => ({ ...prev, roundType: value }))
               }
             >
-              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
                 <SelectValue placeholder="选择面试类型" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
-                <SelectItem value="behavioral">行为面试</SelectItem>
-                <SelectItem value="technical">技术面试</SelectItem>
-                <SelectItem value="system-design">系统设计</SelectItem>
-                <SelectItem value="coding">编程挑战</SelectItem>
-                <SelectItem value="mixed">综合面试</SelectItem>
+                <SelectItem value="behavioral" className="text-gray-900 dark:text-gray-100">行为面试</SelectItem>
+                <SelectItem value="technical" className="text-gray-900 dark:text-gray-100">技术面试</SelectItem>
+                <SelectItem value="system-design" className="text-gray-900 dark:text-gray-100">系统设计</SelectItem>
+                <SelectItem value="coding" className="text-gray-900 dark:text-gray-100">编程挑战</SelectItem>
+                <SelectItem value="mixed" className="text-gray-900 dark:text-gray-100">综合面试</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Rounds */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="rounds"
+              className="text-gray-900 dark:text-white"
+            >
+              面试轮次 *
+            </Label>
+            <Select
+              value={String(setupData.rounds)}
+              onValueChange={(value) =>
+                setSetupData((prev) => ({ ...prev, rounds: Number(value) }))
+              }
+            >
+              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
+                <SelectValue placeholder="选择轮次" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-[#23263A]">
+                {[5, 6, 7, 8, 9, 10].map((num) => (
+                  <SelectItem key={num} value={String(num)} className="text-gray-900 dark:text-gray-100">
+                    {num} 轮
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -214,7 +242,7 @@ const PracticeSetup = ({
                 }))
               }
               rows={3}
-              className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+              className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
             />
           </div>
           <Button
@@ -280,7 +308,7 @@ const PracticeSetup = ({
               面试内容预览
             </h4>
             <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-              <li>• 根据您的选择提供5-8个问题</li>
+              <li>• 根据您的选择提供{setupData.rounds}个问题</li>
               <li>• 实时反馈和评分</li>
               <li>• 详细的性能分析</li>
               <li>• 改进建议</li>

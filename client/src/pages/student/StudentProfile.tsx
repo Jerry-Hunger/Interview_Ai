@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { User, FileText, Phone, MapPin, DollarSign, GraduationCap, Code } from "lucide-react";
+import { FileText, Phone, MapPin, DollarSign, GraduationCap, Code, User } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
 import Navigation from "@/components/Navigation";
 import ResumeUploader from "@/components/practice/ResumeUploader";
@@ -28,8 +28,8 @@ const ProfilePage = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [resumeText, setResumeText] = useState<string>("");
   const [resumeFileName, setResumeFileName] = useState<string>("");
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -64,7 +64,7 @@ const ProfilePage = () => {
     try {
       setResumeText(data.resumeText);
       setResumeFileName(data.fileName || "");
-      
+
       await axiosInstance.post(
         "/resume/update-text",
         { resumeText: data.resumeText },
@@ -76,23 +76,54 @@ const ProfilePage = () => {
     }
   };
 
-  const startEdit = (field: string, value: string | undefined) => {
-    setEditingField(field);
-    setEditValue(value || "");
+  const startEdit = () => {
+    if (!user) return;
+    setEditValues({
+      fullName: user.fullName || "",
+      phone: user.phone || "",
+      location: user.location || "",
+      expectedSalary: user.expectedSalary || "",
+      education: user.education || "",
+      skills: user.skills?.join(", ") || "",
+    });
+    setIsEditing(true);
   };
 
-  const saveEdit = async () => {
-    if (!editingField || !user) return;
-    
+  const saveAllChanges = async () => {
+    if (!user) return;
+
+    const updates: Record<string, string | string[]> = {};
+    if (editValues.fullName !== user.fullName) {
+      updates.fullName = editValues.fullName;
+    }
+    if (editValues.phone !== (user.phone || "")) {
+      updates.phone = editValues.phone;
+    }
+    if (editValues.location !== (user.location || "")) {
+      updates.location = editValues.location;
+    }
+    if (editValues.expectedSalary !== (user.expectedSalary || "")) {
+      updates.expectedSalary = editValues.expectedSalary;
+    }
+    if (editValues.education !== (user.education || "")) {
+      updates.education = editValues.education;
+    }
+    if (editValues.skills !== (user.skills?.join(", ") || "")) {
+      updates.skills = editValues.skills.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+
     setSaving(true);
     try {
-      const res = await axiosInstance.put(
-        "/auth/profile",
-        { [editingField]: editValue },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
+      const res = await axiosInstance.put("/auth/profile", updates, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
       setUser(res.data.user);
-      setEditingField(null);
+      setIsEditing(false);
       toast({ title: "保存成功" });
     } catch (err) {
       console.error("保存失败:", err);
@@ -103,39 +134,29 @@ const ProfilePage = () => {
   };
 
   const cancelEdit = () => {
-    setEditingField(null);
-    setEditValue("");
+    setIsEditing(false);
+    setEditValues({});
   };
 
-  const renderEditableField = (field: string, label: string, value: string | undefined, icon: React.ReactNode) => (
+  const handleEditValueChange = (field: string, value: string) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const renderField = (field: string, label: string, value: string | undefined, icon: React.ReactNode) => (
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
         {icon}
         <span className="font-medium">{label}：</span>
-        {editingField !== field ? (
-          <span>{value || "未设置"}</span>
-        ) : (
+        {isEditing ? (
           <Input
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="w-48 h-8 ml-2"
+            value={editValues[field] || ""}
+            onChange={(e) => handleEditValueChange(field, e.target.value)}
+            className="w-48 h-8 ml-2 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
           />
+        ) : (
+          <span>{value || "未设置"}</span>
         )}
       </div>
-      {editingField !== field ? (
-        <Button variant="ghost" size="sm" onClick={() => startEdit(field, value)}>
-          编辑
-        </Button>
-      ) : (
-        <div className="flex gap-2">
-          <Button size="sm" onClick={saveEdit} disabled={saving}>
-            保存
-          </Button>
-          <Button variant="ghost" size="sm" onClick={cancelEdit}>
-            取消
-          </Button>
-        </div>
-      )}
     </div>
   );
 
@@ -153,8 +174,41 @@ const ProfilePage = () => {
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-bold text-indigo-700 dark:text-indigo-300">
-              <User size={20} /> 个人资料
+            <CardTitle className="flex items-center justify-between text-xl font-bold text-indigo-700 dark:text-indigo-300">
+              <div className="flex items-center gap-2">
+                <User size={20} /> 个人资料
+              </div>
+              {!isEditing ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={startEdit}
+                  className="border-indigo-500 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-400 dark:text-indigo-400 dark:hover:bg-indigo-950"
+                >
+                  编辑
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveAllChanges}
+                    disabled={saving}
+                    className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-950"
+                  >
+                    {saving ? "保存中..." : "确认"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelEdit}
+                    disabled={saving}
+                    className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"
+                  >
+                    取消
+                  </Button>
+                </div>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -166,22 +220,24 @@ const ProfilePage = () => {
                 onUploadSuccess={handleAvatarUploadSuccess}
               />
               <div className="flex-1 space-y-1">
-                {renderEditableField("fullName", "姓名", user.fullName, <User size={16} />)}
-                <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2 py-2">
+                  <span className="font-medium">姓名：</span> {user.fullName}
+                </p>
+                <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2 py-2">
                   <span className="font-medium">邮箱：</span> {user.email}
                 </p>
-                <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2 py-2">
                   <span className="font-medium">角色：</span> {user.role === "student" ? "学生" : "企业"}
                 </p>
               </div>
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-1">
-              {renderEditableField("phone", "手机号", user.phone, <Phone size={16} />)}
-              {renderEditableField("location", "所在地", user.location, <MapPin size={16} />)}
-              {renderEditableField("expectedSalary", "期望薪资", user.expectedSalary, <DollarSign size={16} />)}
-              {renderEditableField("education", "学历", user.education, <GraduationCap size={16} />)}
-              {renderEditableField("skills", "技能", user.skills?.join(", "), <Code size={16} />)}
+              {renderField("phone", "手机号", user.phone, <Phone size={16} />)}
+              {renderField("location", "所在地", user.location, <MapPin size={16} />)}
+              {renderField("expectedSalary", "期望薪资", user.expectedSalary, <DollarSign size={16} />)}
+              {renderField("education", "学历", user.education, <GraduationCap size={16} />)}
+              {renderField("skills", "技能", user.skills?.join(", "), <Code size={16} />)}
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -222,7 +278,7 @@ const ProfilePage = () => {
               )}
 
               <div className="mt-4">
-                <ResumeUploader 
+                <ResumeUploader
                   dataChanged={handleResumeTextSave}
                   onUploadSuccess={handleResumeUploadSuccess}
                 />
