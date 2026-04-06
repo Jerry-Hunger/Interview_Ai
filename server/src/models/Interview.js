@@ -12,6 +12,8 @@ const InterviewSchema = new Schema(
     roleSummary: String,
     roundType: String,
     customTopic: String,
+    rounds: { type: Number, default: 1 },
+    currentRound: { type: Number, default: 1 },
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }

@@ -2,9 +2,42 @@ import { generateDeepSeekResponse, streamDeepSeekResponse } from "../utils/deeps
 import Interview from "../models/Interview.js";
 
 export const startInterview = async (req, res) => {
-  const { role, resume, roundType, topic, difficulty } = req.body;
+  const { role, resume, roundType, topic, difficulty, isContinuation, currentRound, totalRounds, previousFeedback } = req.body;
 
-  const prompt = `
+  let prompt;
+  
+  if (isContinuation && currentRound && totalRounds) {
+    let continuationContext = `这是第 ${currentRound} 轮面试（共 ${totalRounds} 轮）。`;
+    
+    if (currentRound > 1 && previousFeedback) {
+      continuationContext += `
+
+【前一轮面试的反馈】
+${previousFeedback}
+
+请根据以上反馈，适当调整提问的深度和方向。对于前面已经表现良好的方面可以简化，对于需要改进的方面可以深入追问。`;
+    }
+    
+    prompt = `
+你正在主持一场多轮求职面试的第 ${currentRound} 轮。
+
+你的名字是艾莎，是一名经验丰富的面试官。不要提及你是 AI。
+
+候选人的简历：
+${resume}
+
+应聘职位：${role}
+
+${roundType ? `这是 ${roundType} 环节。` : ""}
+${topic ? `请重点关注以下主题：${topic}。` : ""}
+${difficulty ? `请将问题的难度调整为：${difficulty}。` : ""}
+
+${continuationContext}
+
+请简短地欢迎候选人进入第 ${currentRound} 轮面试，然后直接开始提问。保持对话流畅自然，避免机械化的语气。
+`;
+  } else {
+    prompt = `
 你正在主持一场求职面试。
 
 你的名字是艾莎，是一名经验丰富的面试官。不要提及你是 AI。
@@ -20,6 +53,7 @@ ${difficulty ? `请将问题的难度调整为：${difficulty}。` : ""}
 
 请自然专业地开始面试，像真正的面试官一样。介绍一下自己，然后用你自己的方式开始对话。避免机械化的语气。
 `;
+  }
 
   try {
     const response = await generateDeepSeekResponse(prompt);
@@ -49,7 +83,7 @@ export const respondToInterview = async (req, res) => {
   let prompt;
   if (isLastQuestion) {
     prompt = `
-面试即将结束。
+本轮面试即将结束。
 
 你是艾莎，一名专业的面试官。不要提及你是 AI。
 
@@ -70,7 +104,7 @@ ${isShortAnswer || isNumericAnswer || isSingleWordAnswer ? `
 【重要】候选人的这个回答内容非常简短（"${answer}"），没有提供有实质意义的面试信息。
 
 请直接、坦率地指出这个问题，然后礼貌地结束面试。例如：
-"我注意到您的回答比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，面试到此结束。"` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人面试到此结束，感谢他们的参与。`}
+"我注意到您的回答比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，本轮面试到此结束。"` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人本轮面试到此结束，感谢他们的参与。`}
 
 不要再问任何问题。
 `;
@@ -95,20 +129,18 @@ ${historyFormatted}
 最新回答：
 "${answer}"
 
-${isShortAnswer || isNumericAnswer || isSingleWordAnswer ? `
-【重要】候选人的这个回答 "${answer}" 非常简短，没有实质内容。
+【重要】请仔细分析这个回答：
+1. 首先判断回答是否与问题相关——即使回答较短，只要涉及了问题的核心内容，就应该给予肯定
+2. 如果回答基本正确但不够详细，请具体指出缺少哪些方面的内容（如：实现细节、时间复杂度、边界情况、优缺点分析等），然后用更具体的问题引导面试者深入回答
+3. 如果回答与问题完全不相关或敷衍，才要求重新回答
 
-请不要假装这个简短的回答有什么深层含义，也不要说"我明白了"或"好的"然后继续假装理解了。
-你应该直接、友好地指出这个问题：
+回复原则：
+- 即使回答简短，只要相关就要肯定
+- 指出不足时要具体，不要泛泛而谈
+- 尽量引导面试者深入思考，而不是简单要求"详细回答"
+- 如果需要追问，可以用更具体的问题（如："你提到了X，能详细说说Y吗？"）
 
-示例回应：
-- "我注意到您的回答比较简短。作为面试官，我需要更详细的回答来了解您的经验和能力。请您重新回答一下刚才的问题，尽可能详细地描述您的相关经历。"
-- "请不要只回答数字或单个词。请认真思考并用完整的句子回答问题，这样我才能更好地评估您的能力。"
-
-然后再次提出同样的问题，或者根据情况问一个相关的后续问题。
-` : `请继续对话——如果合适的话，简短地回顾一下候选人的回答，然后自然地提出下一个问题。`}
-
-避免格式或标签。保持流畅和人性化。
+请继续对话，保持自然流畅。
 `;
   }
 
@@ -140,7 +172,7 @@ export const respondToInterviewStream = async (req, res) => {
   let prompt;
   if (isLastQuestion) {
     prompt = `
-面试即将结束。
+本轮面试即将结束。
 
 你是艾莎，一名专业的面试官。不要提及你是 AI。
 
@@ -161,7 +193,7 @@ ${isShortAnswer || isNumericAnswer || isSingleWordAnswer ? `
 【重要】候选人的这个回答内容非常简短（"${answer}"），没有提供有实质意义的面试信息。
 
 请直接、坦率地指出这个问题，然后礼貌地结束面试。例如：
-"我注意到您的回答比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，面试到此结束。"` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人面试到此结束，感谢他们的参与。`}
+"我注意到您的回答比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，本轮面试到此结束。"` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人本轮面试到此结束，感谢他们的参与。`}
 
 不要再问任何问题。
 `;
@@ -186,20 +218,18 @@ ${historyFormatted}
 最新回答：
 "${answer}"
 
-${isShortAnswer || isNumericAnswer || isSingleWordAnswer ? `
-【重要】候选人的这个回答 "${answer}" 非常简短，没有实质内容。
+【重要】请仔细分析这个回答：
+1. 首先判断回答是否与问题相关——即使回答较短，只要涉及了问题的核心内容，就应该给予肯定
+2. 如果回答基本正确但不够详细，请具体指出缺少哪些方面的内容（如：实现细节、时间复杂度、边界情况、优缺点分析等），然后用更具体的问题引导面试者深入回答
+3. 如果回答与问题完全不相关或敷衍，才要求重新回答
 
-请不要假装这个简短的回答有什么深层含义，也不要说"我明白了"或"好的"然后继续假装理解了。
-你应该直接、友好地指出这个问题：
+回复原则：
+- 即使回答简短，只要相关就要肯定
+- 指出不足时要具体，不要泛泛而谈
+- 尽量引导面试者深入思考，而不是简单要求"详细回答"
+- 如果需要追问，可以用更具体的问题（如："你提到了X，能详细说说Y吗？"）
 
-示例回应：
-- "我注意到您的回答比较简短。作为面试官，我需要更详细的回答来了解您的经验和能力。请您重新回答一下刚才的问题，尽可能详细地描述您的相关经历。"
-- "请不要只回答数字或单个词。请认真思考并用完整的句子回答问题，这样我才能更好地评估您的能力。"
-
-然后再次提出同样的问题，或者根据情况问一个相关的后续问题。
-` : `请继续对话——如果合适的话，简短地回顾一下候选人的回答，然后自然地提出下一个问题。`}
-
-避免格式或标签。保持流畅和人性化。
+请继续对话，保持自然流畅。
 `;
   }
 
@@ -258,7 +288,35 @@ export const concludeInterview = async (req, res) => {
     customTopic,
     difficulty,
     typeOfInterview,
+    result: clientResult,
+    totalRounds,
+    currentRound,
   } = req.body;
+
+  if (clientResult === "Quit") {
+    const userId = req.user.id;
+    const interview = new Interview({
+      user: userId,
+      chatHistory: history,
+      finalFeedback: "面试已退出，未完成评估。",
+      result: "Quit",
+      feedbacks: [],
+      type: typeOfInterview,
+      difficulty,
+      resumeText,
+      roleSummary,
+      roundType,
+      customTopic,
+      rounds: totalRounds || 1,
+      currentRound: currentRound || 1,
+      createdAt: new Date(),
+    });
+    await interview.save();
+    console.log("Saved quit interview:", interview._id);
+    return res.json({
+      interview: interview,
+    });
+  }
 
   const CHUNK_SIZE = 5;
 
@@ -322,13 +380,7 @@ ${resumeText}
   }
 
   const finalPrompt = `
-你是一名严谨的面试评估专家。你将基于各部分的实际评估结果，给出最终的综合评价。
-
-【核心原则】
-- 所有评价必须基于候选人实际回答的内容
-- 如果候选人的回答内容简单、敷衍、无实质信息，应如实指出这是问题所在
-- 绝对不要凭空添加候选人在面试中没有展现的优点或能力
-- 评价必须与面试中的实际表现相符
+你是一名专业的面试评估专家。你将基于各部分的实际评估结果，给出最终的综合评价。
 
 【面试基本信息】
 - 应聘职位：${roleSummary}
@@ -338,12 +390,25 @@ ${resumeText}
 【各部分实际评估结果】
 ${feedbacks.map((f, i) => `第 ${i + 1} 部分评估：\n${f}`).join("\n\n")}
 
+【评估标准】（请综合考虑以下因素）
+1. 回答的相关性：回答是否与问题相关
+2. 回答的深度：根据难度级别评估回答的详细程度
+3. 面试表现整体性：即使部分回答不够完美，也要看整体表现
+4. 成长潜力：对于初学者，评估学习态度和潜力
+5. 与职位的匹配度：回答是否展现了职位所需的基本能力
+
+【通过标准】（请宽容评估）
+- 大部分回答涉及问题核心，即使有小瑕疵也给予通过
+- 对于初级难度，要求可以适当放宽
+- 除非明显敷衍、完全不相关或态度问题，否则给予通过机会
+- 考虑面试者的整体表现，而非揪住某一个弱点不放
+
 【输出要求】
-1. 基于以上实际评估，写一份客观的综合评价
-2. 如实总结候选人在面试中展现的优点（如有）和不足（如有）
+1. 基于以上评估，写一份客观的综合评价，重点肯定面试者的优点
+2. 如实总结优点和可以改进的地方（用鼓励的语气）
 3. 最后另起一行，输出评估结论：
-   如果候选人在面试中表现良好、回答有实质内容、与职位要求基本匹配 → "结果：通过"
-   如果候选人回答敷衍、内容空洞、偏离职位要求或存在明显不足 → "结果：不通过"
+   如果面试者整体表现尚可，有基本的职位相关能力 → "结果：通过"
+   如果面试者明显敷衍、态度消极、或者几乎所有问题都完全无法回答 → "结果：不通过"
 4. 评估结论后不要添加任何解释
 `;
 
@@ -368,6 +433,8 @@ ${feedbacks.map((f, i) => `第 ${i + 1} 部分评估：\n${f}`).join("\n\n")}
     roleSummary,
     roundType,
     customTopic,
+    rounds: totalRounds || 1,
+    currentRound: currentRound || 1,
     createdAt: new Date(),
   });
   await interview.save();

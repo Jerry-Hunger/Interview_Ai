@@ -8,9 +8,11 @@ import {
   Building,
   ArrowLeft,
   MessageSquare,
+  ArrowRight,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useLocation } from "react-router-dom";
 
 import {
   Carousel,
@@ -35,12 +37,31 @@ type Interview = {
   feedbacks?: string[];
 };
 
-type PracticeResultsProps = {
-  interview: Interview;
-  navigate: (path: string) => void;
+type SetupData = {
+  resume: string;
+  role: string;
+  difficulty: string;
+  roundType: string;
+  topic: string;
+  rounds: number;
+  questionsPerRound: number;
 };
 
-const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
+type PracticeResultsProps = {
+  interview: Interview;
+  navigate: (path: string, options?: { state?: unknown }) => void;
+  setupData?: SetupData;
+  rounds?: number;
+};
+
+const PracticeResults = ({ interview, navigate, setupData }: PracticeResultsProps) => {
+  const location = useLocation();
+  const state = location.state as { currentRound?: number; totalRounds?: number; roundInterviewIds?: string[]; isCompletedSession?: boolean } | undefined;
+  const currentRound = state?.currentRound || interview.currentRound || 1;
+  const totalRounds = state?.totalRounds || interview.rounds || 1;
+  const isLastRound = currentRound >= totalRounds;
+  const showContinueButton = !isLastRound && interview.result === "success" && !state?.isCompletedSession;
+  const showFailMessage = !isLastRound && interview.result === "failure" && !state?.isCompletedSession;
   const isSuccess = interview.result === "success";
 
   return (
@@ -106,14 +127,14 @@ const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
       {/* Top Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Result */}
-        <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-          <CardHeader className="text-center">
+        <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl w-full flex flex-col justify-center min-h-[200px]">
+          <CardHeader className="text-center pb-2">
             <CardTitle className="flex items-center justify-center gap-2 text-yellow-500 dark:text-yellow-400">
               <Star size={20} />
               结果
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
+          <CardContent className="text-center flex flex-col items-center justify-center flex-1">
             <div
               className={`text-4xl font-bold mb-4 ${
                 isSuccess
@@ -132,15 +153,50 @@ const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
         </Card>
 
         {/* Actions */}
-        <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
+        <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl w-full">
           <CardHeader>
             <CardTitle className="text-indigo-500 dark:text-indigo-400">
               下一步
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {showContinueButton && (
+              <Button
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold hover:shadow-lg cursor-pointer"
+                onClick={() => {
+                  const nextRound = (state?.currentRound || 1) + 1;
+                  const setupDataWithInterview = {
+                    ...setupData,
+                    role: setupData?.role || interview.roleSummary || "",
+                    roundType: setupData?.roundType || interview.roundType || "",
+                    difficulty: setupData?.difficulty || interview.difficulty || "",
+                    rounds: setupData?.rounds || totalRounds || interview.rounds || 1,
+                    questionsPerRound: setupData?.questionsPerRound || 5,
+                  };
+                  navigate("/student/practice", { 
+                    state: { 
+                      continueRound: true, 
+                      previousRoundIds: state?.roundInterviewIds, 
+                      setupData: setupDataWithInterview, 
+                      currentRound: nextRound,
+                      previousFeedback: interview.finalFeedback,
+                    } 
+                  });
+                }}
+              >
+                <ArrowRight size={16} className="mr-2" />
+                继续下一轮面试 ({currentRound}/{totalRounds})
+              </Button>
+            )}
+            {showFailMessage && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-center">
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  本轮面试未通过，无法进行下一轮面试
+                </p>
+              </div>
+            )}
             <Button
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg"
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg cursor-pointer"
               onClick={() => navigate("/student/practice")}
             >
               <Play size={16} className="mr-2" />
@@ -148,7 +204,7 @@ const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
             </Button>
             <Button
               variant="outline"
-              className="w-full text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700"
+              className="w-full text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 cursor-pointer"
               onClick={() => navigate("/student/jobs")}
             >
               <Building size={16} className="mr-2" />
@@ -156,7 +212,7 @@ const PracticeResults = ({ interview, navigate }: PracticeResultsProps) => {
             </Button>
             <Button
               variant="outline"
-              className="w-full text-purple-500 dark:text-purple-400 border border-purple-200 dark:border-purple-700"
+              className="w-full text-purple-500 dark:text-purple-400 border border-purple-200 dark:border-purple-700 cursor-pointer"
               onClick={() => navigate("/student/dashboard")}
             >
               <ArrowLeft size={16} className="mr-2" />

@@ -28,6 +28,7 @@ type SetupData = {
   roundType: string;
   topic: string;
   rounds: number;
+  questionsPerRound: number;
 };
 
 type PracticeSetupProps = {
@@ -218,9 +219,35 @@ const PracticeSetup = ({
                 <SelectValue placeholder="选择轮次" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
-                {[5, 6, 7, 8, 9, 10].map((num) => (
+                {[1, 2, 3, 4].map((num) => (
                   <SelectItem key={num} value={String(num)} className="text-gray-900 dark:text-gray-100">
                     {num} 轮
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Questions Per Round */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="questionsPerRound"
+              className="text-gray-900 dark:text-white"
+            >
+              每轮问题数量 *
+            </Label>
+            <Select
+              value={String(setupData.questionsPerRound)}
+              onValueChange={(value) =>
+                setSetupData((prev) => ({ ...prev, questionsPerRound: Number(value) }))
+              }
+            >
+              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
+                <SelectValue placeholder="选择问题数量" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-[#23263A]">
+                {[5, 6, 7, 8].map((num) => (
+                  <SelectItem key={num} value={String(num)} className="text-gray-900 dark:text-gray-100">
+                    {num} 个问题
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -308,7 +335,7 @@ const PracticeSetup = ({
               面试内容预览
             </h4>
             <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-              <li>• 根据您的选择提供{setupData.rounds}个问题</li>
+              <li>• 共 {setupData.rounds} 轮面试，每轮 {setupData.questionsPerRound} 个问题</li>
               <li>• 实时反馈和评分</li>
               <li>• 详细的性能分析</li>
               <li>• 改进建议</li>

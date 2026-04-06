@@ -50,6 +50,7 @@ type Interview = {
   difficulty: string;
   type: "practice" | "company";
   createdAt: string;
+  rounds?: number;
 };
 
 const StudentDashboard = () => {
@@ -182,7 +183,13 @@ const StudentDashboard = () => {
                     key={i._id}
                     onClick={() =>
                       navigate("/student/practice-result", {
-                        state: { interview: i },
+                        state: { 
+                          interview: i,
+                          currentRound: i.currentRound || 1,
+                          totalRounds: i.rounds || 1,
+                          rounds: i.rounds || 1,
+                          isCompletedSession: true,
+                        },
                       })
                     }
                     className={[
@@ -199,7 +206,11 @@ const StudentDashboard = () => {
                     <CardHeader className="relative z-10">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-base font-semibold dark:text-white">
-                          {i.type === "practice" ? `练习面试 ${items.length - index}` : "企业面试"}
+                          {i.type === "practice" ? (
+                            i.rounds && i.rounds > 1
+                              ? `练习面试 ${items.length - index} (${i.currentRound || 1}/${i.rounds}轮)`
+                              : `练习面试 ${items.length - index}`
+                          ) : "企业面试"}
                         </CardTitle>
 
                         {(() => {

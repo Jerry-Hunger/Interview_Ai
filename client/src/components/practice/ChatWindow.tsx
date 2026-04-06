@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type ChatMessage = {
   type: "question" | "answer";
@@ -11,9 +13,11 @@ type ChatMessage = {
 type ChatWindowProps = {
   chatHistory: ChatMessage[];
   streamingMessage?: string;
+  rounds?: number;
+  currentRound?: number;
 };
 
-const ChatWindow = ({ chatHistory, streamingMessage }: ChatWindowProps) => {
+const ChatWindow = ({ chatHistory, streamingMessage, rounds, currentRound }: ChatWindowProps) => {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -22,15 +26,45 @@ const ChatWindow = ({ chatHistory, streamingMessage }: ChatWindowProps) => {
     }
   }, [chatHistory, streamingMessage]);
 
+  const renderContent = (content: string) => (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => (
+          <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-200 mb-2 last:mb-0">{children}</p>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>
+        ),
+        ul: ({ children }) => (
+          <ul className="list-disc list-inside text-sm text-gray-900 dark:text-gray-200">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="list-decimal list-inside text-sm text-gray-900 dark:text-gray-200">{children}</ol>
+        ),
+        li: ({ children }) => (
+          <li className="text-gray-900 dark:text-gray-200">{children}</li>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+
   return (
     <Card className="col-span-3 shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg text-indigo-500 dark:text-indigo-400">
           对话历史
         </CardTitle>
+        {rounds && rounds > 1 && (
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {currentRound || 1}轮/{rounds}轮
+          </span>
+        )}
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-[500px] overflow-y-auto px-4 pb-4 space-y-4 custom-scrollbar">
+        <div className="h-[calc(100vh-16rem)] overflow-y-auto px-4 pb-4 space-y-4 custom-scrollbar">
           {chatHistory.map((chat: ChatMessage, index: number) => (
             <div
               key={index}
@@ -59,9 +93,7 @@ const ChatWindow = ({ chatHistory, streamingMessage }: ChatWindowProps) => {
                   {chat.timestamp}
                 </span>
               </div>
-              <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-200 whitespace-pre-wrap">
-                {chat.content}
-              </p>
+              {renderContent(chat.content)}
             </div>
           ))}
           {chatHistory.length === 0 && streamingMessage && (
@@ -75,9 +107,7 @@ const ChatWindow = ({ chatHistory, streamingMessage }: ChatWindowProps) => {
                   AI Interviewer
                 </span>
               </div>
-              <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-200 whitespace-pre-wrap">
-                {streamingMessage}
-              </p>
+              {renderContent(streamingMessage)}
             </div>
           )}
           <div ref={chatEndRef} />

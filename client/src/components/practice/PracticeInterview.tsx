@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   FileText,
   Play,
@@ -23,6 +25,9 @@ type SetupData = {
   difficulty: string;
   roundType: string;
   topic: string;
+  rounds: number;
+  questionsPerRound: number;
+  currentRound?: number;
 };
 
 type ChatMessage = {
@@ -78,10 +83,12 @@ type PracticeInterviewProps = {
   setInterviewState: React.Dispatch<React.SetStateAction<InterviewState>>;
   handleAnswerSubmit: () => void;
   handleEndInterview: () => void;
+  handleQuit: () => void;
   toast: ToastFunc;
   isLoading?: boolean;
   interviewPhase?: "answering" | "ended";
   streamingMessage?: string;
+  currentRound?: number;
 };
 
 const PracticeInterview = ({
@@ -90,10 +97,12 @@ const PracticeInterview = ({
   setInterviewState,
   handleAnswerSubmit,
   handleEndInterview,
+  handleQuit,
   toast,
   isLoading = false,
   interviewPhase = "answering",
   streamingMessage,
+  currentRound = 1,
 }: PracticeInterviewProps) => {
   const currentQuestion = interviewState.question;
   const isLastQuestion =
@@ -243,76 +252,66 @@ const PracticeInterview = ({
                 </Label>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {setupData.roundType === "behavioral" ? "行为面试" :
-                   setupData.roundType === "technical" ? "技术面试" :
-                   setupData.roundType === "system-design" ? "系统设计" :
-                   setupData.roundType === "coding" ? "编程挑战" :
-                   setupData.roundType === "mixed" ? "综合面试" :
-                   setupData.roundType}
-                </p>
-              </div>
-              <Separator />
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  面试轮次
-                </Label>
-                <div className="flex items-center justify-between gap-1">
-                  {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
-                    const roundNum = i + 1;
-                    const isCompleted = interviewPhase === "ended" || roundNum < interviewState.currentQuestion;
-                    const isCurrent = interviewPhase !== "ended" && roundNum === interviewState.currentQuestion;
+                    setupData.roundType === "technical" ? "技术面试" :
+                    setupData.roundType === "system-design" ? "系统设计" :
+                    setupData.roundType === "coding" ? "编程挑战" :
+                    setupData.roundType === "mixed" ? "综合面试" :
+                    setupData.roundType}
+                 </p>
+               </div>
+               <Separator />
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-900 dark:text-white">
+                    当前问题
+                  </Label>
+                  <div className="flex items-center justify-center gap-1">
+                    {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
+                      const questionNum = i + 1;
+                      const isCompleted = questionNum < interviewState.currentQuestion;
+                      const isCurrent = questionNum === interviewState.currentQuestion;
+                      const isLastQuestion = interviewPhase === "ended" && questionNum === interviewState.totalQuestions;
 
-                    return (
-                      <div key={roundNum} className="flex flex-col items-center">
+                      return (
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                          key={`bar-${questionNum}`}
+                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                             isCompleted
-                              ? "bg-green-500 text-white"
-                              : isCurrent
-                              ? "bg-indigo-500 text-white animate-pulse shadow-lg shadow-indigo-400/50"
-                              : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                              ? "bg-green-500"
+                              : isCurrent || isLastQuestion
+                              ? "bg-indigo-500"
+                              : "bg-gray-300 dark:bg-gray-600"
                           }`}
-                        >
-                          {isCompleted ? "✓" : roundNum}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                    {interviewPhase === "ended" 
+                      ? `已完成 ${interviewState.totalQuestions} / ${interviewState.totalQuestions} 个问题`
+                      : `第 ${Math.min(interviewState.currentQuestion, interviewState.totalQuestions)} / ${interviewState.totalQuestions} 个问题`}
+                  </p>
                 </div>
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
-                    const roundNum = i + 1;
-                    const isCompleted = interviewPhase === "ended" || roundNum < interviewState.currentQuestion;
-                    const isCurrent = interviewPhase !== "ended" && roundNum === interviewState.currentQuestion;
-
-                    return (
-                      <div
-                        key={`bar-${roundNum}`}
-                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                          isCompleted
-                            ? "bg-green-500"
-                            : isCurrent
-                            ? "bg-indigo-500"
-                            : "bg-gray-300 dark:bg-gray-600"
-                        }`}
-                      />
-                    );
-                  })}
+               <Separator />
+               <div className="space-y-2">
+                 <Label className="text-sm font-medium text-gray-900 dark:text-white">
+                   当前问题
+                 </Label>
+                 <div className="p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg text-sm text-gray-900 dark:text-white">
+                   <ReactMarkdown
+                     remarkPlugins={[remarkGfm]}
+                     components={{
+                       p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                       strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                       ul: ({ children }) => <ul className="list-disc list-inside mb-1">{children}</ul>,
+                       ol: ({ children }) => <ol className="list-decimal list-inside mb-1">{children}</ol>,
+                     }}
+                   >
+                     {streamingMessage || currentQuestion}
+                   </ReactMarkdown>
+                  </div>
                 </div>
-                <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                  第 {interviewPhase === "ended" ? interviewState.totalQuestions : Math.min(interviewState.currentQuestion, interviewState.totalQuestions)} / {interviewState.totalQuestions} 轮
-                </p>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                  当前问题 #{interviewState.currentQuestion}
-                </Label>
-                <div className="p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg text-sm text-gray-900 dark:text-white">
-                  {streamingMessage || currentQuestion}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
           {/* Center - Interview Windows */}
           <div className="col-span-6 space-y-6">
@@ -495,14 +494,23 @@ const PracticeInterview = ({
                         {interviewState.isMicOn ? "开启（聆听中...）" : "关闭"}
                       </span>
                     </div>
-                    <Button
-                      onClick={handleAnswerSubmit}
-                      className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg"
-                      disabled={!interviewState.answer.trim() || isLoading}
-                    >
-                      <Send size={14} className="mr-2" />
-                      {isLastQuestion ? "提交最后一题" : "提交回答"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleQuit}
+                        className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                      >
+                        退出面试
+                      </Button>
+                      <Button
+                        onClick={handleAnswerSubmit}
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg"
+                        disabled={!interviewState.answer.trim() || isLoading}
+                      >
+                        <Send size={14} className="mr-2" />
+                        {isLastQuestion ? "提交最后一题" : "提交回答"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -511,7 +519,12 @@ const PracticeInterview = ({
 
           {/* Right Sidebar - Chat History */}
           {/* <div className="col-span-4"> */}
-          <ChatWindow chatHistory={interviewState.chatHistory} streamingMessage={streamingMessage} />
+          <ChatWindow 
+            chatHistory={interviewState.chatHistory} 
+            streamingMessage={streamingMessage}
+            rounds={setupData.rounds}
+            currentRound={currentRound}
+          />
           {/* </div> */}
         </div>
       </div>
