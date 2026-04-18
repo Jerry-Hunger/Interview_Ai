@@ -155,15 +155,20 @@ const Practice = () => {
 
   useEffect(() => {
     if (setupData.resume) return;
-    
+
     const fetchUserResume = async () => {
       try {
         const res = await axiosInstance.get("/auth/me", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
-        const userResumeText = res.data.user?.resumeText;
-        if (userResumeText) {
-          setSetupData((prev) => ({ ...prev, resume: userResumeText }));
+        const resumeId = res.data.user?.resumeId;
+        if (resumeId) {
+          const textRes = await axiosInstance.get(`/resume/${resumeId}/text`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          if (textRes.data.text) {
+            setSetupData((prev) => ({ ...prev, resume: textRes.data.text }));
+          }
         }
       } catch (err) {
         console.error("获取用户简历失败:", err);
@@ -272,6 +277,8 @@ const Practice = () => {
       setStreamingMessage("");
       const fullResponse: string[] = [];
 
+      const effectiveRounds = setupData?.rounds || 1;
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/respond-stream`, {
         method: "POST",
         headers: {
@@ -286,6 +293,8 @@ const Practice = () => {
           topic: setupData.topic,
           difficulty: setupData.difficulty,
           isLastQuestion,
+          currentRound: effectiveRounds > 1 ? currentRound : undefined,
+          totalRounds: effectiveRounds > 1 ? effectiveRounds : undefined,
         }),
       });
 

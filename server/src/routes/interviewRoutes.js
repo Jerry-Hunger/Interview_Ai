@@ -3,11 +3,11 @@ import {
   startInterview,
   respondToInterview,
   respondToInterviewStream,
-  formatResume,
   concludeInterview,
   getUserInterviews,
   getInterviewById,
 } from "../controllers/interviewController.js";
+import { formatResume } from "../controllers/resumeController.js";
 import { generateDeepSeekResponse } from "../utils/deepseek.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 

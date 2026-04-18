@@ -4,7 +4,7 @@
 
 IntelliHire is an AI-powered interview and hiring platform with:
 - **Client**: React 19 + TypeScript + Vite + TailwindCSS v4 (in `/client`)
-- **Server**: Node.js + Express + MongoDB + Mongoose (in `/server`)
+- **Server**: Node.js + Express 5 + MongoDB + Mongoose (in `/server`)
 - **Deployment**: Render (frontend + backend)
 
 ---
@@ -65,6 +65,9 @@ npm run test -- --run src/components/Button.test.tsx
   - `noUnusedLocals: true`
   - `noUnusedParameters: true`
   - `noFallthroughCasesInSwitch: true`
+  - `verbatimModuleSyntax: true`
+  - `erasableSyntaxOnly: true`
+  - `noUncheckedSideEffectImports: true`
 
 ### Imports
 
@@ -162,12 +165,8 @@ export const register = async (req, res) => {
 ### Styling (TailwindCSS)
 
 - Use **Tailwind v4** with `@tailwindcss/vite` plugin
-- Dark mode via `dark:` prefix with `class` strategy
-- Custom colors extend `tailwind.config.js`:
-  - `background.light/dark`
-  - `foreground.light/dark`
-  - `card.light/dark`
-  - `border.light/dark`
+- `tailwind.config.js` defines custom colors (background, foreground, card, border) with light/dark variants
+- Dark mode via `class` strategy with `dark:` prefix
 - Apply dark mode class to root:
   ```typescript
   root.classList.remove('light', 'dark');
@@ -214,18 +213,48 @@ export function ThemeProvider({ children, ...props }) {
 ├── src/
 │   ├── assets/           # Static assets
 │   ├── components/       # Shared UI components
-│   │   ├── ui/           # shadcn/ui components (accordion, alert, alert-dialog, etc.)
-│   │   ├── practice/     # Practice interview components
-│   │   └── resume/       # Resume-related components
-│   ├── contexts/         # React context providers
-│   ├── hooks/            # Custom React hooks
-│   ├── lib/               # Utility functions (utils.ts)
-│   ├── pages/             # Page components
-│   │   ├── auth/          # Login, Register
-│   │   ├── student/       # Dashboard, Practice, Jobs, Applications
-│   │   ├── company/       # Dashboard, Jobs, Applications, Profile
-│   │   └── Index.tsx, NotFound.tsx
-│   ├── utils/             # Helper utilities (axiosInstance, resumeExtractor)
+│   │   ├── ui/          # shadcn/ui components (accordion, alert, alert-dialog, etc.)
+│   │   ├── practice/    # Practice interview components
+│   │   │   ├── ChatWindow.tsx
+│   │   │   ├── PracticeInterview.tsx
+│   │   │   ├── PracticeSetup.tsx
+│   │   │   └── ResumeUploader.tsx
+│   │   ├── resume/      # Resume viewer components
+│   │   │   ├── MarkdownText.tsx
+│   │   │   ├── ResumeSection.tsx
+│   │   │   └── ResumeViewer.tsx
+│   │   └── Navigation.tsx
+│   ├── contexts/        # React context providers
+│   │   └── ThemeContext.tsx
+│   ├── hooks/           # Custom React hooks
+│   │   ├── use-mobile.ts / .tsx
+│   │   └── use-toast.ts
+│   ├── lib/             # Utility functions (utils.ts)
+│   ├── pages/           # Page components
+│   │   ├── auth/
+│   │   │   ├── Login.tsx
+│   │   │   └── Register.tsx
+│   │   ├── student/
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Practice.tsx
+│   │   │   ├── PracticeResultPage.tsx
+│   │   │   ├── StudentProfile.tsx
+│   │   │   ├── StudentsJobsPage.tsx
+│   │   │   ├── JobDetailPage.tsx
+│   │   │   ├── StudentApplicationsPage.tsx
+│   │   │   └── StudentApplicationDetailPage.tsx
+│   │   ├── company/
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── CompanyProfile.tsx
+│   │   │   ├── CompanyJobsPage.tsx
+│   │   │   ├── CompanyJobForm.tsx
+│   │   │   ├── CompanyJobApplicationsPage.tsx
+│   │   │   └── ApplicationDetailPage.tsx
+│   │   ├── Index.tsx
+│   │   └── NotFound.tsx
+│   ├── utils/           # Helper utilities
+│   │   ├── axiosInstance.ts
+│   │   └── resumeExtractor.ts
 │   ├── App.tsx
 │   ├── App.css
 │   ├── main.tsx
@@ -235,19 +264,43 @@ export function ThemeProvider({ children, ...props }) {
 ├── vite.config.ts
 ├── tailwind.config.js
 ├── tsconfig.app.json
-└── tsconfig.json
+├── tsconfig.json
+└── eslint.config.js
 
 /server
 ├── src/
-│   ├── config/            # db.js - MongoDB connection
-│   ├── controllers/       # Route handlers (auth, company, interview, job, application, resume, upload)
-│   ├── middlewares/       # authMiddleware.js
-│   ├── models/            # Mongoose schemas (User, JobOpening, Interview, Application, Resume)
-│   ├── routes/            # Express routes (auth, company, interview, job, application, resume, upload)
-│   ├── utils/             # Server utilities (oss.js, deepseek.js)
-│   └── index.js           # Entry point
+│   ├── config/
+│   │   └── db.js         # MongoDB connection
+│   ├── controllers/      # Route handlers
+│   │   ├── authController.js
+│   │   ├── companyController.js
+│   │   ├── interviewController.js
+│   │   ├── jobController.js
+│   │   ├── applicationController.js
+│   │   ├── resumeController.js
+│   │   └── uploadController.js
+│   ├── middlewares/
+│   │   └── authMiddleware.js
+│   ├── models/          # Mongoose schemas
+│   │   ├── User.js
+│   │   ├── JobOpening.js
+│   │   ├── Interview.js
+│   │   ├── Application.js
+│   │   └── Resume.js
+│   ├── routes/          # Express routes
+│   │   ├── authRoutes.js
+│   │   ├── companyRoutes.js
+│   │   ├── interviewRoutes.js
+│   │   ├── jobRoutes.js
+│   │   ├── applicationRoutes.js
+│   │   ├── resumeRoutes.js
+│   │   └── uploadRoutes.js
+│   ├── utils/
+│   │   ├── oss.js       # Aliyun OSS integration
+│   │   └── deepseek.js  # DeepSeek AI integration
+│   └── index.js         # Entry point
 ├── package.json
-└── .env                   # Environment variables
+└── .env                 # Environment variables
 ```
 
 ---
@@ -266,7 +319,29 @@ ALIYUN_OSS_ACCESS_KEY_ID=...
 ALIYUN_OSS_ACCESS_KEY_SECRET=...
 ```
 
-**Client**: Uses hardcoded API base URL in `src/utils/axiosInstance.ts`
+**Client (`/client/.env`):**
+```
+VITE_API_URL=http://localhost:5000/api
+```
+
+---
+
+## API Routes
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register user |
+| POST | `/api/auth/login` | Login user |
+| GET | `/api/interview/mine` | Get user's interviews |
+| GET | `/api/jobs` | List job openings |
+| POST | `/api/jobs` | Create job opening |
+| GET | `/api/resume/mine` | Get user's resume |
+| POST | `/api/resume` | Save resume |
+| GET | `/api/applications` | Get applications |
+| POST | `/api/applications` | Apply to job |
+| GET | `/api/company/profile` | Get company profile |
+| PUT | `/api/company/profile` | Update company profile |
+| POST | `/api/upload/resume` | Upload resume file |
 
 ---
 

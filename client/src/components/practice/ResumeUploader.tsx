@@ -96,6 +96,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
 
     await page.render({
       canvasContext: context,
+      canvas: canvas,
       viewport: viewport,
     }).promise;
 
@@ -220,7 +221,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
           }
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          const strings = content.items.map((item: { str: string }) => item.str);
+          const strings = content.items.map((item) => ("str" in item ? item.str : ""));
           fullText += strings.join(" ") + "\n";
         }
 

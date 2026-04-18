@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Star,
-  TrendingUp,
   Play,
   Building,
   ArrowLeft,
@@ -13,14 +12,6 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLocation } from "react-router-dom";
-
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 
 type Interview = {
   _id: string;
@@ -34,7 +25,6 @@ type Interview = {
   createdAt: string;
   finalFeedback?: string;
   chatHistory?: { type: string; content: string; timestamp: string }[];
-  feedbacks?: string[];
 };
 
 type SetupData = {
@@ -246,70 +236,6 @@ const PracticeResults = ({ interview, navigate, setupData }: PracticeResultsProp
               <p className="text-sm">{entry.content}</p>
             </div>
           ))}
-        </CardContent>
-      </Card>
-
-      {/* Feedbacks Carousel */}
-      <Card className="mt-8 shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400">
-            <TrendingUp size={20} />
-            详细反馈
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Carousel className="w-full">
-            <CarouselContent>
-              {interview.feedbacks?.map((fb: string, i: number) => (
-                <CarouselItem key={i} className="basis-full">
-                  <Card className="bg-indigo-50 dark:bg-indigo-900/30 border-0 shadow-md rounded-xl">
-                    <CardHeader>
-                      <CardTitle className="text-indigo-600 dark:text-indigo-300 text-lg">
-                        第 {i + 1} 部分反馈
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({ className, children, ...props }) {
-                            const match = /language-(\w+)/.exec(className || "");
-                            const isInline = !match && !className;
-                            return isInline ? (
-                              <code
-                                className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs font-mono"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            ) : (
-                              <code
-                                className={`block p-3 rounded bg-gray-900 dark:bg-gray-800 text-gray-100 text-xs font-mono overflow-x-auto ${className || ""}`}
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            );
-                          },
-                          p: ({ children }) => <p className="mb-3 leading-relaxed text-sm">{children}</p>,
-                          ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1 text-sm">{children}</ul>,
-                          ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1 text-sm">{children}</ol>,
-                          li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                          strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
-                        }}
-                      >
-                        {fb}
-                      </ReactMarkdown>
-                    </CardContent>
-                  </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <div className="flex justify-center gap-2 mt-4">
-              <CarouselPrevious />
-              <CarouselNext />
-            </div>
-          </Carousel>
         </CardContent>
       </Card>
     </div>

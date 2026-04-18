@@ -35,7 +35,7 @@ type Job = {
 type Application = {
   _id: string;
   jobId: { _id: string; title: string } | null;
-  candidateId: { name: string } | null;
+  candidateId: { _id: string; fullName: string; email?: string } | null;
   status: string;
 };
 
@@ -207,7 +207,7 @@ const CompanyDashboard = () => {
                 >
                   <div>
                     <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                      {app.candidateId?.name || "未知候选人"}
+                      {app.candidateId?.fullName || "未知候选人"}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       申请了 {app.jobId?.title}

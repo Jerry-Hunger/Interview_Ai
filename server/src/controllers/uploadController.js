@@ -1,6 +1,7 @@
-// server/src/controllers/uploadController.js
-import User from "../models/User.js";
+import Student from "../models/Student.js";
+import Company from "../models/Company.js";
 import Resume from "../models/Resume.js";
+import User from "../models/User.js";
 import {
   uploadFile,
   generateAvatarPath,
@@ -12,8 +13,8 @@ import {
   isValidResumeType,
 } from "../utils/oss.js";
 
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
-const MAX_RESUME_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 
 export const uploadAvatar = async (req, res) => {
   try {
@@ -23,8 +24,8 @@ export const uploadAvatar = async (req, res) => {
 
     const file = req.file;
     const userId = req.user.id;
+    const user = await User.findById(userId);
 
-    // Validate file type
     const ext = getFileExtension(file.originalname);
     if (!isValidImageType(ext)) {
       return res
@@ -32,19 +33,17 @@ export const uploadAvatar = async (req, res) => {
         .json({ success: false, error: "不支持的图片格式，仅支持 jpg、png、webp" });
     }
 
-    // Validate file size
     if (file.size > MAX_AVATAR_SIZE) {
       return res
         .status(400)
         .json({ success: false, error: "图片大小不能超过 2MB" });
     }
 
-    // Upload to OSS
     const path = generateAvatarPath(userId, ext);
     const url = await uploadFile(file, path);
 
-    // Update user record
-    await User.findByIdAndUpdate(userId, { avatarUrl: url });
+    const ProfileModel = user.role === "student" ? Student : Company;
+    await ProfileModel.findByIdAndUpdate(userId, { avatarUrl: url });
 
     res.json({ success: true, url });
   } catch (err) {
@@ -61,8 +60,12 @@ export const uploadResume = async (req, res) => {
 
     const file = req.file;
     const userId = req.user.id;
+    const user = await User.findById(userId);
 
-    // Validate file type
+    if (user.role !== "student") {
+      return res.status(400).json({ success: false, error: "只有学生可以上传简历" });
+    }
+
     const ext = getFileExtension(file.originalname);
     if (!isValidResumeType(ext)) {
       return res
@@ -73,34 +76,29 @@ export const uploadResume = async (req, res) => {
         });
     }
 
-    // Validate file size
     if (file.size > MAX_RESUME_SIZE) {
       return res
         .status(400)
         .json({ success: false, error: "简历大小不能超过 5MB" });
     }
 
-    // Upload to OSS
     const path = generateResumePath(userId, ext);
     const url = await uploadFile(file, path);
 
-    // Delete old resume if exists
-    const user = await User.findById(userId);
-    if (user.resumeId) {
-      await Resume.findByIdAndDelete(user.resumeId);
+    const student = await Student.findById(userId);
+    if (student.resumeId) {
+      await Resume.findByIdAndDelete(student.resumeId);
     }
 
-    // Create new resume record
     const resume = new Resume({
-      userId,
+      studentId: userId,
       fileUrl: url,
       fileName: file.originalname,
       fileType: ext,
     });
     await resume.save();
 
-    // Update user record
-    await User.findByIdAndUpdate(userId, { resumeId: resume._id });
+    await Student.findByIdAndUpdate(userId, { resumeId: resume._id });
 
     res.json({
       success: true,
@@ -125,6 +123,11 @@ export const uploadLogo = async (req, res) => {
 
     const file = req.file;
     const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (user.role !== "company") {
+      return res.status(400).json({ success: false, error: "只有企业可以上传 Logo" });
+    }
 
     const ext = getFileExtension(file.originalname);
     if (!isValidImageType(ext)) {
@@ -142,7 +145,7 @@ export const uploadLogo = async (req, res) => {
     const path = generateLogoPath(userId, ext);
     const url = await uploadFile(file, path);
 
-    await User.findByIdAndUpdate(userId, { companyLogoUrl: url });
+    await Company.findByIdAndUpdate(userId, { companyLogoUrl: url });
 
     res.json({ success: true, url });
   } catch (err) {
@@ -159,12 +162,17 @@ export const uploadPhotos = async (req, res) => {
 
     const files = req.files;
     const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (user.role !== "company") {
+      return res.status(400).json({ success: false, error: "只有企业可以上传照片" });
+    }
 
     const urls = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const ext = getFileExtension(file.originalname);
-      
+
       if (!isValidImageType(ext)) {
         return res
           .status(400)
@@ -182,11 +190,11 @@ export const uploadPhotos = async (req, res) => {
       urls.push(url);
     }
 
-    const user = await User.findById(userId);
-    const existingPhotos = user.companyPhotos || [];
+    const company = await Company.findById(userId);
+    const existingPhotos = company.companyPhotos || [];
     const updatedPhotos = [...existingPhotos, ...urls].slice(0, 10);
-    
-    await User.findByIdAndUpdate(userId, { companyPhotos: updatedPhotos });
+
+    await Company.findByIdAndUpdate(userId, { companyPhotos: updatedPhotos });
 
     res.json({ success: true, urls });
   } catch (err) {

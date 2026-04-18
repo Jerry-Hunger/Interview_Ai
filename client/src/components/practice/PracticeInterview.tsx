@@ -267,9 +267,8 @@ const PracticeInterview = ({
                   <div className="flex items-center justify-center gap-1">
                     {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
                       const questionNum = i + 1;
-                      const isCompleted = questionNum < interviewState.currentQuestion;
-                      const isCurrent = questionNum === interviewState.currentQuestion;
-                      const isLastQuestion = interviewPhase === "ended" && questionNum === interviewState.totalQuestions;
+                      const isCompleted = questionNum < interviewState.currentQuestion || (interviewPhase === "ended" && questionNum === interviewState.totalQuestions);
+                      const isCurrent = questionNum === interviewState.currentQuestion && interviewPhase !== "ended";
 
                       return (
                         <div
@@ -277,7 +276,7 @@ const PracticeInterview = ({
                           className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                             isCompleted
                               ? "bg-green-500"
-                              : isCurrent || isLastQuestion
+                              : isCurrent
                               ? "bg-indigo-500"
                               : "bg-gray-300 dark:bg-gray-600"
                           }`}

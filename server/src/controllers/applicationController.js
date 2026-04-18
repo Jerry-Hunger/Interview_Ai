@@ -1,14 +1,19 @@
 import Application from "../models/Application.js";
-import User from "../models/User.js";
+import Student from "../models/Student.js";
 
 export const createApplication = async (req, res) => {
   try {
     const { jobId } = req.body;
-    const { resumeText } = await User.findOne({ _id: req.user.id });
+    const candidateId = req.user.id;
+
+    const student = await Student.findById(candidateId);
+    if (!student) {
+      return res.status(404).json({ msg: "学生不存在" });
+    }
 
     const exists = await Application.findOne({
       jobId,
-      userId: req.user.id,
+      candidateId,
     });
     if (exists) {
       return res.status(400).json({ msg: "您已申请过该职位" });
@@ -18,9 +23,8 @@ export const createApplication = async (req, res) => {
       jobId,
       status: "applied",
       currentRound: 0,
-      jobId,
-      candidateId: req.user.id,
-      resumeText,
+      candidateId,
+      resumeId: student.resumeId || null,
       history: [],
     });
 
@@ -36,7 +40,7 @@ export const getAllApplications = async (req, res) => {
   try {
     const applications = await Application.find()
       .populate("jobId")
-      .populate("userId");
+      .populate("candidateId");
     res.json(applications);
   } catch (err) {
     console.error("Error fetching applications:", err);
@@ -46,11 +50,13 @@ export const getAllApplications = async (req, res) => {
 
 export const getMyApplications = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
-    if (!userId) return res.status(401).json({ msg: "未授权" });
+    const candidateId = req.user.id;
+    if (!candidateId) return res.status(401).json({ msg: "未授权" });
 
-    const applications = await Application.find({ candidateId: userId })
+    const applications = await Application.find({ candidateId })
       .populate("jobId")
+      .populate("candidateId")
+      .populate("resumeId")
       .sort({ createdAt: -1 });
 
     return res.json(applications);
@@ -63,9 +69,9 @@ export const getMyApplications = async (req, res) => {
 export const getJobApplications = async (req, res) => {
   try {
     const { jobId } = req.params;
-    const applications = await Application.find({ jobId }).populate(
-      "candidateId"
-    );
+    const applications = await Application.find({ jobId })
+      .populate("candidateId")
+      .populate("resumeId");
     res.json(applications);
   } catch (err) {
     console.error("Error fetching job applications:", err);
@@ -79,7 +85,8 @@ export const getApplicationById = async (req, res) => {
 
     const application = await Application.findById(applicationId)
       .populate("jobId")
-      .populate("candidateId");
+      .populate("candidateId")
+      .populate("resumeId");
 
     if (!application) {
       return res.status(404).json({ message: "申请记录不存在" });
@@ -173,7 +180,8 @@ export const addRoundResult = async (req, res) => {
 
     const updated = await Application.findById(applicationId)
       .populate("jobId")
-      .populate("candidateId");
+      .populate("candidateId")
+      .populate("resumeId");
 
     return res.json({
       msg: "轮次结果保存成功",

@@ -5,10 +5,10 @@ export const startInterview = async (req, res) => {
   const { role, resume, roundType, topic, difficulty, isContinuation, currentRound, totalRounds, previousFeedback } = req.body;
 
   let prompt;
-  
+
   if (isContinuation && currentRound && totalRounds) {
     let continuationContext = `这是第 ${currentRound} 轮面试（共 ${totalRounds} 轮）。`;
-    
+
     if (currentRound > 1 && previousFeedback) {
       continuationContext += `
 
@@ -17,7 +17,9 @@ ${previousFeedback}
 
 请根据以上反馈，适当调整提问的深度和方向。对于前面已经表现良好的方面可以简化，对于需要改进的方面可以深入追问。`;
     }
-    
+
+    const roundQuestionCount = Math.max(3, 5 - currentRound + 1);
+
     prompt = `
 你正在主持一场多轮求职面试的第 ${currentRound} 轮。
 
@@ -33,6 +35,8 @@ ${topic ? `请重点关注以下主题：${topic}。` : ""}
 ${difficulty ? `请将问题的难度调整为：${difficulty}。` : ""}
 
 ${continuationContext}
+
+【重要】本轮请只提 ${roundQuestionCount} 个问题，不要提更多。保持问题简洁有力。
 
 请简短地欢迎候选人进入第 ${currentRound} 轮面试，然后直接开始提问。保持对话流畅自然，避免机械化的语气。
 `;
@@ -65,8 +69,11 @@ ${difficulty ? `请将问题的难度调整为：${difficulty}。` : ""}
 };
 
 export const respondToInterview = async (req, res) => {
-  const { chatHistory, answer, resume, role, roundType, topic, difficulty, isLastQuestion } =
+  const { chatHistory, answer, resume, role, roundType, topic, difficulty, isLastQuestion, currentRound, totalRounds } =
     req.body;
+
+  const isLastRoundOfMultiRound = currentRound && totalRounds && currentRound >= totalRounds;
+  const shouldEndInterview = isLastQuestion || isLastRoundOfMultiRound || (currentRound && isLastQuestion);
 
   const historyFormatted = chatHistory
     .slice(-10)
@@ -81,9 +88,13 @@ export const respondToInterview = async (req, res) => {
   const isSingleWordAnswer = answer.trim().split(/\s+/).length <= 2;
 
   let prompt;
-  if (isLastQuestion) {
+  if (shouldEndInterview) {
+    const endMessage = currentRound && totalRounds
+ ? `这是第 ${currentRound} 轮面试（共 ${totalRounds} 轮）的最后一题。`
+ : "本轮面试即将结束。";
+
     prompt = `
-本轮面试即将结束。
+${endMessage}
 
 你是艾莎，一名专业的面试官。不要提及你是 AI。
 
@@ -103,10 +114,15 @@ ${historyFormatted}
 ${isShortAnswer || isNumericAnswer || isSingleWordAnswer ? `
 【重要】候选人的这个回答内容非常简短（"${answer}"），没有提供有实质意义的面试信息。
 
-请直接、坦率地指出这个问题，然后礼貌地结束面试。例如：
-"我注意到您的回答比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，本轮面试到此结束。"` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人本轮面试到此结束，感谢他们的参与。`}
+请先尝试追问一次，引导候选人详细回答。例如：
+"您提到的X能详细说说吗？" 或 "能举例说明一下吗？"
 
-不要再问任何问题。
+如果候选人仍然拒绝详细回答或继续简短回应，再礼貌地结束面试。例如：
+"我注意到您的回答仍然比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，本轮面试到此结束。"
+
+【注意】先追问，不要直接结束面试！` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人本轮面试到此结束，感谢他们的参与。`}
+
+不要再问超过1个问题。
 `;
   } else {
     prompt = `
@@ -138,7 +154,7 @@ ${historyFormatted}
 - 即使回答简短，只要相关就要肯定
 - 指出不足时要具体，不要泛泛而谈
 - 尽量引导面试者深入思考，而不是简单要求"详细回答"
-- 如果需要追问，可以用更具体的问题（如："你提到了X，能详细说说Y吗？"）
+- 如果需要追问，可以用更具体的问题（如："你提到了X，能详细说说Y吗？"。）
 
 请继续对话，保持自然流畅。
 `;
@@ -154,8 +170,11 @@ ${historyFormatted}
 };
 
 export const respondToInterviewStream = async (req, res) => {
-  const { chatHistory, answer, resume, role, roundType, topic, difficulty, isLastQuestion } =
+  const { chatHistory, answer, resume, role, roundType, topic, difficulty, isLastQuestion, currentRound, totalRounds } =
     req.body;
+
+  const isLastRoundOfMultiRound = currentRound && totalRounds && currentRound >= totalRounds;
+  const shouldEndInterview = isLastQuestion || isLastRoundOfMultiRound || (currentRound && isLastQuestion);
 
   const historyFormatted = chatHistory
     .slice(-10)
@@ -170,9 +189,13 @@ export const respondToInterviewStream = async (req, res) => {
   const isSingleWordAnswer = answer.trim().split(/\s+/).length <= 2;
 
   let prompt;
-  if (isLastQuestion) {
+  if (shouldEndInterview) {
+    const endMessage = currentRound && totalRounds
+ ? `这是第 ${currentRound} 轮面试（共 ${totalRounds} 轮）的最后一题。`
+ : "本轮面试即将结束。";
+
     prompt = `
-本轮面试即将结束。
+${endMessage}
 
 你是艾莎，一名专业的面试官。不要提及你是 AI。
 
@@ -192,10 +215,15 @@ ${historyFormatted}
 ${isShortAnswer || isNumericAnswer || isSingleWordAnswer ? `
 【重要】候选人的这个回答内容非常简短（"${answer}"），没有提供有实质意义的面试信息。
 
-请直接、坦率地指出这个问题，然后礼貌地结束面试。例如：
-"我注意到您的回答比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，本轮面试到此结束。"` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人本轮面试到此结束，感谢他们的参与。`}
+请先尝试追问一次，引导候选人详细回答。例如：
+"您提到的X能详细说说吗？" 或 "能举例说明一下吗？"
 
-不要再问任何问题。
+如果候选人仍然拒绝详细回答或继续简短回应，再礼貌地结束面试。例如：
+"我注意到您的回答仍然比较简短，没有充分展示您的能力。作为专业的面试官，我希望看到更详细的回答来了解您的经验和技能。不过面试时间有限，感谢您的参与，本轮面试到此结束。"
+
+【注意】先追问，不要直接结束面试！` : `请对候选人的最后一个回答进行简短的点评和总结，然后礼貌地结束面试，告知候选人本轮面试到此结束，感谢他们的参与。`}
+
+不要再问超过1个问题。
 `;
   } else {
     prompt = `
@@ -227,7 +255,7 @@ ${historyFormatted}
 - 即使回答简短，只要相关就要肯定
 - 指出不足时要具体，不要泛泛而谈
 - 尽量引导面试者深入思考，而不是简单要求"详细回答"
-- 如果需要追问，可以用更具体的问题（如："你提到了X，能详细说说Y吗？"）
+- 如果需要追问，可以用更具体的问题（如："你提到了X，能详细说说Y吗？"。）
 
 请继续对话，保持自然流畅。
 `;
@@ -249,36 +277,6 @@ ${historyFormatted}
   }
 };
 
-export const formatResume = async (req, res) => {
-  const { resumeText } = req.body;
-
-  const prompt = `
-你是一个简历格式化助手。
-
-请将以下提取的简历文本整理成清晰的结构，包含以下部分：
-- 个人简介（如果有）
-- 技能
-- 项目经验
-- 工作经历
-- 教育背景
-- 证书资质
-- 获奖情况
-
-请使用 Markdown 格式，使用适当的标题和项目符号，使其视觉上清晰易读。不要添加任何虚假信息。
-
-简历内容：
-${resumeText}
-`;
-
-  try {
-    const formatted = await generateDeepSeekResponse(prompt);
-    res.json({ formatted });
-  } catch (error) {
-    console.error("Error formatting resume:", error.message);
-    res.status(500).json({ error: "简历格式化失败" });
-  }
-};
-
 export const concludeInterview = async (req, res) => {
   const {
     history = [],
@@ -293,14 +291,14 @@ export const concludeInterview = async (req, res) => {
     currentRound,
   } = req.body;
 
+  const studentId = req.user.id;
+
   if (clientResult === "Quit") {
-    const userId = req.user.id;
     const interview = new Interview({
-      user: userId,
+      student: studentId,
       chatHistory: history,
       finalFeedback: "面试已退出，未完成评估。",
-      result: "Quit",
-      feedbacks: [],
+      result: "quit",
       type: typeOfInterview,
       difficulty,
       resumeText,
@@ -383,6 +381,8 @@ ${resumeText}
 你是一名专业的面试评估专家。你将基于各部分的实际评估结果，给出最终的综合评价。
 
 【面试基本信息】
+- 面试总问题数：${history.length} 个
+- 评估块数：${chunks.length} 个（每${CHUNK_SIZE}个问答为一块）
 - 应聘职位：${roleSummary}
 - 难度级别：${difficulty || "中等"}
 - 简历摘要：${resumeText}
@@ -410,6 +410,7 @@ ${feedbacks.map((f, i) => `第 ${i + 1} 部分评估：\n${f}`).join("\n\n")}
    如果面试者整体表现尚可，有基本的职位相关能力 → "结果：通过"
    如果面试者明显敷衍、态度消极、或者几乎所有问题都完全无法回答 → "结果：不通过"
 4. 评估结论后不要添加任何解释
+5. 【重要】不要使用"基于面试的X个部分"这样的固定句式，直接根据实际评估内容写综合评价
 `;
 
   const finalFeedback = await generateDeepSeekResponse(finalPrompt);
@@ -419,14 +420,12 @@ ${feedbacks.map((f, i) => `第 ${i + 1} 部分评估：\n${f}`).join("\n\n")}
     .find((line) => line.includes("结果：通过") || line.includes("结果:通过") || line.includes("结果：不通过") || line.includes("结果:不通过"));
 
   const result = resultLine?.includes("不通过") ? "failure" : "success";
-  const userId = req.user.id;
 
   const interview = new Interview({
-    user: userId,
+    student: studentId,
     chatHistory: history,
     finalFeedback,
     result,
-    feedbacks,
     type: typeOfInterview,
     difficulty,
     resumeText,
@@ -446,9 +445,9 @@ ${feedbacks.map((f, i) => `第 ${i + 1} 部分评估：\n${f}`).join("\n\n")}
 
 export const getUserInterviews = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log("Fetching interviews for user:", userId);
-    const interviews = await Interview.find({ user: userId }).sort({
+    const studentId = req.user.id;
+    console.log("Fetching interviews for student:", studentId);
+    const interviews = await Interview.find({ student: studentId }).sort({
       createdAt: -1,
     });
     res.json(interviews);
@@ -461,9 +460,9 @@ export const getUserInterviews = async (req, res) => {
 export const getInterviewById = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const studentId = req.user.id;
 
-    const interview = await Interview.findOne({ _id: id, user: userId });
+    const interview = await Interview.findOne({ _id: id, student: studentId });
     if (!interview) {
       return res.status(404).json({ error: "面试记录不存在" });
     }

@@ -13,7 +13,7 @@ const roundSchema = new mongoose.Schema({
     required: true,
   },
   topic: { type: String },
-  duration: { type: Number }, // minutes
+  duration: { type: Number },
   notes: { type: String },
 });
 
@@ -21,7 +21,7 @@ const jobOpeningSchema = new mongoose.Schema(
   {
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Company",
       required: true,
     },
     title: { type: String, required: true },
@@ -29,11 +29,13 @@ const jobOpeningSchema = new mongoose.Schema(
     skills: [{ type: String }],
     rounds: [roundSchema],
     status: { type: String, enum: ["open", "closed"], default: "open" },
-    companyLogoUrl: { type: String },
-    companyName: { type: String },
-    companyLocation: { type: String },
   },
   { timestamps: true }
 );
+
+jobOpeningSchema.index({ companyId: 1, createdAt: -1 });
+jobOpeningSchema.index({ companyId: 1 });
+jobOpeningSchema.index({ status: 1 });
+jobOpeningSchema.index({ createdAt: -1 });
 
 export default mongoose.model("JobOpening", jobOpeningSchema);

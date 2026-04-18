@@ -298,7 +298,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       <div className="relative inline-block">
         <Avatar className={`${sizeClasses[size]} cursor-pointer`} onClick={handleClick}>
           <AvatarImage src={previewUrl} alt={userName} />
-          <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xl font-semibold">
+          <AvatarFallback className="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-xl font-semibold">
             {userName.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -306,7 +306,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
         <button
           onClick={handleClick}
           disabled={loading}
-          className="absolute bottom-0 right-0 bg-indigo-600 text-white p-1.5 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition"
+          className="absolute bottom-0 right-0 bg-indigo-600 dark:bg-indigo-500 text-white p-1.5 rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 transition"
           title="上传头像"
         >
           <Camera size={14} />
@@ -321,8 +321,8 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
         />
 
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 dark:bg-black/60 rounded-full">
+            <div className="w-5 h-5 border-2 border-white dark:border-gray-300 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
       </div>

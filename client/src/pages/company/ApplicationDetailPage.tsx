@@ -16,10 +16,16 @@ type Application = {
   };
   candidateId: {
     _id: string;
-    name: string;
+    fullName: string;
     email: string;
+    skills?: string[];
   };
-  resumeText: string;
+  resumeId?: {
+    _id: string;
+    fileUrl: string;
+    fileName: string;
+    fileType: string;
+  };
   currentRound: number;
   status:
     | "applied"
@@ -109,7 +115,7 @@ const ApplicationDetailPage: React.FC = () => {
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle className="text-2xl text-gray-900 dark:text-gray-100">
-                {application.candidateId?.name} - {application.jobId?.title}
+                {application.candidateId?.fullName} - {application.jobId?.title}
               </CardTitle>
               <Badge
                 variant={
@@ -203,7 +209,7 @@ const ApplicationDetailPage: React.FC = () => {
 
       {showResume && (
         <ResumeViewer
-          resumeText={application.resumeText}
+          resumeId={application.resumeId?._id}
           onClose={() => setShowResume(false)}
         />
       )}

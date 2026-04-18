@@ -1,11 +1,10 @@
-// server/src/models/Resume.js
 import mongoose from "mongoose";
 
 const resumeSchema = new mongoose.Schema(
   {
-    userId: {
+    studentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Student",
       required: true,
     },
     fileUrl: {
@@ -21,14 +20,13 @@ const resumeSchema = new mongoose.Schema(
       enum: ["pdf", "doc", "docx"],
       required: true,
     },
-    textContent: {
+    text: {
       type: String,
-    },
-    parsedAt: {
-      type: Date,
     },
   },
   { timestamps: true }
 );
+
+resumeSchema.index({ studentId: 1 });
 
 export default mongoose.model("Resume", resumeSchema);

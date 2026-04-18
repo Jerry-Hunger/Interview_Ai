@@ -1,29 +1,9 @@
-import User from "../models/User.js";
+import Student from "../models/Student.js";
 import Resume from "../models/Resume.js";
-import { generateDeepSeekResponse } from "../utils/deepseek.js";
-
-export const updateResumeText = async (req, res) => {
-  try {
-    const { resumeText } = req.body;
-    if (!resumeText) {
-      return res.status(400).json({ msg: "简历内容不能为空" });
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      { resumeText: resumeText },
-      { new: true }
-    ).select("-password");
-
-    res.json({
-      msg: "简历保存成功",
-      user: updatedUser,
-    });
-  } catch (err) {
-    console.error("Error updating resume:", err);
-    res.status(500).json({ msg: "服务器错误", error: err.message });
-  }
-};
+import { generateDeepSeekResponse, streamDeepSeekResponse } from "../utils/deepseek.js";
+import axios from "axios";
+import * as pdfjsLib from "pdfjs-dist";
+import mammoth from "mammoth";
 
 export const formatResume = async (req, res) => {
   const { resumeText } = req.body;
@@ -55,6 +35,64 @@ ${resumeText}
   }
 };
 
+export const formatResumeStream = async (req, res) => {
+  const { resumeText } = req.body;
+
+  const prompt = `
+你是一个简历格式化助手。
+
+请将以下提取的简历文本整理成清晰的结构，包含以下部分：
+- 个人简介（如果有）
+- 技能
+- 项目经验
+- 工作经历
+- 教育背景
+- 证书资质
+- 获奖情况
+
+请使用 Markdown 格式，使用适当的标题和项目符号，使其视觉上清晰易读。不要添加任何虚假信息。
+
+简历内容：
+${resumeText}
+`;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+
+  try {
+    for await (const chunk of streamDeepSeekResponse(prompt)) {
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+    }
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+  } catch (error) {
+    console.error("Error formatting resume stream:", error.message);
+    res.write(`data: ${JSON.stringify({ error: "简历格式化失败" })}\n\n`);
+    res.end();
+  }
+};
+
+export const saveResumeText = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ error: "简历不存在" });
+    }
+    const { text } = req.body;
+    if (typeof text !== "string") {
+      return res.status(400).json({ error: "无效的文本内容" });
+    }
+    resume.text = text.trim();
+    await resume.save();
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error saving resume text:", err);
+    res.status(500).json({ error: "保存简历文本失败" });
+  }
+};
+
 export const getResumeById = async (req, res) => {
   try {
     const resume = await Resume.findById(req.params.id);
@@ -68,16 +106,44 @@ export const getResumeById = async (req, res) => {
   }
 };
 
+export const getResumeFile = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ error: "简历不存在" });
+    }
+
+    const fileUrl = resume.fileUrl;
+    const fileType = resume.fileType;
+
+    const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
+    const buffer = Buffer.from(response.data);
+
+    const contentType = fileType === "pdf"
+      ? "application/pdf"
+      : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(resume.fileName)}"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.send(buffer);
+  } catch (err) {
+    console.error("Error streaming resume file:", err);
+    res.status(500).json({ error: "获取简历文件失败" });
+  }
+};
+
 export const getResumeByUserId = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
-    if (!user) {
+    const student = await Student.findById(req.params.userId);
+    if (!student) {
       return res.status(404).json({ error: "用户不存在" });
     }
-    if (!user.resumeId) {
+    if (!student.resumeId) {
       return res.status(404).json({ error: "用户未上传简历" });
     }
-    const resume = await Resume.findById(user.resumeId);
+    const resume = await Resume.findById(student.resumeId);
     if (!resume) {
       return res.status(404).json({ error: "简历不存在" });
     }
@@ -85,5 +151,60 @@ export const getResumeByUserId = async (req, res) => {
   } catch (err) {
     console.error("Error getting user resume:", err);
     res.status(500).json({ error: "服务器错误" });
+  }
+};
+
+export const getResumeTextById = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ error: "简历不存在" });
+    }
+
+    if (resume.text) {
+      return res.json({ text: resume.text });
+    }
+
+    const fileUrl = resume.fileUrl;
+    const fileType = resume.fileType;
+
+    const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
+    const buffer = Buffer.from(response.data);
+
+    let text = "";
+
+    if (fileType === "pdf") {
+      try {
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+        const pdf = await loadingTask.promise;
+        const textParts = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item) => ("str" in item ? item.str : ""));
+          textParts.push(strings.join(" "));
+        }
+        text = textParts.join("\n");
+      } catch (pdfErr) {
+        console.error("PDF parse error:", pdfErr);
+        return res.status(422).json({ error: "无法解析该 PDF 文件" });
+      }
+    } else if (fileType === "docx" || fileType === "doc") {
+      const result = await mammoth.extractRawText({ buffer });
+      text = result.value;
+    } else {
+      return res.status(400).json({ error: "不支持的文件格式" });
+    }
+
+    const trimmed = text.trim();
+    if (trimmed) {
+      resume.text = trimmed;
+      await resume.save();
+    }
+
+    res.json({ text: trimmed });
+  } catch (err) {
+    console.error("Error extracting resume text:", err);
+    res.status(500).json({ error: "提取简历文本失败" });
   }
 };

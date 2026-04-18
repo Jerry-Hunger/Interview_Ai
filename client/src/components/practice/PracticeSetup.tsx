@@ -131,7 +131,7 @@ const PracticeSetup = ({
             </div>
           </div> */}
           <ResumeUploader
-            dataChanged={(data: { resumeText: string }) => {
+            handleDataChanged={(data: { resumeText: string }) => {
               setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
             }}
             initialResumeText={setupData.resume}

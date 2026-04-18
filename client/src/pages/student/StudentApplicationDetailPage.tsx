@@ -17,7 +17,7 @@ type RoundHistory = {
 type ApplicationType = {
   _id: string;
   jobId: { title: string; description: string; difficulty: string; rounds: { type?: string; description?: string }[] };
-  resumeText: string;
+  resumeId?: { _id: string; fileUrl: string; fileName: string; fileType: string };
   status: string;
   currentRound: number;
   history?: RoundHistory[];
@@ -61,6 +61,7 @@ const ApplicationDetail = () => {
 
   const [application, setApplication] = useState<ApplicationType | null>(null);
   const [job, setJob] = useState<JobType | null>(null);
+  const [resumeText, setResumeText] = useState<string>("");
 
   const [currentStep, setCurrentStep] = useState<Step>("waiting");
   const [interviewState, setInterviewState] = useState<InterviewState>({
@@ -98,9 +99,18 @@ const ApplicationDetail = () => {
 
   const handleStartInterview = async () => {
     try {
+      let resumeToUse = resumeText;
+      if (!resumeToUse && application.resumeId?._id) {
+        const rtRes = await axiosInstance.get(`/resume/${application.resumeId._id}/text`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        resumeToUse = rtRes.data.text || "";
+        setResumeText(resumeToUse);
+      }
+
       const res = await axiosInstance.post("/interview/start", {
         role: job.title,
-        resume: application.resumeText,
+        resume: resumeToUse,
         roundType: job.rounds[application.currentRound]?.type || "综合面试",
         topic: job.rounds[application.currentRound]?.description || "",
         difficulty: job.difficulty,
@@ -155,7 +165,7 @@ const ApplicationDetail = () => {
           "/interview/conclude",
           {
             history: updatedChatHistory,
-            resumeText: application.resumeText,
+            resumeText: resumeText,
             roleSummary: job.title,
             roundType: job.rounds[application.currentRound]?.type,
             customTopic: job.rounds[application.currentRound]?.description,
@@ -192,7 +202,7 @@ const ApplicationDetail = () => {
         const res = await axiosInstance.post("/interview/respond", {
           chatHistory: updatedChatHistory,
           answer: interviewState.answer,
-          resume: application.resumeText,
+          resume: resumeText,
           role: job.title,
           roundType: job.rounds[application.currentRound]?.type,
           topic: job.rounds[application.currentRound]?.description,
@@ -369,7 +379,7 @@ const ApplicationDetail = () => {
         <PracticeInterview
           setupData={{
             role: job.title,
-            resume: application.resumeText,
+            resume: resumeText,
             roundType: job.rounds[application.currentRound]?.type,
             topic: job.rounds[application.currentRound]?.description,
             difficulty: job.difficulty,

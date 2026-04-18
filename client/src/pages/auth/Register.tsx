@@ -154,11 +154,10 @@ const Register = () => {
                 <Button
                   type="button"
                   variant={role === "student" ? "default" : "outline"}
-                  className={`h-20 flex-col space-y-2 ${
-                    role === "student"
+                  className={`h-20 flex-col space-y-2 ${role === "student"
                       ? "bg-indigo-500 dark:bg-indigo-700 text-white shadow-lg"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                  }`}
+                    }`}
                   onClick={() => setRole("student")}
                 >
                   <User size={24} />
@@ -172,11 +171,10 @@ const Register = () => {
                 <Button
                   type="button"
                   variant={role === "company" ? "default" : "outline"}
-                  className={`h-20 flex-col space-y-2 ${
-                    role === "company"
+                  className={`h-20 flex-col space-y-2 ${role === "company"
                       ? "bg-purple-600 dark:bg-purple-700 text-white shadow-lg"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                  }`}
+                    }`}
                   onClick={() => setRole("company")}
                 >
                   <Building size={24} />
@@ -392,15 +390,15 @@ const Register = () => {
                           <SelectValue placeholder="选择行业" />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-[#23263A] text-gray-900 dark:text-white">
-                          <SelectItem value="technology" className="dark:focus:bg-purple-900 dark:focus:text-white">科技</SelectItem>
-                          <SelectItem value="finance" className="dark:focus:bg-purple-900 dark:focus:text-white">金融</SelectItem>
-                          <SelectItem value="healthcare" className="dark:focus:bg-purple-900 dark:focus:text-white">医疗</SelectItem>
-                          <SelectItem value="education" className="dark:focus:bg-purple-900 dark:focus:text-white">教育</SelectItem>
-                          <SelectItem value="retail" className="dark:focus:bg-purple-900 dark:focus:text-white">零售</SelectItem>
-                          <SelectItem value="manufacturing" className="dark:focus:bg-purple-900 dark:focus:text-white">
+                          <SelectItem value="科技" className="dark:focus:bg-purple-900 dark:focus:text-white">科技</SelectItem>
+                          <SelectItem value="金融" className="dark:focus:bg-purple-900 dark:focus:text-white">金融</SelectItem>
+                          <SelectItem value="医疗" className="dark:focus:bg-purple-900 dark:focus:text-white">医疗</SelectItem>
+                          <SelectItem value="教育" className="dark:focus:bg-purple-900 dark:focus:text-white">教育</SelectItem>
+                          <SelectItem value="零售" className="dark:focus:bg-purple-900 dark:focus:text-white">零售</SelectItem>
+                          <SelectItem value="制造业" className="dark:focus:bg-purple-900 dark:focus:text-white">
                             制造业
                           </SelectItem>
-                          <SelectItem value="other" className="dark:focus:bg-purple-900 dark:focus:text-white">其他</SelectItem>
+                          <SelectItem value="其他" className="dark:focus:bg-purple-900 dark:focus:text-white">其他</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

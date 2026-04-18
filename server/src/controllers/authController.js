@@ -1,6 +1,9 @@
 import User from "../models/User.js";
+import Student from "../models/Student.js";
+import Company from "../models/Company.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import axios from "axios";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -35,6 +38,14 @@ const fetchWithRetry = async (fn, retries = MAX_RETRIES) => {
     }
   }
   throw lastError;
+};
+
+const getProfileModel = (role) => (role === "student" ? Student : Company);
+const getProfileFields = (role) => {
+  if (role === "student") {
+    return ["fullName", "avatarUrl", "phone", "location", "education", "skills", "expectedSalaryMin", "expectedSalaryMax", "resumeId"];
+  }
+  return ["companyName", "companyLogoUrl", "companyPhotos", "companyDescription", "companyWebsite", "companySize", "industry", "roleOffered", "companyLocation", "companyLocationCoords"];
 };
 
 export const githubLogin = (req, res) => {
@@ -93,15 +104,21 @@ export const githubCallback = async (req, res) => {
         const existingUser = await User.findOne({ email: primaryEmail });
         if (existingUser) {
           existingUser.githubId = githubId;
-          existingUser.avatarUrl = avatarUrl || existingUser.avatarUrl;
           await existingUser.save();
           user = existingUser;
         } else {
+          const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
           user = await User.create({
             role: "student",
             email: primaryEmail,
-            password: await bcrypt.hash(Math.random().toString(36), 10),
+            password: hashedPassword,
             githubId,
+          });
+
+          const StudentModel = getProfileModel("student");
+          await StudentModel.create({
+            _id: user._id,
+            email: primaryEmail,
             fullName: name || githubLogin,
             avatarUrl,
           });
@@ -110,15 +127,21 @@ export const githubCallback = async (req, res) => {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
           existingUser.githubId = githubId;
-          existingUser.avatarUrl = avatarUrl || existingUser.avatarUrl;
           await existingUser.save();
           user = existingUser;
         } else {
+          const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
           user = await User.create({
             role: "student",
             email,
-            password: await bcrypt.hash(Math.random().toString(36), 10),
+            password: hashedPassword,
             githubId,
+          });
+
+          const StudentModel = getProfileModel("student");
+          await StudentModel.create({
+            _id: user._id,
+            email,
             fullName: name || githubLogin,
             avatarUrl,
           });
@@ -132,7 +155,7 @@ export const githubCallback = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    res.redirect(`http://localhost:5173/login?token=${token}&role=${user.role}`);
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&role=${user.role}`);
   } catch (err) {
     console.error("GitHub OAuth error:", err.message);
     res.status(500).json({ error: "GitHub 登录失败，请重试" });
@@ -142,6 +165,11 @@ export const githubCallback = async (req, res) => {
 export const register = async (req, res) => {
   try {
     const { role, email, password, ...rest } = req.body;
+
+    if (!["student", "company"].includes(role)) {
+      return res.status(400).json({ message: "无效的角色" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "该邮箱已被注册" });
@@ -149,27 +177,40 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = new User({
+    const user = await User.create({
       role,
       email,
       password: hashedPassword,
-      ...rest,
     });
-    if (role == "student") {
-      user.fullName = rest.name;
+
+    const ProfileModel = getProfileModel(role);
+    const profileData = {
+      _id: user._id,
+      email,
+    };
+
+    if (role === "student") {
+      profileData.fullName = rest.name || "";
+      profileData.education = rest.education || "";
+      profileData.skills = rest.skills || [];
     } else {
-      user.companyName = rest.name;
+      profileData.companyName = rest.name || "";
+      profileData.industry = rest.industry || "";
+      profileData.companySize = rest.companySize || "";
+      profileData.roleOffered = rest.roleOffered || [];
     }
-    await user.save();
+
+    await ProfileModel.create(profileData);
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
-    res
-      .status(201)
-      .json({ message: "注册成功", user, token });
+
+    const profile = await ProfileModel.findById(user._id).select("-password");
+
+    res.status(201).json({ message: "注册成功", user: { ...profile.toObject(), email }, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -183,8 +224,10 @@ export const login = async (req, res) => {
     if (!user) return res.status(400).json({ message: "邮箱或密码错误" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "邮箱或密码错误" });
+    if (!isMatch) return res.status(400).json({ message: "邮箱或密码错误" });
+
+    const ProfileModel = getProfileModel(user.role);
+    const profile = await ProfileModel.findById(user._id).select("-password");
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -192,7 +235,7 @@ export const login = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({ token, role: user.role, user });
+    res.json({ token, role: user.role, user: { ...profile.toObject(), email: user.email } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -201,11 +244,15 @@ export const login = async (req, res) => {
 export const me = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "用户不存在" });
     }
-    res.json({ user });
+
+    const ProfileModel = getProfileModel(user.role);
+    const profile = await ProfileModel.findById(userId).select("-password");
+
+    res.json({ user: { ...profile.toObject(), email: user.email }, role: user.role });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -214,23 +261,28 @@ export const me = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { fullName, phone, location, expectedSalary, education, skills } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "用户不存在" });
+    }
 
+    const ProfileModel = getProfileModel(user.role);
+    const allowedFields = getProfileFields(user.role);
     const updateData = {};
-    if (fullName !== undefined) updateData.fullName = fullName;
-    if (phone !== undefined) updateData.phone = phone;
-    if (location !== undefined) updateData.location = location;
-    if (expectedSalary !== undefined) updateData.expectedSalary = expectedSalary;
-    if (education !== undefined) updateData.education = education;
-    if (skills !== undefined) updateData.skills = skills;
 
-    const user = await User.findByIdAndUpdate(
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    const profile = await ProfileModel.findByIdAndUpdate(
       userId,
       updateData,
       { new: true }
     ).select("-password");
 
-    res.json({ user });
+    res.json({ user: profile });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

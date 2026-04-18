@@ -15,10 +15,11 @@ type UserType = {
   fullName: string;
   email: string;
   role: string;
-  resumeText?: string;
+  resumeId?: string;
   phone?: string;
   location?: string;
-  expectedSalary?: string;
+  expectedSalaryMin?: string;
+  expectedSalaryMax?: string;
   education?: string;
   skills?: string[];
 };
@@ -26,7 +27,6 @@ type UserType = {
 const ProfilePage = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [resumeText, setResumeText] = useState<string>("");
   const [resumeFileName, setResumeFileName] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -41,9 +41,20 @@ const ProfilePage = () => {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        setUser(res.data.user);
-        if (res.data.user.resumeText) {
-          setResumeText(res.data.user.resumeText);
+        const userData = res.data.user;
+        userData.role = res.data.role;
+        setUser(userData);
+        if (userData.resumeId) {
+          try {
+            const resumeRes = await axiosInstance.get(`/resume/${userData.resumeId}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
+            if (resumeRes.data.fileName) {
+              setResumeFileName(resumeRes.data.fileName);
+            }
+          } catch {
+            // resume fetch error ignored
+          }
         }
       } catch (err) {
         console.error("获取用户信息失败:", err);
@@ -58,21 +69,24 @@ const ProfilePage = () => {
 
   const handleResumeUploadSuccess = (data: { resumeId: string; fileUrl: string; fileName: string }) => {
     console.log("简历上传成功:", data);
+    if (data.resumeId) {
+      setUser((prev) => (prev ? { ...prev, resumeId: data.resumeId } : null));
+      setResumeFileName(data.fileName || "");
+    }
   };
 
   const handleResumeTextSave = async (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => {
-    try {
-      setResumeText(data.resumeText);
-      setResumeFileName(data.fileName || "");
-
-      await axiosInstance.post(
-        "/resume/update-text",
-        { resumeText: data.resumeText },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
-    } catch (err) {
-      console.error("保存简历失败:", err);
-      alert("保存简历失败，请稍后重试。");
+    setResumeFileName(data.fileName || "");
+    if (data.resumeId && data.resumeText) {
+      try {
+        await axiosInstance.put(
+          `/resume/${data.resumeId}/text`,
+          { text: data.resumeText },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+      } catch (err) {
+        console.error("保存简历文本失败:", err);
+      }
     }
   };
 
@@ -82,7 +96,8 @@ const ProfilePage = () => {
       fullName: user.fullName || "",
       phone: user.phone || "",
       location: user.location || "",
-      expectedSalary: user.expectedSalary || "",
+      expectedSalaryMin: user.expectedSalaryMin || "",
+      expectedSalaryMax: user.expectedSalaryMax || "",
       education: user.education || "",
       skills: user.skills?.join(", ") || "",
     });
@@ -92,7 +107,7 @@ const ProfilePage = () => {
   const saveAllChanges = async () => {
     if (!user) return;
 
-    const updates: Record<string, string | string[]> = {};
+    const updates: Record<string, string | string[] | number> = {};
     if (editValues.fullName !== user.fullName) {
       updates.fullName = editValues.fullName;
     }
@@ -102,8 +117,11 @@ const ProfilePage = () => {
     if (editValues.location !== (user.location || "")) {
       updates.location = editValues.location;
     }
-    if (editValues.expectedSalary !== (user.expectedSalary || "")) {
-      updates.expectedSalary = editValues.expectedSalary;
+    if (editValues.expectedSalaryMin !== (user.expectedSalaryMin?.toString() || "")) {
+      updates.expectedSalaryMin = editValues.expectedSalaryMin || '0';
+    }
+    if (editValues.expectedSalaryMax !== (user.expectedSalaryMax?.toString() || "")) {
+      updates.expectedSalaryMax = editValues.expectedSalaryMax || '0';
     }
     if (editValues.education !== (user.education || "")) {
       updates.education = editValues.education;
@@ -235,7 +253,33 @@ const ProfilePage = () => {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-1">
               {renderField("phone", "手机号", user.phone, <Phone size={16} />)}
               {renderField("location", "所在地", user.location, <MapPin size={16} />)}
-              {renderField("expectedSalary", "期望薪资", user.expectedSalary, <DollarSign size={16} />)}
+              <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2">
+                <DollarSign size={16} />
+                <span className="font-medium">期望薪资：</span>
+                {isEditing ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={editValues.expectedSalaryMin || ""}
+                      onChange={(e) => handleEditValueChange("expectedSalaryMin", e.target.value)}
+                      placeholder="最低"
+                      className="w-24 h-8 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+                    />
+                    <span>-</span>
+                    <Input
+                      value={editValues.expectedSalaryMax || ""}
+                      onChange={(e) => handleEditValueChange("expectedSalaryMax", e.target.value)}
+                      placeholder="最高"
+                      className="w-24 h-8 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+                    />
+                  </div>
+                ) : (
+                  <span>
+                    {user.expectedSalaryMin || user.expectedSalaryMax
+                      ? `${user.expectedSalaryMin || ""}${user.expectedSalaryMin && user.expectedSalaryMax ? " - " : ""}${user.expectedSalaryMax || ""}`
+                      : "未设置"}
+                  </span>
+                )}
+              </div>
               {renderField("education", "学历", user.education, <GraduationCap size={16} />)}
               {renderField("skills", "技能", user.skills?.join(", "), <Code size={16} />)}
             </div>
@@ -245,7 +289,7 @@ const ProfilePage = () => {
                 简历
               </h3>
 
-              {resumeText ? (
+              {user.resumeId ? (
                 <div className="bg-gray-50 dark:bg-[#23263A] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText size={18} className="text-indigo-500" />
@@ -254,19 +298,16 @@ const ProfilePage = () => {
                       <span className="text-xs text-gray-500">({resumeFileName})</span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line mb-3">
-                    {resumeText.slice(0, 200)}...
-                  </p>
                   <button
                     onClick={() => setShowModal(true)}
-                    className="cursor-pointer mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="cursor-pointer mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     预览简历
                   </button>
 
-                  {showModal && (
+                  {showModal && user.resumeId && (
                     <ResumeViewer
-                      resumeText={resumeText}
+                      resumeId={user.resumeId}
                       onClose={() => setShowModal(false)}
                     />
                   )}
@@ -279,7 +320,7 @@ const ProfilePage = () => {
 
               <div className="mt-4">
                 <ResumeUploader
-                  dataChanged={handleResumeTextSave}
+                  handleDataChanged={handleResumeTextSave}
                   onUploadSuccess={handleResumeUploadSuccess}
                 />
               </div>

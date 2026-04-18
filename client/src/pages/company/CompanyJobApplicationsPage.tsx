@@ -16,7 +16,7 @@ type Job = {
 
 type Application = {
   _id: string;
-  candidateId: { fullName: string; email: string };
+  candidateId: { _id: string; fullName: string; email: string; skills?: string[] };
   status:
     | "applied"
     | "in-progress"
