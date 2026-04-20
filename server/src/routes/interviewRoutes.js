@@ -4,6 +4,7 @@ import {
   respondToInterview,
   respondToInterviewStream,
   concludeInterview,
+  concludeInterviewStream,
   getUserInterviews,
   getInterviewById,
 } from "../controllers/interviewController.js";
@@ -28,6 +29,7 @@ router.post("/summarize-role", async (req, res) => {
 });
 router.post("/format-resume", formatResume);
 router.post("/conclude", authMiddleware(), concludeInterview);
+router.post("/conclude-stream", authMiddleware(), concludeInterviewStream);
 router.get("/mine", authMiddleware(), getUserInterviews);
 router.get("/:id", authMiddleware(), getInterviewById);
 

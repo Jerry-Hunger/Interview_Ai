@@ -48,7 +48,7 @@ const CompanyJobsPage: React.FC = () => {
       <Navigation />
       <div className="max-w-6xl mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
-          <Briefcase className="w-7 h-7" />
+          <Briefcase className="w-7 h-7 text-gray-900 dark:text-gray-300" />
           我的发布职位
         </h1>
 
@@ -61,7 +61,7 @@ const CompanyJobsPage: React.FC = () => {
             {jobs.map((job) => (
               <Card
                 key={job._id}
-                className="rounded-xl shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition cursor-pointer"
+                className="rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition cursor-pointer"
                 onClick={() => navigate(`/company/job/${job._id}`)}
               >
                 <CardHeader>
@@ -110,7 +110,10 @@ const CompanyJobsPage: React.FC = () => {
         )}
 
         <div className="mt-8">
-          <Button onClick={() => navigate("/company/job/new")}>
+          <Button
+            onClick={() => navigate("/company/job/new")}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+          >
             发布新职位
           </Button>
         </div>

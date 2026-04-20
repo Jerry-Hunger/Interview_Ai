@@ -5,7 +5,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import Navigation from "@/components/Navigation";
 import ResumeUploader from "@/components/practice/ResumeUploader";
 import ResumeViewer from "@/components/resume/ResumeViewer";
-import AvatarUploader from "@/components/ui/AvatarUploader";
+import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -189,6 +189,7 @@ const ProfilePage = () => {
   return (
     <>
       <Navigation />
+      <div className="min-h-screen bg-white dark:bg-[#101322]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
           <CardHeader>
@@ -231,7 +232,7 @@ const ProfilePage = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-start gap-6">
-              <AvatarUploader
+              <SimpleAvatarUploader
                 avatarUrl={user.avatarUrl}
                 userName={user.fullName}
                 size="xl"
@@ -264,7 +265,7 @@ const ProfilePage = () => {
                       placeholder="最低"
                       className="w-24 h-8 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
                     />
-                    <span>-</span>
+                    <span className="text-gray-600 dark:text-gray-300">-</span>
                     <Input
                       value={editValues.expectedSalaryMax || ""}
                       onChange={(e) => handleEditValueChange("expectedSalaryMax", e.target.value)}
@@ -292,15 +293,15 @@ const ProfilePage = () => {
               {user.resumeId ? (
                 <div className="bg-gray-50 dark:bg-[#23263A] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText size={18} className="text-indigo-500" />
-                    <span className="font-medium">已保存的简历</span>
+                    <FileText size={18} className="text-indigo-500 dark:text-indigo-400" />
+                    <span className="font-medium text-gray-700 dark:text-gray-300">已保存的简历</span>
                     {resumeFileName && (
-                      <span className="text-xs text-gray-500">({resumeFileName})</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({resumeFileName})</span>
                     )}
                   </div>
                   <button
                     onClick={() => setShowModal(true)}
-                    className="cursor-pointer mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="cursor-pointer mt-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
                   >
                     预览简历
                   </button>
@@ -327,6 +328,7 @@ const ProfilePage = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </>
   );

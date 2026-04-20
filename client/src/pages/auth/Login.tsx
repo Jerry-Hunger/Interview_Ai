@@ -229,8 +229,9 @@ const Login = () => {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 p-0 text-gray-400 dark:text-gray-500"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 p-0 text-gray-400 dark:text-gray-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "隐藏密码" : "显示密码"}
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </Button>

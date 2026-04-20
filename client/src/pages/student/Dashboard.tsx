@@ -46,11 +46,16 @@ const statusMeta = (raw: string) => {
 
 type Interview = {
   _id: string;
-  result: "success" | "failure" | "Quit";
+  result: "success" | "failure" | "quit" | "Quit";
   difficulty: string;
   type: "practice" | "company";
   createdAt: string;
   rounds?: number;
+  currentRound?: number;
+  chatHistory?: { type: string; content: string; timestamp: string }[];
+  feedbacks?: string[];
+  finalFeedback?: string;
+  roleSummary?: string;
 };
 
 const StudentDashboard = () => {
@@ -82,12 +87,12 @@ const StudentDashboard = () => {
   const total = interviews.length;
   const passed = interviews.filter((i) => i.result === "success").length;
   const failed = interviews.filter((i) => i.result === "failure").length;
-  const quit = interviews.filter((i) => i.result === "Quit").length;
+  const quit = interviews.filter((i) => i.result === "quit").length;
 
   const groups = {
     通过: interviews.filter((i) => i.result === "success"),
     未通过: interviews.filter((i) => i.result === "failure"),
-    已退出: interviews.filter((i) => i.result === "Quit"),
+    已退出: interviews.filter((i) => i.result === "quit"),
   };
 
   const Carousel = ({ children }: { children: React.ReactNode }) => {
@@ -104,15 +109,17 @@ const StudentDashboard = () => {
         </div>
 
         <button
+          aria-label="上一页"
           onClick={() => emblaApi && emblaApi.scrollPrev()}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
         >
           ‹
         </button>
 
         <button
+          aria-label="下一页"
           onClick={() => emblaApi && emblaApi.scrollNext()}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
         >
           ›
         </button>
@@ -133,40 +140,40 @@ const StudentDashboard = () => {
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">总面试数</p>
-                <p className="text-2xl font-bold dark:text-white">{total}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">总面试数</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{total}</p>
               </div>
-              <BarChart className="text-indigo-500" size={28} />
+              <BarChart className="text-indigo-500 dark:text-indigo-400" size={28} />
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">通过</p>
-                <p className="text-2xl font-bold text-green-500">{passed}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">通过</p>
+                <p className="text-2xl font-bold text-green-500 dark:text-green-400">{passed}</p>
               </div>
-              <CheckCircle className="text-green-500" size={28} />
+              <CheckCircle className="text-green-500 dark:text-green-400" size={28} />
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">未通过</p>
-                <p className="text-2xl font-bold text-red-500">{failed}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">未通过</p>
+                <p className="text-2xl font-bold text-red-500 dark:text-red-400">{failed}</p>
               </div>
-              <XCircle className="text-red-500" size={28} />
+              <XCircle className="text-red-500 dark:text-red-400" size={28} />
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">已退出</p>
-                <p className="text-2xl font-bold text-yellow-500">{quit}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">已退出</p>
+                <p className="text-2xl font-bold text-yellow-500 dark:text-yellow-400">{quit}</p>
               </div>
-              <AlertCircle className="text-yellow-500" size={28} />
+              <AlertCircle className="text-yellow-500 dark:text-yellow-400" size={28} />
             </CardContent>
           </Card>
         </div>
@@ -278,7 +285,7 @@ const StudentDashboard = () => {
         <div className="mt-8">
           <Button
             onClick={() => navigate("/student/practice")}
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl px-6 py-2 shadow-md hover:shadow-lg transition"
+            className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 text-white rounded-xl px-6 py-2 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
           >
             <Play size={16} className="mr-2" />
             开始新的练习

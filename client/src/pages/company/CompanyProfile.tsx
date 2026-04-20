@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import AvatarUploader from "@/components/ui/AvatarUploader";
+import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 
 type CompanyUser = {
   companyName?: string;
@@ -263,11 +264,10 @@ const CompanyProfilePage = () => {
             <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-white dark:from-[#1a1c2e] dark:via-[#1f2033] dark:to-[#181A2A] rounded-2xl p-6 border border-indigo-100 dark:border-indigo-900/40 shadow-sm">
               <div className="flex items-start gap-5">
                 <div className="relative shrink-0">
-                  <AvatarUploader
+                  <SimpleAvatarUploader
                     avatarUrl={c?.companyLogoUrl}
                     userName={c?.companyName || "Logo"}
                     size="xl"
-                    dialogTitle="裁剪 Logo"
                     uploadEndpoint="/upload/logo"
                     onUploadSuccess={(url) => {
                       setCompany((prev) => prev ? { ...prev, companyLogoUrl: url } : null);
@@ -285,23 +285,23 @@ const CompanyProfilePage = () => {
                     {isEditing ? (
                       <>
                         <select
-                          className="cursor-pointer rounded-full border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 text-xs text-indigo-700 dark:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="cursor-pointer rounded-full border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/40 px-3 py-1 text-xs text-indigo-700 dark:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500"
                           value={getCardValue("industry") as string || ""}
                           onChange={(e) => handleCardChange("industry", e.target.value)}
                         >
-                          <option value="">选择行业</option>
+                          <option value="" className="text-gray-900 dark:text-gray-100">选择行业</option>
                           {INDUSTRIES.map((ind) => (
-                            <option key={ind} value={ind}>{ind}</option>
+                            <option key={ind} value={ind} className="text-gray-900 dark:text-gray-100">{ind}</option>
                           ))}
                         </select>
                         <select
-                          className="cursor-pointer rounded-full border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 px-3 py-1 text-xs text-purple-700 dark:text-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                          className="cursor-pointer rounded-full border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/40 px-3 py-1 text-xs text-purple-700 dark:text-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400 dark:focus:ring-purple-500"
                           value={getCardValue("companySize") as string || ""}
                           onChange={(e) => handleCardChange("companySize", e.target.value)}
                         >
-                          <option value="">选择规模</option>
+                          <option value="" className="text-gray-900 dark:text-gray-100">选择规模</option>
                           {COMPANY_SIZES.map((sz) => (
-                            <option key={sz.value} value={sz.value}>{sz.label}</option>
+                            <option key={sz.value} value={sz.value} className="text-gray-900 dark:text-gray-100">{sz.label}</option>
                           ))}
                         </select>
                       </>
@@ -353,7 +353,7 @@ const CompanyProfilePage = () => {
                       {isEditing && (
                         <div className="inline-flex items-center gap-1.5">
                           <Input
-                            className="h-6 w-36 text-xs rounded-full border-dashed border-gray-300 dark:border-gray-600 bg-transparent dark:bg-transparent focus:border-indigo-400 focus:ring-0 pl-3 pr-2"
+                            className="h-6 w-36 text-xs rounded-full border-dashed border-gray-300 dark:border-gray-600 bg-transparent dark:bg-transparent focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-0 pl-3 pr-2 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             placeholder="添加职位..."
                             value={newRoleTag}
                             onChange={(e) => setNewRoleTag(e.target.value)}
@@ -367,7 +367,7 @@ const CompanyProfilePage = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 px-2 text-xs rounded-full border border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 text-gray-500 dark:text-gray-400"
+                            className="h-6 px-2 text-xs rounded-full border border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 text-gray-500 dark:text-gray-400"
                             onClick={addRoleTag}
                           >
                             <span className="text-base leading-none">+</span>
@@ -382,7 +382,7 @@ const CompanyProfilePage = () => {
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName">公司名称</Label>
+                <Label htmlFor="companyName" className="text-gray-700 dark:text-gray-300">公司名称</Label>
                 <Input
                   id="companyName"
                   value={company?.companyName || ""}
@@ -394,7 +394,7 @@ const CompanyProfilePage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">邮箱</Label>
+                <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">邮箱</Label>
                 <Input
                   id="email"
                   type="email"
@@ -406,7 +406,7 @@ const CompanyProfilePage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="companyDescription">公司简介</Label>
+                <Label htmlFor="companyDescription" className="text-gray-700 dark:text-gray-300">公司简介</Label>
                 <Textarea
                   id="companyDescription"
                   value={company?.companyDescription || ""}
@@ -420,7 +420,7 @@ const CompanyProfilePage = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="companyLocation">办公地点</Label>
+                  <Label htmlFor="companyLocation" className="text-gray-700 dark:text-gray-300">办公地点</Label>
                   <Input
                     id="companyLocation"
                     value={company?.companyLocation || ""}
@@ -431,7 +431,7 @@ const CompanyProfilePage = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="companyWebsite">公司官网</Label>
+                  <Label htmlFor="companyWebsite" className="text-gray-700 dark:text-gray-300">公司官网</Label>
                   <Input
                     id="companyWebsite"
                     value={company?.companyWebsite || ""}
@@ -445,7 +445,7 @@ const CompanyProfilePage = () => {
             </div>
 
             <div className="space-y-4">
-              <Label className="text-base font-medium">公司环境照片</Label>
+              <Label className="text-base font-medium text-gray-700 dark:text-gray-300">公司环境照片</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {(company?.companyPhotos || []).map((photo, index) => (
                   <div key={index} className="relative group">
@@ -459,7 +459,8 @@ const CompanyProfilePage = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="bg-white/90 hover:bg-white text-gray-800 dark:bg-gray-700/90 dark:hover:bg-gray-700 dark:text-gray-100"
+                        aria-label="预览照片"
+                        className="bg-white/90 hover:bg-white text-gray-800 dark:bg-gray-700/90 dark:hover:bg-gray-700 dark:text-gray-100 cursor-pointer"
                         onClick={() => setPreviewPhoto(photo)}
                       >
                         <Eye size={14} />
@@ -467,7 +468,8 @@ const CompanyProfilePage = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        className="bg-red-500/90 hover:bg-red-600 dark:bg-red-600/90 dark:hover:bg-red-600"
+                        aria-label="删除照片"
+                        className="bg-red-500/90 hover:bg-red-600 dark:bg-red-600/90 dark:hover:bg-red-600 cursor-pointer"
                         onClick={() => handleDeletePhoto(photo)}
                       >
                         <Trash2 size={14} />
@@ -507,7 +509,8 @@ const CompanyProfilePage = () => {
           >
             <button
               onClick={() => setPreviewPhoto(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 transition"
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50"
+              aria-label="关闭预览"
             >
               <X size={32} />
             </button>

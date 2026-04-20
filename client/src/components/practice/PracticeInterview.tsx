@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import aiInterviewer from "@/assets/ai_interviewer.jpg";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
   Send,
   Camera,
   CameraOff,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 
@@ -112,20 +114,34 @@ const PracticeInterview = ({
     ai: false,
     candidate: false,
   });
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
-  // Web Speech API
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+        cameraStreamRef.current = null;
+      }
+    };
+  }, []);
+
+  // Web Speech API - useRef to avoid recreating on every render
   const SpeechRecognitionConstructor = (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
 
-  let recognition: SpeechRecognitionInstance | null = null;
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const micStoppedRef = useRef(false);
 
-  if (SpeechRecognitionConstructor) {
-    recognition = new SpeechRecognitionConstructor();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+  if (!recognitionRef.current && SpeechRecognitionConstructor) {
+    const instance = new SpeechRecognitionConstructor();
+    instance.continuous = true;
+    instance.interimResults = true;
+    instance.lang = "en-US";
+    recognitionRef.current = instance;
   }
 
-  const toggleMic = () => {
+  const toggleMic = useCallback(() => {
+    const recognition = recognitionRef.current;
     if (!recognition) {
       toast({
         title: "不支持",
@@ -136,10 +152,9 @@ const PracticeInterview = ({
     }
 
     if (interviewState.isMicOn) {
-      // 🔴 Stop recording
+      micStoppedRef.current = true;
       recognition.stop();
 
-      // Save transcript as final answer
       setInterviewState((prev) => ({
         ...prev,
         isMicOn: false,
@@ -150,9 +165,9 @@ const PracticeInterview = ({
         handleAnswerSubmit();
       }
 
-      setFullTranscript(""); // reset
+      setFullTranscript("");
     } else {
-      // 🎤 Start recording
+      micStoppedRef.current = false;
       setFullTranscript("");
       recognition.start();
 
@@ -160,7 +175,6 @@ const PracticeInterview = ({
         let newTranscript = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          // ✅ only append *final* transcripts (not interim)
           if (event.results[i].isFinal) {
             newTranscript += event.results[i][0].transcript;
           }
@@ -176,22 +190,28 @@ const PracticeInterview = ({
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("语音识别错误：", event.error);
-        toast({
-          title: "麦克风错误",
-          description: event.error,
-          variant: "destructive",
-        });
+        const fatalError = ["not-allowed", "service-not-allowed", "audio-capture"];
+        if (fatalError.includes(event.error)) {
+          micStoppedRef.current = true;
+          recognition.stop();
+          setInterviewState((prev) => ({ ...prev, isMicOn: false }));
+          toast({
+            title: "麦克风不可用",
+            description: "请检查麦克风权限设置。",
+            variant: "destructive",
+          });
+        }
       };
 
       recognition.onend = () => {
-        // ✅ restart automatically until mic is off
-        if (interviewState.isMicOn) recognition?.start();
+        if (!micStoppedRef.current) {
+          recognition?.start();
+        }
       };
 
       setInterviewState((prev) => ({ ...prev, isMicOn: true }));
     }
-  };
+  }, [interviewState.isMicOn, fullTranscript, setInterviewState, handleAnswerSubmit, toast]);
   useEffect(() => {
     if (interviewState.question) {
       // Cancel previous speech
@@ -275,9 +295,9 @@ const PracticeInterview = ({
                           key={`bar-${questionNum}`}
                           className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                             isCompleted
-                              ? "bg-green-500"
+                              ? "bg-green-500 dark:bg-green-400"
                               : isCurrent
-                              ? "bg-indigo-500"
+                              ? "bg-indigo-500 dark:bg-indigo-400"
                               : "bg-gray-300 dark:bg-gray-600"
                           }`}
                         />
@@ -349,19 +369,31 @@ const PracticeInterview = ({
                       <video
                         autoPlay
                         muted
+                        playsInline
                         className="w-full h-full object-cover"
                         ref={(el) => {
-                          if (
-                            el &&
-                            interviewState.isCameraOn &&
-                            navigator.mediaDevices
-                          ) {
-                            navigator.mediaDevices
-                              .getUserMedia({ video: true })
-                              .then((stream) => {
-                                el.srcObject = stream;
-                              });
+                          if (!el || !interviewState.isCameraOn || !navigator.mediaDevices) return;
+                          if (cameraStreamRef.current) {
+                            el.srcObject = cameraStreamRef.current;
+                            return;
                           }
+                          navigator.mediaDevices
+                            .getUserMedia({ video: true })
+                            .then((stream) => {
+                              cameraStreamRef.current = stream;
+                              el.srcObject = stream;
+                            })
+                            .catch(() => {
+                              setInterviewState((prev) => ({
+                                ...prev,
+                                isCameraOn: false,
+                              }));
+                              toast({
+                                title: "摄像头不可用",
+                                description: "请检查摄像头权限设置。",
+                                variant: "destructive",
+                              });
+                            });
                         }}
                       />
                     ) : (
@@ -378,12 +410,17 @@ const PracticeInterview = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="absolute bottom-2 right-2 text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700"
+                      className="absolute bottom-2 right-2 text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 cursor-pointer"
+                      aria-label={interviewState.isCameraOn ? "关闭摄像头" : "开启摄像头"}
                       onClick={() =>
-                        setInterviewState((prev) => ({
-                          ...prev,
-                          isCameraOn: !prev.isCameraOn,
-                        }))
+                        setInterviewState((prev) => {
+                          const next = !prev.isCameraOn;
+                          if (!next && cameraStreamRef.current) {
+                            cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+                            cameraStreamRef.current = null;
+                          }
+                          return { ...prev, isCameraOn: next };
+                        })
                       }
                     >
                       {interviewState.isCameraOn ? (
@@ -404,7 +441,7 @@ const PracticeInterview = ({
             {interviewPhase === "ended" ? (
               <Card className="shadow-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-900/30 dark:to-purple-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
                 <CardContent className="py-8 text-center">
-                  <div className="text-5xl mb-4">✅</div>
+                  <CheckCircle className="mx-auto mb-4 text-green-500 dark:text-green-400" size={48} />
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                     面试已结束
                   </h3>
@@ -414,11 +451,11 @@ const PracticeInterview = ({
                   <Button
                     onClick={handleEndInterview}
                     disabled={isLoading}
-                    className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg px-8 py-3 text-lg"
+                    className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg px-8 py-3 text-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <>
-                        <span className="animate-spin mr-2">⏳</span>
+                        <Loader2 className="animate-spin mr-2" size={18} />
                         生成中...
                       </>
                     ) : (
@@ -444,6 +481,7 @@ const PracticeInterview = ({
                           interviewState.isRecording ? "destructive" : "outline"
                         }
                         size="sm"
+                        className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         onClick={() =>
                           setInterviewState((prev) => ({
                             ...prev,
@@ -480,7 +518,8 @@ const PracticeInterview = ({
                         variant="outline"
                         size="sm"
                         onClick={toggleMic}
-                        className="text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700"
+                        aria-label={interviewState.isMicOn ? "关闭麦克风" : "开启麦克风"}
+                        className="text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       >
                         {interviewState.isMicOn ? (
                           <Mic size={14} />
@@ -497,13 +536,13 @@ const PracticeInterview = ({
                       <Button
                         variant="outline"
                         onClick={handleQuit}
-                        className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                        className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
                       >
                         退出面试
                       </Button>
                       <Button
                         onClick={handleAnswerSubmit}
-                        className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg"
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!interviewState.answer.trim() || isLoading}
                       >
                         <Send size={14} className="mr-2" />

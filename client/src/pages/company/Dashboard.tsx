@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, CheckCircle, XCircle } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import {
+  Briefcase,
+  Users,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
+} from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import axiosInstance from "@/utils/axiosInstance";
 import Navigation from "@/components/Navigation";
 
-const COLORS = ["#6366F1", "#F59E0B", "#10B981", "#EF4444", "#8B5CF6"];
+const STAGES = [
+  { key: "applied", label: "已申请", color: "#6366F1", bg: "bg-indigo-500" },
+  { key: "inProgress", label: "面试中", color: "#F59E0B", bg: "bg-amber-500" },
+  { key: "selected", label: "已通过", color: "#10B981", bg: "bg-emerald-500" },
+  { key: "finalSelected", label: "最终通过", color: "#8B5CF6", bg: "bg-violet-500" },
+  { key: "rejected", label: "已拒绝", color: "#EF4444", bg: "bg-red-500" },
+] as const;
 
 const statusLabels: Record<string, string> = {
   applied: "已申请",
@@ -39,7 +52,22 @@ type Application = {
   status: string;
 };
 
+const CustomTooltip = ({ active, payload, chartTotal }: { active?: boolean; payload?: { name: string; value: number }[]; chartTotal?: number }) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0];
+  const pct = chartTotal && chartTotal > 0 ? ((d.value / chartTotal) * 100).toFixed(0) : "0";
+  return (
+    <div className="bg-white dark:bg-[#23263A] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg">
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.name}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {d.value} 人 ({pct}%)
+      </p>
+    </div>
+  );
+};
+
 const CompanyDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [recentApps, setRecentApps] = useState<Application[]>([]);
@@ -60,13 +88,16 @@ const CompanyDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const chartData = [
-    { name: "已申请", value: stats?.applied || 0 },
-    { name: "面试中", value: stats?.inProgress || 0 },
-    { name: "已通过", value: stats?.selected || 0 },
-    { name: "最终通过", value: stats?.finalSelected || 0 },
-    { name: "已拒绝", value: stats?.rejected || 0 },
-  ];
+  const total = stats
+    ? (stats.applied || 0) + (stats.inProgress || 0) + (stats.selected || 0) + (stats.finalSelected || 0) + (stats.rejected || 0)
+    : 0;
+
+  const chartData = STAGES.map((s) => ({
+    name: s.label,
+    value: stats?.[s.key] || 0,
+  })).filter((d) => d.value > 0);
+
+  const hasData = total > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
@@ -80,10 +111,11 @@ const CompanyDashboard = () => {
           管理您的职位和追踪候选人申请状态
         </p>
 
+        {/* Stat Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <Briefcase className="text-indigo-500 dark:text-indigo-400" />
+              <Briefcase className="text-indigo-500 dark:text-indigo-400" size={24} />
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">职位总数</p>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -94,7 +126,7 @@ const CompanyDashboard = () => {
           </Card>
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <Users className="text-purple-500 dark:text-purple-400" />
+              <Users className="text-purple-500 dark:text-purple-400" size={24} />
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">申请总数</p>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -105,7 +137,7 @@ const CompanyDashboard = () => {
           </Card>
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <CheckCircle className="text-green-500 dark:text-green-400" />
+              <CheckCircle className="text-green-500 dark:text-green-400" size={24} />
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">已通过</p>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -116,7 +148,7 @@ const CompanyDashboard = () => {
           </Card>
           <Card className="bg-white dark:bg-[#181c2f] shadow-md rounded-2xl">
             <CardContent className="p-4 flex items-center gap-3">
-              <XCircle className="text-red-500 dark:text-red-400" />
+              <XCircle className="text-red-500 dark:text-red-400" size={24} />
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">已拒绝</p>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -127,30 +159,96 @@ const CompanyDashboard = () => {
           </Card>
         </div>
 
+        {/* Application Pipeline */}
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
-          <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
+          <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-6">
             申请流程
           </h2>
-          {stats && (stats.applied > 0 || stats.inProgress > 0 || stats.selected > 0 || stats.finalSelected > 0 || stats.rejected > 0) ? (
-            <PieChart width={400} height={300}>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                dataKey="value"
-                label
-              >
-                {chartData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
+
+          {hasData ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* Donut Chart */}
+              <div className="flex justify-center">
+                <div className="relative w-[260px] h-[260px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={110}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={STAGES.find((s) => s.label === entry.name)?.color || "#888"}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip chartTotal={total} />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Center label */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">{total}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">总申请</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Funnel Progress Bars */}
+              <div className="space-y-4">
+                {STAGES.map((stage, idx) => {
+                  const count = stats?.[stage.key] || 0;
+                  const pct = total > 0 ? (count / total) * 100 : 0;
+                  return (
+                    <div key={stage.key}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {stage.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {count}
+                          </span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            {pct.toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: stage.color,
+                            opacity: 0.85,
+                          }}
+                        />
+                      </div>
+                      {idx < STAGES.length - 1 && (
+                        <div className="flex justify-center my-1">
+                          <ArrowRight
+                            size={12}
+                            className="text-gray-300 dark:text-gray-600 rotate-90"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
               <p className="text-lg mb-2">暂无申请数据</p>
@@ -159,6 +257,7 @@ const CompanyDashboard = () => {
           )}
         </div>
 
+        {/* Active Jobs */}
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
           <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
             进行中的职位
@@ -179,10 +278,8 @@ const CompanyDashboard = () => {
                     </p>
                   </div>
                   <Button
-                    onClick={() =>
-                      (window.location.href = `/company/job/${job._id}`)
-                    }
-                    className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 dark:bg-indigo-600 dark:hover:bg-indigo-700"
+                    onClick={() => navigate(`/company/job/${job._id}`)}
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 dark:bg-indigo-600 dark:hover:bg-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
                     查看申请
                   </Button>
@@ -194,6 +291,7 @@ const CompanyDashboard = () => {
           </div>
         </div>
 
+        {/* Recent Applications */}
         <div className="mt-10 bg-white dark:bg-[#181c2f] shadow-md rounded-2xl p-6">
           <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400 mb-4">
             最近申请
@@ -217,10 +315,8 @@ const CompanyDashboard = () => {
                     </p>
                   </div>
                   <Button
-                    onClick={() =>
-                      (window.location.href = `/company/job/${app.jobId?._id}/${app._id}`)
-                    }
-                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg px-4 py-2 dark:bg-purple-600 dark:hover:bg-purple-700"
+                    onClick={() => navigate(`/company/job/${app.jobId?._id}/${app._id}`)}
+                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg px-4 py-2 dark:bg-purple-600 dark:hover:bg-purple-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400"
                   >
                     查看详情
                   </Button>

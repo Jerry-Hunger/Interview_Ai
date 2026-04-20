@@ -178,7 +178,8 @@ const Navigation = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="w-full text-red-500 hover:text-white hover:bg-red-500"
+                  className="w-full text-red-500 dark:text-red-400 hover:text-white hover:bg-red-500 cursor-pointer"
+                  aria-label="退出登录"
                 >
                   <LogOut size={16} className="mr-2" /> 退出登录
                 </Button>
@@ -200,7 +201,8 @@ const Navigation = () => {
           >
             <button
               onClick={() => setShowLogoutConfirm(false)}
-              className="cursor-pointer absolute top-4 right-4 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition"
+              className="cursor-pointer absolute top-4 right-4 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="关闭"
             >
               <X size={18} />
             </button>

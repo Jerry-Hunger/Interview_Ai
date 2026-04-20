@@ -8,6 +8,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Job = {
   _id: string;
@@ -78,7 +85,8 @@ const StudentJobsPage: React.FC = () => {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    const newFilters = { ...filters, [key]: value };
+    const normalizedValue = value === "all" ? "" : value;
+    const newFilters = { ...filters, [key]: normalizedValue };
     setFilters(newFilters);
     
     const params = new URLSearchParams();
@@ -196,12 +204,12 @@ const StudentJobsPage: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Filter size={18} />
-            <span className="font-medium">筛选条件</span>
+            <Filter size={18} className="text-gray-700 dark:text-gray-300" />
+            <span className="font-medium text-gray-700 dark:text-gray-300">筛选条件</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label className="text-sm">公司名称</Label>
+              <Label className="text-sm text-gray-700 dark:text-gray-300">公司名称</Label>
               <Input
                 placeholder="搜索公司..."
                 value={filters.company}
@@ -209,44 +217,54 @@ const StudentJobsPage: React.FC = () => {
               />
             </div>
             <div>
-              <Label className="text-sm">面试轮次</Label>
-              <select
-                className="w-full h-10 px-3 rounded-md border bg-background"
+              <Label className="text-sm text-gray-700 dark:text-gray-300">面试轮次</Label>
+              <Select
                 value={filters.rounds}
-                onChange={(e) => handleFilterChange("rounds", e.target.value)}
+                onValueChange={(v) => handleFilterChange("rounds", v)}
               >
-                <option value="">不限</option>
-                <option value="1">1轮</option>
-                <option value="2">2轮</option>
-                <option value="3">3轮</option>
-                <option value="4">4轮</option>
-                <option value="4+">4轮以上</option>
-              </select>
+                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectValue placeholder="不限" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#23263A]">
+                  <SelectItem value="1" className="text-gray-900 dark:text-gray-100">1轮</SelectItem>
+                  <SelectItem value="2" className="text-gray-900 dark:text-gray-100">2轮</SelectItem>
+                  <SelectItem value="3" className="text-gray-900 dark:text-gray-100">3轮</SelectItem>
+                  <SelectItem value="4" className="text-gray-900 dark:text-gray-100">4轮</SelectItem>
+                  <SelectItem value="4+" className="text-gray-900 dark:text-gray-100">4轮以上</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label className="text-sm">面试类型</Label>
-              <select
-                className="w-full h-10 px-3 rounded-md border bg-background"
+              <Label className="text-sm text-gray-700 dark:text-gray-300">面试类型</Label>
+              <Select
                 value={filters.type}
-                onChange={(e) => handleFilterChange("type", e.target.value)}
+                onValueChange={(v) => handleFilterChange("type", v)}
               >
-                <option value="">不限</option>
-                <option value="technical">技术面</option>
-                <option value="behavioral">行为面</option>
-                <option value="hr">HR面</option>
-              </select>
+                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectValue placeholder="不限" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#23263A]">
+                  <SelectItem value="technical" className="text-gray-900 dark:text-gray-100">技术面</SelectItem>
+                  <SelectItem value="behavioral" className="text-gray-900 dark:text-gray-100">行为面</SelectItem>
+                  <SelectItem value="hr" className="text-gray-900 dark:text-gray-100">HR面</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label className="text-sm">职位状态</Label>
-              <select
-                className="w-full h-10 px-3 rounded-md border bg-background"
+              <Label className="text-sm text-gray-700 dark:text-gray-300">职位状态</Label>
+              <Select
                 value={filters.status}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
+                onValueChange={(v) => handleFilterChange("status", v)}
               >
-                <option value="open">招聘中</option>
-                <option value="closed">已结束</option>
-                <option value="">全部</option>
-              </select>
+                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#23263A]">
+                  <SelectItem value="open" className="text-gray-900 dark:text-gray-100">招聘中</SelectItem>
+                  <SelectItem value="closed" className="text-gray-900 dark:text-gray-100">已结束</SelectItem>
+                  <SelectItem value="all" className="text-gray-900 dark:text-gray-100">全部</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -256,7 +274,7 @@ const StudentJobsPage: React.FC = () => {
         ) : (
           <>
             {jobs.length === 0 ? (
-              <p className="text-gray-500 text-center py-10">暂无符合条件的职位</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-10">暂无符合条件的职位</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {jobs.map((job) => renderJobCard(job, job.status === "open" ? "open" : "closed"))}

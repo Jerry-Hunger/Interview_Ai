@@ -137,7 +137,7 @@ const ApplicationDetailPage: React.FC = () => {
             </p>
 
             <div className="flex gap-2">
-              <Button onClick={() => setShowResume(true)} variant="outline">
+              <Button onClick={() => setShowResume(true)} variant="outline" className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400">
                 查看简历
               </Button>
             </div>
@@ -151,10 +151,10 @@ const ApplicationDetailPage: React.FC = () => {
                 {application.history?.map((h, idx) => (
                   <div
                     key={idx}
-                    className="p-3 border rounded-lg bg-gray-50 dark:bg-[#23263A]"
+                    className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-[#23263A]"
                   >
                     <div className="flex justify-between">
-                      <span className="font-semibold">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
                         第 {h.roundNumber} 轮
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -172,7 +172,7 @@ const ApplicationDetailPage: React.FC = () => {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button onClick={() => navigate(-1)} variant="outline">
+              <Button onClick={() => navigate(-1)} variant="outline" className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400">
                 返回
               </Button>
 
@@ -181,6 +181,7 @@ const ApplicationDetailPage: React.FC = () => {
                   <Button
                     onClick={() => updateStatus("in-progress")}
                     disabled={updating}
+                    className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
                     批准 → 进入面试
                   </Button>
@@ -188,6 +189,7 @@ const ApplicationDetailPage: React.FC = () => {
                     onClick={() => updateStatus("rejected")}
                     variant="destructive"
                     disabled={updating}
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     拒绝
                   </Button>
@@ -198,6 +200,7 @@ const ApplicationDetailPage: React.FC = () => {
                 <Button
                   onClick={() => updateStatus("final-selected")}
                   disabled={updating}
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   最终批准
                 </Button>

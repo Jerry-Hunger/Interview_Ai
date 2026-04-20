@@ -6,8 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PlusCircle, Trash } from "lucide-react";
 import Navigation from "@/components/Navigation";
+import { useToast } from "@/hooks/use-toast";
 
 type Round = {
   roundNumber: number;
@@ -20,10 +28,12 @@ type Round = {
 
 const CompanyJobForm = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const addRound = () => {
     setRounds([
@@ -50,6 +60,16 @@ const CompanyJobForm = () => {
   };
 
   const handleSubmit = async () => {
+    if (!title.trim()) {
+      toast({ title: "请填写职位名称", variant: "destructive" });
+      return;
+    }
+    if (!description.trim()) {
+      toast({ title: "请填写职位描述", variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
       await axiosInstance.post(
@@ -57,9 +77,13 @@ const CompanyJobForm = () => {
         { title, description, skills, rounds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      toast({ title: "职位发布成功" });
       navigate("/company/jobs");
     } catch (err) {
       console.error("创建职位失败:", err);
+      toast({ title: "创建职位失败，请重试", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -76,10 +100,11 @@ const CompanyJobForm = () => {
           <CardContent className="space-y-6">
             <div>
               <Label className="text-gray-700 dark:text-gray-300">
-                职位名称
+                职位名称 <span className="text-red-500">*</span>
               </Label>
               <Input
                 className="bg-gray-50 dark:bg-[#101322] border-gray-300 dark:border-gray-700"
+                placeholder="例如：前端开发工程师"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -87,10 +112,11 @@ const CompanyJobForm = () => {
 
             <div>
               <Label className="text-gray-700 dark:text-gray-300">
-                职位描述
+                职位描述 <span className="text-red-500">*</span>
               </Label>
               <Textarea
                 className="bg-gray-50 dark:bg-[#101322] border-gray-300 dark:border-gray-700"
+                placeholder="描述职位职责、要求等"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
@@ -103,9 +129,10 @@ const CompanyJobForm = () => {
               </Label>
               <Input
                 className="bg-gray-50 dark:bg-[#101322] border-gray-300 dark:border-gray-700"
+                placeholder="例如：React, TypeScript, Node.js"
                 value={skills.join(", ")}
                 onChange={(e) =>
-                  setSkills(e.target.value.split(",").map((s) => s.trim()))
+                  setSkills(e.target.value.split(",").map((s) => s.trim()).filter(Boolean))
                 }
               />
             </div>
@@ -119,7 +146,7 @@ const CompanyJobForm = () => {
                   type="button"
                   variant="outline"
                   onClick={addRound}
-                  className="dark:border-gray-700 dark:text-gray-200"
+                  className="dark:border-gray-700 dark:text-gray-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 >
                   <PlusCircle className="mr-2" size={16} /> 添加环节
                 </Button>
@@ -139,7 +166,8 @@ const CompanyJobForm = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => removeRound(index)}
-                      className="text-red-500 hover:text-red-600 dark:hover:text-red-400"
+                      aria-label={`删除第 ${round.roundNumber} 轮`}
+                      className="text-red-500 hover:text-red-600 dark:hover:text-red-400 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
                     >
                       <Trash size={18} />
                     </Button>
@@ -147,41 +175,45 @@ const CompanyJobForm = () => {
 
                   <div className="grid grid-cols-2 gap-4 mt-3">
                     <div>
-                      <Label className="text-gray-700 dark:text-gray-300">
+                      <Label className="text-gray-700 dark:text-gray-300 mb-1">
                         环节类型
                       </Label>
-                      <select
-                        className="cursor-pointer w-full border p-2 rounded bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200"
+                      <Select
                         value={round.type}
-                        onChange={(e) =>
-                          updateRound(index, "type", e.target.value)
-                        }
+                        onValueChange={(v) => updateRound(index, "type", v)}
                       >
-                        <option value="technical">技术面试</option>
-                        <option value="behavioral">行为面试</option>
-                        <option value="hr">HR 面试</option>
-                      </select>
+                        <SelectTrigger className="bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-[#23263A]">
+                          <SelectItem value="technical" className="text-gray-900 dark:text-gray-100">技术面试</SelectItem>
+                          <SelectItem value="behavioral" className="text-gray-900 dark:text-gray-100">行为面试</SelectItem>
+                          <SelectItem value="hr" className="text-gray-900 dark:text-gray-100">HR 面试</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label className="text-gray-700 dark:text-gray-300">
+                      <Label className="text-gray-700 dark:text-gray-300 mb-1">
                         难度
                       </Label>
-                      <select
-                        className="cursor-pointer w-full border p-2 rounded bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200"
+                      <Select
                         value={round.difficulty}
-                        onChange={(e) =>
-                          updateRound(index, "difficulty", e.target.value)
-                        }
+                        onValueChange={(v) => updateRound(index, "difficulty", v)}
                       >
-                        <option value="easy">简单</option>
-                        <option value="medium">中等</option>
-                        <option value="hard">困难</option>
-                      </select>
+                        <SelectTrigger className="bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-[#23263A]">
+                          <SelectItem value="easy" className="text-gray-900 dark:text-gray-100">简单</SelectItem>
+                          <SelectItem value="medium" className="text-gray-900 dark:text-gray-100">中等</SelectItem>
+                          <SelectItem value="hard" className="text-gray-900 dark:text-gray-100">困难</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label className="text-gray-700 dark:text-gray-300">
+                      <Label className="text-gray-700 dark:text-gray-300 mb-1">
                         主题
                       </Label>
                       <Input
@@ -194,7 +226,7 @@ const CompanyJobForm = () => {
                     </div>
 
                     <div>
-                      <Label className="text-gray-700 dark:text-gray-300">
+                      <Label className="text-gray-700 dark:text-gray-300 mb-1">
                         时长（分钟）
                       </Label>
                       <Input
@@ -209,7 +241,7 @@ const CompanyJobForm = () => {
                   </div>
 
                   <div className="mt-3">
-                    <Label className="text-gray-700 dark:text-gray-300">
+                    <Label className="text-gray-700 dark:text-gray-300 mb-1">
                       备注
                     </Label>
                     <Textarea
@@ -226,9 +258,10 @@ const CompanyJobForm = () => {
 
             <Button
               onClick={handleSubmit}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              disabled={submitting}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              发布职位
+              {submitting ? "发布中..." : "发布职位"}
             </Button>
           </CardContent>
         </Card>

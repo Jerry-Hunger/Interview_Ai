@@ -1,6 +1,7 @@
 import Student from "../models/Student.js";
 import Resume from "../models/Resume.js";
 import { generateDeepSeekResponse, streamDeepSeekResponse } from "../utils/deepseek.js";
+import { resumeFormatPrompt } from "../prompts/interview.js";
 import axios from "axios";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
@@ -8,23 +9,7 @@ import mammoth from "mammoth";
 export const formatResume = async (req, res) => {
   const { resumeText } = req.body;
 
-  const prompt = `
-你是一个简历格式化助手。
-
-请将以下提取的简历文本整理成清晰的结构，包含以下部分：
-- 个人简介（如果有）
-- 技能
-- 项目经验
-- 工作经历
-- 教育背景
-- 证书资质
-- 获奖情况
-
-请使用 Markdown 格式，使用适当的标题和项目符号，使其视觉上清晰易读。不要添加任何虚假信息。
-
-简历内容：
-${resumeText}
-`;
+  const prompt = resumeFormatPrompt(resumeText);
 
   try {
     const formatted = await generateDeepSeekResponse(prompt);
@@ -38,23 +23,7 @@ ${resumeText}
 export const formatResumeStream = async (req, res) => {
   const { resumeText } = req.body;
 
-  const prompt = `
-你是一个简历格式化助手。
-
-请将以下提取的简历文本整理成清晰的结构，包含以下部分：
-- 个人简介（如果有）
-- 技能
-- 项目经验
-- 工作经历
-- 教育背景
-- 证书资质
-- 获奖情况
-
-请使用 Markdown 格式，使用适当的标题和项目符号，使其视觉上清晰易读。不要添加任何虚假信息。
-
-简历内容：
-${resumeText}
-`;
+  const prompt = resumeFormatPrompt(resumeText);
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

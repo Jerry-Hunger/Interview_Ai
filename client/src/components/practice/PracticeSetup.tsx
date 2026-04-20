@@ -274,7 +274,7 @@ const PracticeSetup = ({
           </div>
           <Button
             onClick={handleSetupSubmit}
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg transition-all duration-300"
+            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
             size="lg"
           >
             <Play size={16} className="mr-2" />
@@ -348,7 +348,7 @@ const PracticeSetup = ({
       {isStarting && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-white dark:bg-[#1a1c29] rounded-xl shadow-2xl p-8 w-full max-w-sm mx-4 text-center space-y-6">
-            <Loader2 className="h-10 w-10 animate-spin mx-auto text-indigo-500" />
+            <Loader2 className="h-10 w-10 animate-spin mx-auto text-indigo-500 dark:text-indigo-400" />
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 准备面试中
@@ -358,7 +358,7 @@ const PracticeSetup = ({
               </p>
             </div>
             <Progress value={undefined} className="w-full [&>div]:bg-gradient-to-r [&>div]:from-indigo-500 [&>div]:to-purple-500 [&>div]:animate-pulse" />
-            <p className="text-xs text-gray-400">请稍候，这可能需要几秒钟</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">请稍候，这可能需要几秒钟</p>
           </div>
         </div>
       )}

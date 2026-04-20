@@ -14,17 +14,18 @@ const InterviewSchema = new Schema(
     },
     difficulty: {
       type: String,
-      enum: ["easy", "medium", "hard"],
+      enum: ["beginner", "intermediate", "senior"],
     },
     resumeText: String,
     roleSummary: String,
     roundType: {
       type: String,
-      enum: ["technical", "behavioral", "hr"],
+      enum: ["behavioral", "technical", "system-design", "coding", "mixed"],
     },
     customTopic: String,
     rounds: { type: Number, default: 1 },
     currentRound: { type: Number, default: 1 },
+    feedbacks: [{ type: String }],
     student: {
       type: Schema.Types.ObjectId,
       ref: "Student",

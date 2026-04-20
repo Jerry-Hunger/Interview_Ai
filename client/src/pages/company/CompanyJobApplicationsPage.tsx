@@ -116,7 +116,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
     <>
       <Navigation />
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
-        <Card className="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+        <Card className="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#181c2f]">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -148,7 +148,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
         {Object.entries(groupedApps).map(([status, apps]) => (
           <Card
             key={status}
-            className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm"
+            className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-[#181c2f]"
           >
             <CardHeader
               onClick={() => toggleGroup(status)}

@@ -25,8 +25,6 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
     const startStream = (text: string) => {
       if (cancelled) return;
 
-
-
       xhr = new XMLHttpRequest();
       xhr.open("POST", `${import.meta.env.VITE_API_URL}/resume/format-resume-stream`, true);
       xhr.setRequestHeader("Content-Type", "application/json");

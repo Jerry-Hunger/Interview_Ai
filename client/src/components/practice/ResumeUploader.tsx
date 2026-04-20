@@ -440,7 +440,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
         >
           <div className="flex flex-col items-center justify-center space-y-2">
             <svg
-              className="w-10 h-10 text-gray-400"
+              className="w-10 h-10 text-gray-400 dark:text-gray-500"
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
@@ -459,10 +459,10 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
               <p className="text-xs text-gray-400">支持扫描件 PDF、图片和 DOCX 文件</p>
             )}
             {loading && !status.includes("完成") && !status.includes("取消") && (
-              <p className="text-blue-600 text-xs animate-pulse">{status}</p>
+              <p className="text-blue-600 dark:text-blue-400 text-xs animate-pulse">{status}</p>
             )}
             {fileName && !loading && status === "" && (
-              <p className="text-green-600 text-xs">已上传: {fileName}</p>
+              <p className="text-green-600 dark:text-green-400 text-xs">已上传: {fileName}</p>
             )}
           </div>
         </label>
@@ -492,7 +492,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
           </div>
 
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {progress < 100 ? (
                 estimatedTime > 0 ? (
                   <span>预计剩余 {estimatedTime} 秒</span>
@@ -500,10 +500,10 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
                   <span>计算中...</span>
                 )
               ) : (
-                <span className="text-green-600">处理完成！</span>
+                <span className="text-green-600 dark:text-green-400">处理完成！</span>
               )}
             </p>
-            <p className="text-xs text-gray-400">{progress}%</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{progress}%</p>
           </div>
         </div>
       )}
