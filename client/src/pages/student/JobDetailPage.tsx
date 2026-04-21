@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "@/utils/axiosInstance";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { Calendar, Layers } from "lucide-react";
+import { useJobDetail, useMyApplications, useApplyJob } from "@/hooks/api";
 
 type Round = {
   roundNumber?: number;
@@ -35,37 +35,10 @@ type ApplicationType = {
 const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [job, setJob] = useState<JobType | null>(null);
-  const [applications, setApplications] = useState<ApplicationType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: job, isPending: loading } = useJobDetail(id!);
+  const { data: applications = [] } = useMyApplications();
+  const applyMutation = useApplyJob();
   const [applying, setApplying] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [jobRes, appsRes] = await Promise.all([
-          axiosInstance.get(`/jobs/${id}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }),
-          axiosInstance.get("/applications/mine", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }),
-        ]);
-        setJob(jobRes.data);
-        setApplications(appsRes.data || []);
-      } catch (err) {
-        console.error("Error fetching job detail", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetchData();
-  }, [id]);
 
   const hasApplied = applications.some((a) => {
     const jobId = a.jobId;
@@ -80,17 +53,7 @@ const JobDetailPage: React.FC = () => {
     }
     setApplying(true);
     try {
-      await axiosInstance.post(
-        "/applications",
-        { jobId: id },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const appsRes = await axiosInstance.get("/applications/mine");
-      setApplications(appsRes.data || []);
+      await applyMutation.mutateAsync(id!);
       alert("申请成功！");
     } catch (err: unknown) {
       console.error("Apply failed", err);
@@ -101,12 +64,11 @@ const JobDetailPage: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!job) return <div className="p-6 text-gray-600 dark:text-gray-300">职位不存在</div>;
 
   return (
     <>
-      <Navigation />
       <div className="max-w-4xl mx-auto py-8 px-4">
         <Card className="rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <CardHeader>

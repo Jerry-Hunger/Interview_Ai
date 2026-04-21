@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,8 @@ import {
   XCircle,
   ArrowRight,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import axiosInstance from "@/utils/axiosInstance";
-import Navigation from "@/components/Navigation";
+import { useState } from "react";
+import { useCompanyDashboard } from "@/hooks/api";
 
 const STAGES = [
   { key: "applied", label: "已申请", color: "#6366F1", bg: "bg-indigo-500" },
@@ -52,41 +50,13 @@ type Application = {
   status: string;
 };
 
-const CustomTooltip = ({ active, payload, chartTotal }: { active?: boolean; payload?: { name: string; value: number }[]; chartTotal?: number }) => {
-  if (!active || !payload?.length) return null;
-  const d = payload[0];
-  const pct = chartTotal && chartTotal > 0 ? ((d.value / chartTotal) * 100).toFixed(0) : "0";
-  return (
-    <div className="bg-white dark:bg-[#23263A] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg">
-      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.name}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        {d.value} 人 ({pct}%)
-      </p>
-    </div>
-  );
-};
-
 const CompanyDashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [recentApps, setRecentApps] = useState<Application[]>([]);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const res = await axiosInstance.get("/company/dashboard", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        setStats(res.data.stats);
-        setJobs(res.data.jobs);
-        setRecentApps(res.data.recentApplications);
-      } catch (err) {
-        console.error("加载仪表盘失败:", err);
-      }
-    };
-    fetchDashboardData();
-  }, []);
+  const { data, isPending, error } = useCompanyDashboard();
+  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+  const stats = data?.stats ?? null;
+  const jobs = data?.jobs || [];
+  const recentApps = data?.recentApplications || [];
 
   const total = stats
     ? (stats.applied || 0) + (stats.inProgress || 0) + (stats.selected || 0) + (stats.finalSelected || 0) + (stats.rejected || 0)
@@ -99,10 +69,24 @@ const CompanyDashboard = () => {
 
   const hasData = total > 0;
 
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322] flex items-center justify-center">
+        <p className="text-gray-500 dark:text-gray-400">加载中...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322] flex items-center justify-center">
+        <p className="text-red-500">加载仪表盘失败</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-6 py-10">
         <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
           企业仪表盘
@@ -170,33 +154,69 @@ const CompanyDashboard = () => {
               {/* Donut Chart */}
               <div className="flex justify-center">
                 <div className="relative w-[260px] h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={110}
-                        paddingAngle={3}
-                        dataKey="value"
-                        strokeWidth={0}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={STAGES.find((s) => s.label === entry.name)?.color || "#888"}
+                  <svg
+                    viewBox="0 0 260 260"
+                    width="260"
+                    height="260"
+                    className="block"
+                  >
+                    {(() => {
+                      const radius = 90;
+                      const circumference = 2 * Math.PI * radius;
+                      const gap = 3;
+                      const totalGap = chartData.length * gap;
+                      const available = circumference - totalGap;
+                      let accumulatedOffset = 0;
+
+                      return chartData.map((entry, index) => {
+                        const stage = STAGES.find((s) => s.label === entry.name);
+                        const segmentLength = total > 0 ? (entry.value / total) * available : 0;
+                        const offset = circumference * 0.25 - accumulatedOffset;
+                        accumulatedOffset += segmentLength + gap;
+
+                        return (
+                          <circle
+                            key={`seg-${index}`}
+                            cx="130"
+                            cy="130"
+                            r={radius}
+                            fill="none"
+                            stroke={stage?.color || "#888"}
+                            strokeWidth={40}
+                            strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
+                            strokeDashoffset={offset}
+                            strokeLinecap="butt"
+                            transform={`rotate(-90 130 130)`}
+                            className="cursor-pointer transition-opacity duration-200 hover:opacity-80"
+                            onMouseEnter={() => setHoveredSegment(index)}
+                            onMouseLeave={() => setHoveredSegment(null)}
                           />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip chartTotal={total} />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                        );
+                      });
+                    })()}
+                  </svg>
                   {/* Center label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">{total}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">总申请</span>
                   </div>
+                  {/* Hover Tooltip */}
+                  {hoveredSegment !== null && chartData[hoveredSegment] && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[calc(50%+60px)] pointer-events-none z-10">
+                      <div className="bg-white dark:bg-[#23263A] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {chartData[hoveredSegment].name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {chartData[hoveredSegment].value} 人 (
+                          {(total > 0
+                            ? ((chartData[hoveredSegment].value / total) * 100).toFixed(0)
+                            : "0")}
+                          %)
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "@/utils/axiosInstance";
-import Navigation from "@/components/Navigation";
+import { useMyInterviews } from "@/hooks/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,31 +56,41 @@ type Interview = {
   roleSummary?: string;
 };
 
-const StudentDashboard = () => {
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const navigate = useNavigate();
+const Carousel = ({ children }: { children: React.ReactNode }) => {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    dragFree: true,
+    containScroll: "trimSnaps",
+  });
 
-  useEffect(() => {
-    const fetchInterviews = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axiosInstance.get("/interview/mine", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (Array.isArray(res.data)) {
-          setInterviews(res.data);
-        } else if (Array.isArray(res.data.data)) {
-          setInterviews(res.data.data);
-        } else {
-          setInterviews([]);
-        }
-      } catch (err) {
-        console.error("获取面试记录失败", err);
-        setInterviews([]);
-      }
-    };
-    fetchInterviews();
-  }, []);
+  return (
+    <div className="relative">
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex gap-4">{children}</div>
+      </div>
+
+      <button
+        aria-label="上一页"
+        onClick={() => emblaApi && emblaApi.scrollPrev()}
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+      >
+        ‹
+      </button>
+
+      <button
+        aria-label="下一页"
+        onClick={() => emblaApi && emblaApi.scrollNext()}
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+      >
+        ›
+      </button>
+    </div>
+  );
+};
+
+const StudentDashboard = () => {
+  const { data: interviews = [], isPending } = useMyInterviews();
+  const navigate = useNavigate();
 
   const total = interviews.length;
   const passed = interviews.filter((i) => i.result === "success").length;
@@ -95,42 +103,8 @@ const StudentDashboard = () => {
     已退出: interviews.filter((i) => i.result === "quit"),
   };
 
-  const Carousel = ({ children }: { children: React.ReactNode }) => {
-    const [emblaRef, emblaApi] = useEmblaCarousel({
-      align: "start",
-      dragFree: true,
-      containScroll: "trimSnaps",
-    });
-
-    return (
-      <div className="relative">
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-4">{children}</div>
-        </div>
-
-        <button
-          aria-label="上一页"
-          onClick={() => emblaApi && emblaApi.scrollPrev()}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-        >
-          ‹
-        </button>
-
-        <button
-          aria-label="下一页"
-          onClick={() => emblaApi && emblaApi.scrollNext()}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-        >
-          ›
-        </button>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-white dark:bg-[#101322]">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
           我的面试

@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "@/utils/axiosInstance";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { Briefcase, Calendar } from "lucide-react";
+import { useCompanyJobs } from "@/hooks/api";
 
 type Job = {
   _id: string;
@@ -18,35 +17,14 @@ type Job = {
 };
 
 const CompanyJobsPage: React.FC = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { data: jobs = [], isPending, error } = useCompanyJobs();
 
-  useEffect(() => {
-    const fetchJobs = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosInstance.get("/jobs/company", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setJobs(res.data || []);
-      } catch (err) {
-        console.error("获取职位列表失败", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchJobs();
-  }, []);
-
-  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
+  if (isPending) return <PageSkeleton variant="table" />;
+  if (error) return <div className="p-6 text-red-500">获取职位列表失败</div>;
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-6xl mx-auto py-8 px-4">
+    <div className="max-w-6xl mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
           <Briefcase className="w-7 h-7 text-gray-900 dark:text-gray-300" />
           我的发布职位
@@ -118,7 +96,6 @@ const CompanyJobsPage: React.FC = () => {
           </Button>
         </div>
       </div>
-    </>
   );
 };
 

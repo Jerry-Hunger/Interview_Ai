@@ -1,39 +1,54 @@
 import axios from "axios";
 
+const deepseekClient = axios.create({
+  baseURL: "https://api.deepseek.com",
+  timeout: parseInt(process.env.DEEPSEEK_TIMEOUT || "60000", 10),
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+  },
+});
+
+const withRetry = async (fn, retries = parseInt(process.env.DEEPSEEK_MAX_RETRIES || "2", 10)) => {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const status = err.response?.status;
+      if (status >= 400 && status < 500) throw err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+      }
+    }
+  }
+  throw lastError;
+};
+
 export const generateDeepSeekResponse = async (prompt) => {
-  const response = await axios.post(
-    "https://api.deepseek.com/chat/completions",
-    {
+  const response = await withRetry(() =>
+    deepseekClient.post("/chat/completions", {
       model: "deepseek-chat",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-      },
-    }
+    })
   );
   return response.data.choices[0].message.content;
 };
 
 export const streamDeepSeekResponse = async function* (prompt) {
-  const response = await axios.post(
-    "https://api.deepseek.com/chat/completions",
-    {
-      model: "deepseek-chat",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      stream: true,
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+  const response = await withRetry(() =>
+    deepseekClient.post(
+      "/chat/completions",
+      {
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        stream: true,
       },
-      responseType: "stream",
-    }
+      { responseType: "stream" }
+    )
   );
 
   const stream = response.data;

@@ -1,18 +1,10 @@
-import * as pdfjsLib from "pdfjs-dist";
-import type { TextItem } from "pdfjs-dist/types/src/display/api";
-// import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min?url";
-
-// ✅ Tell pdfjs where the worker lives
-
-import mammoth from "mammoth";
-
-// ✅ Setup pdfjs worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.js",
-  import.meta.url
-).toString();
-
 const extractPdfText = async (file: File): Promise<string> => {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.js",
+    import.meta.url
+  ).toString();
+
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
@@ -20,18 +12,21 @@ const extractPdfText = async (file: File): Promise<string> => {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    textContent += content.items.filter((item): item is TextItem => "str" in item).map((item) => item.str).join(" ") + "\n";
+    textContent += content.items
+      .filter((item): item is Extract<typeof item, { str: string }> => "str" in item)
+      .map((item: { str: string }) => item.str)
+      .join(" ") + "\n";
   }
   return textContent.trim();
 };
 
 const extractDocxText = async (file: File): Promise<string> => {
+  const mammoth = await import("mammoth");
   const arrayBuffer = await file.arrayBuffer();
   const { value } = await mammoth.extractRawText({ arrayBuffer });
   return value.trim();
 };
 
-// 🔹 Extract text based on file type
 export const extractResumeText = async (file: File): Promise<string> => {
   if (file.type === "application/pdf") return extractPdfText(file);
   if (
@@ -44,7 +39,6 @@ export const extractResumeText = async (file: File): Promise<string> => {
   throw new Error("Unsupported file format. Please upload PDF or DOCX.");
 };
 
-// 🔹 Open file dialog and return resume data
 export const pickResumeFile = (): Promise<{ file: File; text: string }> => {
   return new Promise((resolve, reject) => {
     const input = document.createElement("input");

@@ -130,12 +130,17 @@ const PracticeSetup = ({
               )}
             </div>
           </div> */}
-          <ResumeUploader
-            handleDataChanged={(data: { resumeText: string }) => {
-              setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
-            }}
-            initialResumeText={setupData.resume}
-          />
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1 text-gray-900 dark:text-white">
+              简历 <span className="text-red-500">*</span>
+            </Label>
+            <ResumeUploader
+              handleDataChanged={(data: { resumeText: string }) => {
+                setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
+              }}
+              initialResumeText={setupData.resume}
+            />
+          </div>
           {/* Role Selection */}
           <div className="space-y-2">
             <Label htmlFor="role" className="text-gray-900 dark:text-white">

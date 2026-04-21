@@ -2,73 +2,62 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowRight, 
-  Users, 
-  Building, 
-  Target, 
-  CheckCircle, 
-  Star, 
+import {
+  ArrowRight,
+  Building,
+  Target,
+  CheckCircle,
+  Star,
   TrendingUp,
   Zap,
-  Shield,
-  Globe
+  FileText
 } from 'lucide-react';
 
-const Index = () => {
-  const features = [
-    {
-      icon: <Target className="text-indigo-500 dark:text-indigo-400" size={24} />,
-      title: 'AI 智能面试',
-      description: '获取个性化面试问题，实时反馈助您提升表现。',
-    },
-    {
-      icon: <Users className="text-purple-500 dark:text-purple-400" size={24} />,
-      title: '针对性训练',
-      description: '根据您的职位和行业要求定制面试问题。',
-    },
-    {
-      icon: <TrendingUp className="text-green-500 dark:text-green-400" size={24} />,
-      title: '数据分析',
-      description: '追踪您的进步，获得详细的分析和建议。',
-    },
-    {
-      icon: <Building className="text-yellow-500 dark:text-yellow-400" size={24} />,
-      title: '企业对接',
-      description: '与顶尖企业建立联系，简化招聘流程。',
-    },
-    {
-      icon: <Shield className="text-indigo-500 dark:text-indigo-400" size={24} />,
-      title: '安全私密',
-      description: '企业级安全措施保护您的数据隐私。',
-    },
-    {
-      icon: <Globe className="text-purple-500 dark:text-purple-400" size={24} />,
-      title: '全球网络',
-      description: '访问全球企业的机会，拓展职业发展。',
-    },
-  ];
+const features = [
+  {
+    icon: <Target className="text-indigo-500 dark:text-indigo-400" size={28} />,
+    title: 'AI 模拟面试',
+    description: '基于深度学习的智能面试官，模拟真实面试场景，提供个性化问题与即时评估反馈。',
+  },
+  {
+    icon: <Building className="text-purple-500 dark:text-purple-400" size={28} />,
+    title: '企业招聘',
+    description: '企业可发布职位、管理候选人申请流程，AI 辅助筛选提升招聘效率。',
+  },
+  {
+    icon: <TrendingUp className="text-green-500 dark:text-green-400" size={28} />,
+    title: '实时反馈',
+    description: '面试过程中 AI 实时分析回答质量，提供针对性建议和改进方向。',
+  },
+  {
+    icon: <FileText className="text-amber-500 dark:text-amber-400" size={28} />,
+    title: '简历分析',
+    description: '智能解析简历内容，生成匹配职位要求的面试问题，精准评估候选人能力。',
+  },
+];
 
-  const testimonials = [
-    {
-      name: '张同学',
-      role: '软件工程师 @ 科技公司',
-      content: '使用 InterviewPro 后我成功拿到了梦想的 offer！AI 的反馈非常准确，帮助我改进了技术表达。',
-      rating: 5,
-    },
-    {
-      name: '李同学',
-      role: '产品经理 @ 创业公司',
-      content: '练习过程非常真实，正式面试时我充满信心和准备。',
-      rating: 5,
-    },
-    {
-      name: '王经理',
-      role: 'HR总监 @ 云端科技',
-      content: '作为企业方，InterviewPro 简化了我们的招聘流程，帮助我们更快找到优秀人才。',
-      rating: 5,
-    },
-  ];
+const testimonials = [
+  {
+    name: '张同学',
+    role: '软件工程师 @ 科技公司',
+    content: '使用 InterviewPro 后我成功拿到了梦想的 offer！AI 的反馈非常准确，帮助我改进了技术表达。',
+    rating: 5,
+  },
+  {
+    name: '李同学',
+    role: '产品经理 @ 创业公司',
+    content: '练习过程非常真实，正式面试时我充满信心和准备。',
+    rating: 5,
+  },
+  {
+    name: '王经理',
+    role: 'HR总监 @ 云端科技',
+    content: '作为企业方，InterviewPro 简化了我们的招聘流程，帮助我们更快找到优秀人才。',
+    rating: 5,
+  },
+];
+
+const Index = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#101322]">
@@ -143,6 +132,29 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Stats Section */}
+      <section className="py-16 bg-white dark:bg-[#101322]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { value: '10,000+', label: '模拟面试次数' },
+              { value: '500+', label: '合作企业' },
+              { value: '95%', label: '用户满意度' },
+              { value: '3x', label: '面试通过率提升' },
+            ].map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                  {stat.value}
+                </div>
+                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="py-20 bg-gray-50 dark:bg-[#181A2A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -153,7 +165,7 @@ const Index = () => {
               我们提供所有工具和资源，帮助您在面试中脱颖而出
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="shadow-lg hover:shadow-xl transition-all duration-300 bg-white dark:bg-[#23263A]">
                 <CardHeader>
@@ -257,7 +269,7 @@ const Index = () => {
               <a href="#" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">帮助中心</a>
             </div>
             <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
-              © 2024 IntelliHire. 保留所有权利。
+              © {new Date().getFullYear()} IntelliHire. 保留所有权利。
             </div>
           </div>
         </div>

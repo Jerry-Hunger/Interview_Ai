@@ -1,12 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker?url";
-import Tesseract from "tesseract.js";
-import mammoth from "mammoth";
 import { Button } from "@/components/ui/button";
 import axiosInstance from "@/utils/axiosInstance";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type ResumeUploaderProps = {
   handleDataChanged: (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => void;
@@ -63,7 +57,6 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     const baseProgress = stageWeight;
     const stageProgress = (current / total) * (100 - stageWeight);
     const newProgress = Math.round(baseProgress + stageProgress);
-
     completedOperationsRef.current = current;
     setProgress(newProgress);
   }, []);
@@ -74,8 +67,15 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     setTimeout(resetStates, 1500);
   }, [resetStates]);
 
+  const getPdfjs = async () => {
+    const pdfjsLib = await import("pdfjs-dist");
+    const pdfjsWorker = (await import("pdfjs-dist/build/pdf.worker?url")).default;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    return pdfjsLib;
+  };
+
   const pdfPageToImage = async (
-    pdf: pdfjsLib.PDFDocumentProxy,
+    pdf: import("pdfjs-dist").PDFDocumentProxy,
     pageNumber: number,
     scale: number = 2.0
   ): Promise<string> => {
@@ -103,7 +103,11 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     return canvas.toDataURL("image/png");
   };
 
-  const pdfToImages = async (file: File, totalPages: number): Promise<string[]> => {
+  const pdfToImages = async (
+    pdfjsLib: typeof import("pdfjs-dist"),
+    file: File,
+    totalPages: number
+  ): Promise<string[]> => {
     const reader = new FileReader();
 
     return new Promise((resolve, reject) => {
@@ -148,6 +152,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
   };
 
   const extractTextByOCR = async (images: string[]): Promise<string> => {
+    const Tesseract = await import("tesseract.js");
     let fullText = "";
     const totalImages = images.length;
 
@@ -165,7 +170,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
         setStatus(`正在识别第 ${i + 1}/${totalImages} 页...`);
 
         const result = await Tesseract.recognize(images[i], "eng+chi_sim", {
-          logger: (m) => {
+          logger: (m: { status: string; progress: number }) => {
             if (m.status === "recognizing text" && !cancelRef.current) {
               const overallProgress = 30 + (i / totalImages) * 70 + (m.progress * 70 / totalImages);
               setProgress(Math.round(overallProgress));
@@ -191,6 +196,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     setLoading(true);
     setStatus("正在读取 PDF...");
     setProgress(0);
+
+    const pdfjsLib = await getPdfjs();
 
     const reader = new FileReader();
 
@@ -232,7 +239,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
           startTimer();
 
           try {
-            const images = await pdfToImages(file, totalPages);
+            const images = await pdfToImages(pdfjsLib, file, totalPages);
 
             if (cancelRef.current) {
               resetStates();
@@ -281,7 +288,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
           totalOperationsRef.current = totalPages;
 
           startTimer();
-          const images = await pdfToImages(file, totalPages);
+          const images = await pdfToImages(pdfjsLib, file, totalPages);
 
           if (cancelRef.current) {
             resetStates();
@@ -322,6 +329,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     setLoading(true);
     setStatus("正在提取 DOCX 文字...");
     setProgress(50);
+
+    const mammoth = await import("mammoth");
 
     try {
       const reader = new FileReader();
@@ -372,7 +381,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     const fileType = file.name.toLowerCase();
     const validExtensions = [".pdf", ".docx", ".doc"];
     const hasValidExtension = validExtensions.some(ext => fileType.endsWith(ext));
-    
+
     if (!hasValidExtension) {
       alert("不支持的文件格式，请上传 PDF 或 DOCX 文件。");
       return;
@@ -399,7 +408,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
 
       if (uploadResponse.data.success) {
         const resumeData = uploadResponse.data.resume;
-        
+
         if (onUploadSuccess) {
           onUploadSuccess({
             resumeId: resumeData.id,

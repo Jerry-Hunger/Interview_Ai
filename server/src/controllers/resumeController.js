@@ -2,6 +2,7 @@ import Student from "../models/Student.js";
 import Resume from "../models/Resume.js";
 import { generateDeepSeekResponse, streamDeepSeekResponse } from "../utils/deepseek.js";
 import { resumeFormatPrompt } from "../prompts/interview.js";
+import { getSignedUrl } from "../utils/oss.js";
 import axios from "axios";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
@@ -82,23 +83,12 @@ export const getResumeFile = async (req, res) => {
       return res.status(404).json({ error: "简历不存在" });
     }
 
-    const fileUrl = resume.fileUrl;
-    const fileType = resume.fileType;
-
-    const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
-    const buffer = Buffer.from(response.data);
-
-    const contentType = fileType === "pdf"
-      ? "application/pdf"
-      : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-
-    res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(resume.fileName)}"`);
-    res.setHeader("Content-Length", buffer.length);
-    res.setHeader("Cache-Control", "private, max-age=3600");
-    res.send(buffer);
+    const url = new URL(resume.fileUrl);
+    const objectKey = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    const signedUrl = getSignedUrl(objectKey);
+    res.redirect(signedUrl);
   } catch (err) {
-    console.error("Error streaming resume file:", err);
+    console.error("Error getting resume file:", err);
     res.status(500).json({ error: "获取简历文件失败" });
   }
 };

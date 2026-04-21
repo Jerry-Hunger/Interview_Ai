@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Phone, MapPin, DollarSign, GraduationCap, Code, User } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import ResumeUploader from "@/components/practice/ResumeUploader";
 import ResumeViewer from "@/components/resume/ResumeViewer";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useStudentProfile } from "@/hooks/api";
 
 type UserType = {
   avatarUrl?: string;
@@ -25,7 +26,8 @@ type UserType = {
 };
 
 const ProfilePage = () => {
-  const [user, setUser] = useState<UserType | null>(null);
+  const { data: user, isPending } = useStudentProfile();
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [resumeFileName, setResumeFileName] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
@@ -33,44 +35,41 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
+  // 同步 React Query 数据到本地 state（用于 mutation 后更新）
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await axiosInstance.get("/auth/me", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        const userData = res.data.user;
-        userData.role = res.data.role;
-        setUser(userData);
-        if (userData.resumeId) {
-          try {
-            const resumeRes = await axiosInstance.get(`/resume/${userData.resumeId}`, {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            if (resumeRes.data.fileName) {
-              setResumeFileName(resumeRes.data.fileName);
-            }
-          } catch {
-            // resume fetch error ignored
+    if (user) {
+      setCurrentUser(user as UserType);
+    }
+  }, [user]);
+
+  // 获取简历文件名
+  useEffect(() => {
+    const fetchResumeName = async () => {
+      const resumeId = (user as UserType)?.resumeId;
+      if (resumeId) {
+        try {
+          const resumeRes = await axiosInstance.get(`/resume/${resumeId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          if (resumeRes.data.fileName) {
+            setResumeFileName(resumeRes.data.fileName);
           }
+        } catch {
+          // resume fetch error ignored
         }
-      } catch (err) {
-        console.error("获取用户信息失败:", err);
       }
     };
-    fetchProfile();
-  }, []);
+    fetchResumeName();
+  }, [user]);
 
   const handleAvatarUploadSuccess = (url: string) => {
-    setUser((prev: UserType | null) => (prev ? { ...prev, avatarUrl: url } : null));
+    setCurrentUser((prev: UserType | null) => (prev ? { ...prev, avatarUrl: url } : null));
   };
 
   const handleResumeUploadSuccess = (data: { resumeId: string; fileUrl: string; fileName: string }) => {
     console.log("简历上传成功:", data);
     if (data.resumeId) {
-      setUser((prev) => (prev ? { ...prev, resumeId: data.resumeId } : null));
+      setCurrentUser((prev) => (prev ? { ...prev, resumeId: data.resumeId } : null));
       setResumeFileName(data.fileName || "");
     }
   };
@@ -91,42 +90,42 @@ const ProfilePage = () => {
   };
 
   const startEdit = () => {
-    if (!user) return;
+    if (!currentUser) return;
     setEditValues({
-      fullName: user.fullName || "",
-      phone: user.phone || "",
-      location: user.location || "",
-      expectedSalaryMin: user.expectedSalaryMin || "",
-      expectedSalaryMax: user.expectedSalaryMax || "",
-      education: user.education || "",
-      skills: user.skills?.join(", ") || "",
+      fullName: currentUser.fullName || "",
+      phone: currentUser.phone || "",
+      location: currentUser.location || "",
+      expectedSalaryMin: currentUser.expectedSalaryMin || "",
+      expectedSalaryMax: currentUser.expectedSalaryMax || "",
+      education: currentUser.education || "",
+      skills: currentUser.skills?.join(", ") || "",
     });
     setIsEditing(true);
   };
 
   const saveAllChanges = async () => {
-    if (!user) return;
+    if (!currentUser) return;
 
     const updates: Record<string, string | string[] | number> = {};
-    if (editValues.fullName !== user.fullName) {
+    if (editValues.fullName !== currentUser.fullName) {
       updates.fullName = editValues.fullName;
     }
-    if (editValues.phone !== (user.phone || "")) {
+    if (editValues.phone !== (currentUser.phone || "")) {
       updates.phone = editValues.phone;
     }
-    if (editValues.location !== (user.location || "")) {
+    if (editValues.location !== (currentUser.location || "")) {
       updates.location = editValues.location;
     }
-    if (editValues.expectedSalaryMin !== (user.expectedSalaryMin?.toString() || "")) {
+    if (editValues.expectedSalaryMin !== (currentUser.expectedSalaryMin?.toString() || "")) {
       updates.expectedSalaryMin = editValues.expectedSalaryMin || '0';
     }
-    if (editValues.expectedSalaryMax !== (user.expectedSalaryMax?.toString() || "")) {
+    if (editValues.expectedSalaryMax !== (currentUser.expectedSalaryMax?.toString() || "")) {
       updates.expectedSalaryMax = editValues.expectedSalaryMax || '0';
     }
-    if (editValues.education !== (user.education || "")) {
+    if (editValues.education !== (currentUser.education || "")) {
       updates.education = editValues.education;
     }
-    if (editValues.skills !== (user.skills?.join(", ") || "")) {
+    if (editValues.skills !== (currentUser.skills?.join(", ") || "")) {
       updates.skills = editValues.skills.split(",").map((s) => s.trim()).filter(Boolean);
     }
 
@@ -140,7 +139,7 @@ const ProfilePage = () => {
       const res = await axiosInstance.put("/auth/profile", updates, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setUser(res.data.user);
+      setCurrentUser(res.data.user);
       setIsEditing(false);
       toast({ title: "保存成功" });
     } catch (err) {
@@ -178,17 +177,12 @@ const ProfilePage = () => {
     </div>
   );
 
-  if (!user) {
-    return (
-      <div className="flex justify-center items-center min-h-screen text-gray-600 dark:text-gray-300">
-        加载中...
-      </div>
-    );
+  if (isPending || !currentUser) {
+    return <PageSkeleton variant="form" />;
   }
 
   return (
     <>
-      <Navigation />
       <div className="min-h-screen bg-white dark:bg-[#101322]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
@@ -233,27 +227,27 @@ const ProfilePage = () => {
           <CardContent className="space-y-6">
             <div className="flex items-start gap-6">
               <SimpleAvatarUploader
-                avatarUrl={user.avatarUrl}
-                userName={user.fullName}
+                avatarUrl={currentUser.avatarUrl}
+                userName={currentUser.fullName}
                 size="xl"
                 onUploadSuccess={handleAvatarUploadSuccess}
               />
               <div className="flex-1 space-y-1">
                 <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2 py-2">
-                  <span className="font-medium">姓名：</span> {user.fullName}
+                  <span className="font-medium">姓名：</span> {currentUser.fullName}
                 </p>
                 <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2 py-2">
-                  <span className="font-medium">邮箱：</span> {user.email}
+                  <span className="font-medium">邮箱：</span> {currentUser.email}
                 </p>
                 <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2 py-2">
-                  <span className="font-medium">角色：</span> {user.role === "student" ? "学生" : "企业"}
+                  <span className="font-medium">角色：</span> {currentUser.role === "student" ? "学生" : "企业"}
                 </p>
               </div>
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-1">
-              {renderField("phone", "手机号", user.phone, <Phone size={16} />)}
-              {renderField("location", "所在地", user.location, <MapPin size={16} />)}
+              {renderField("phone", "手机号", currentUser.phone, <Phone size={16} />)}
+              {renderField("location", "所在地", currentUser.location, <MapPin size={16} />)}
               <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2">
                 <DollarSign size={16} />
                 <span className="font-medium">期望薪资：</span>
@@ -275,14 +269,14 @@ const ProfilePage = () => {
                   </div>
                 ) : (
                   <span>
-                    {user.expectedSalaryMin || user.expectedSalaryMax
-                      ? `${user.expectedSalaryMin || ""}${user.expectedSalaryMin && user.expectedSalaryMax ? " - " : ""}${user.expectedSalaryMax || ""}`
+                    {currentUser.expectedSalaryMin || currentUser.expectedSalaryMax
+                      ? `${currentUser.expectedSalaryMin || ""}${currentUser.expectedSalaryMin && currentUser.expectedSalaryMax ? " - " : ""}${currentUser.expectedSalaryMax || ""}`
                       : "未设置"}
                   </span>
                 )}
               </div>
-              {renderField("education", "学历", user.education, <GraduationCap size={16} />)}
-              {renderField("skills", "技能", user.skills?.join(", "), <Code size={16} />)}
+              {renderField("education", "学历", currentUser.education, <GraduationCap size={16} />)}
+              {renderField("skills", "技能", currentUser.skills?.join(", "), <Code size={16} />)}
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -290,7 +284,7 @@ const ProfilePage = () => {
                 简历
               </h3>
 
-              {user.resumeId ? (
+              {currentUser.resumeId ? (
                 <div className="bg-gray-50 dark:bg-[#23263A] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText size={18} className="text-indigo-500 dark:text-indigo-400" />
@@ -306,9 +300,9 @@ const ProfilePage = () => {
                     预览简历
                   </button>
 
-                  {showModal && user.resumeId && (
+                  {showModal && currentUser.resumeId && (
                     <ResumeViewer
-                      resumeId={user.resumeId}
+                      resumeId={currentUser.resumeId}
                       onClose={() => setShowModal(false)}
                     />
                   )}

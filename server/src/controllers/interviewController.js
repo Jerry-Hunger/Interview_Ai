@@ -110,14 +110,21 @@ export const respondToInterviewStream = async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  let clientDisconnected = false;
+  req.on("close", () => { clientDisconnected = true; });
+
   try {
     for await (const chunk of streamDeepSeekResponse(prompt)) {
+      if (clientDisconnected) break;
       res.write(chunk);
     }
     res.end();
   } catch (error) {
     console.error("respondToInterviewStream error:", error.message);
-    res.status(500).json({ error: "AI 响应失败，请稍后重试。" });
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: "AI 响应失败，请稍后重试。" })}\n\n`);
+      res.end();
+    }
   }
 };
 
@@ -137,6 +144,7 @@ export const concludeInterview = async (req, res) => {
 
   const studentId = req.user.id;
 
+  try {
   if (clientResult === "Quit") {
     const interview = new Interview({
       student: studentId,
@@ -169,20 +177,20 @@ export const concludeInterview = async (req, res) => {
     chunks.push(filteredHistory.slice(i, Math.min(i + CHUNK_SIZE, filteredHistory.length)));
   }
 
-  const feedbacks = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const prompt = concludeChunk({
-      chunkIndex: i,
-      totalChunks: chunks.length,
-      blockContent: formatBlock(chunks[i]),
-      roleSummary,
-      resumeText,
-      roundType,
-      customTopic,
-    });
-    const feedback = await generateDeepSeekResponse(prompt);
-    feedbacks.push(feedback.trim());
-  }
+  const feedbacks = await Promise.all(
+    chunks.map((chunk, i) => {
+      const prompt = concludeChunk({
+        chunkIndex: i,
+        totalChunks: chunks.length,
+        blockContent: formatBlock(chunk),
+        roleSummary,
+        resumeText,
+        roundType,
+        customTopic,
+      });
+      return generateDeepSeekResponse(prompt).then((f) => f.trim());
+    })
+  );
 
   const finalPrompt = concludeFinal({
     historyLength: filteredHistory.length,
@@ -226,6 +234,10 @@ export const concludeInterview = async (req, res) => {
   await interview.save();
   console.log("Saved interview:", interview._id);
   res.json({ interview, feedbacks });
+  } catch (error) {
+    console.error("concludeInterview error:", error.message);
+    res.status(500).json({ error: "生成反馈失败，请稍后重试。" });
+  }
 };
 
 export const concludeInterviewStream = async (req, res) => {
@@ -270,6 +282,9 @@ export const concludeInterviewStream = async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  let clientDisconnected = false;
+  req.on("close", () => { clientDisconnected = true; });
+
   const CHUNK_SIZE = 5;
 
   const lastEntry = history[history.length - 1];
@@ -285,6 +300,7 @@ export const concludeInterviewStream = async (req, res) => {
     const feedbacks = [];
 
     for (let i = 0; i < chunks.length; i++) {
+      if (clientDisconnected) break;
       const prompt = concludeChunk({
         chunkIndex: i,
         totalChunks: chunks.length,
@@ -364,6 +380,9 @@ export const concludeInterviewStream = async (req, res) => {
     console.error("concludeInterviewStream error:", error.message);
     if (!res.headersSent) {
       res.status(500).json({ error: "生成反馈失败，请稍后重试。" });
+    } else if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: "生成反馈失败，请稍后重试。" })}\n\n`);
+      res.end();
     }
   }
 };
@@ -377,6 +396,18 @@ export const getUserInterviews = async (req, res) => {
   } catch (err) {
     console.error("Error fetching interviews:", err);
     res.status(500).json({ error: "获取面试记录失败" });
+  }
+};
+
+export const summarizeRole = async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const summary = await generateDeepSeekResponse(prompt);
+    res.json({ summary });
+  } catch (err) {
+    console.error("summarizeRole error:", err.message);
+    res.status(500).json({ error: "职位总结生成失败" });
   }
 };
 

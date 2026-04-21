@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import axiosInstance from "@/utils/axiosInstance";
+import { useState } from "react";
+import { useJobs, useMyApplications, useApplyJob } from "@/hooks/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { Briefcase, Filter } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +39,6 @@ type Application = {
 };
 
 const StudentJobsPage: React.FC = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -53,36 +50,10 @@ const StudentJobsPage: React.FC = () => {
     status: searchParams.get("status") || "open",
   });
 
-  useEffect(() => {
-    fetchJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
-
-  const fetchJobs = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filters.company) params.append("company", filters.company);
-      if (filters.rounds) params.append("rounds", filters.rounds);
-      if (filters.type) params.append("type", filters.type);
-      if (filters.status) params.append("status", filters.status);
-
-      const [jobsRes, appsRes] = await Promise.all([
-        axiosInstance.get(`/jobs?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }),
-        axiosInstance.get("/applications/mine", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }),
-      ]);
-      setJobs(jobsRes.data || []);
-      setApplications(appsRes.data || []);
-    } catch (err) {
-      console.error("Error fetching jobs/apps", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: jobs = [], isPending: jobsLoading } = useJobs(filters);
+  const { data: applications = [], isPending: appsLoading } = useMyApplications();
+  const applyMutation = useApplyJob();
+  const loading = jobsLoading || appsLoading;
 
   const handleFilterChange = (key: string, value: string) => {
     const normalizedValue = value === "all" ? "" : value;
@@ -107,16 +78,7 @@ const StudentJobsPage: React.FC = () => {
   const applyJob = async (jobId: string) => {
     setApplyingId(jobId);
     try {
-      await axiosInstance.post(
-        "/applications",
-        { jobId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
-
-      const appsRes = await axiosInstance.get("/applications/mine", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setApplications(appsRes.data || []);
+      await applyMutation.mutateAsync(jobId);
     } catch (err: unknown) {
       console.error("Apply failed", err);
       const axiosError = err as { response?: { data?: { msg?: string } } };
@@ -139,7 +101,7 @@ const StudentJobsPage: React.FC = () => {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               {job.companyLogoUrl && (
-                <img src={job.companyLogoUrl} alt="" className="w-10 h-10 object-contain mb-2 rounded" />
+                <img src={job.companyLogoUrl} alt="" loading="lazy" className="w-10 h-10 object-contain mb-2 rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               )}
               <CardTitle
                 className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:underline"
@@ -195,7 +157,6 @@ const StudentJobsPage: React.FC = () => {
 
   return (
     <>
-      <Navigation />
       <div className="max-w-6xl mx-auto py-10 px-4">
         <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white">
           <Briefcase className="w-8 h-8 text-blue-600 dark:text-blue-400" />
@@ -270,7 +231,7 @@ const StudentJobsPage: React.FC = () => {
         </div>
 
         {loading ? (
-          <p className="text-gray-600 dark:text-gray-300">加载中...</p>
+          <PageSkeleton variant="table" />
         ) : (
           <>
             {jobs.length === 0 ? (

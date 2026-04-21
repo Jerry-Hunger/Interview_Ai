@@ -48,6 +48,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [roleError, setRoleError] = useState(false);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -60,6 +61,7 @@ const Register = () => {
     e.preventDefault();
 
     if (!role) {
+      setRoleError(true);
       toast({
         title: "请选择角色",
         description: "请选择您是学生还是企业用户",
@@ -67,6 +69,7 @@ const Register = () => {
       });
       return;
     }
+    setRoleError(false);
 
     if (formData.password !== formData.confirmPassword) {
       toast({
@@ -146,9 +149,9 @@ const Register = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-3">
+            <div className={`space-y-3 p-3 rounded-lg transition-all ${roleError ? "bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 animate-pulse" : ""}`}>
               <Label className="text-base font-medium text-gray-900 dark:text-white">
-                我是：
+                我是：{roleError && <span className="text-red-500 text-sm ml-1">请选择角色</span>}
               </Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -158,7 +161,7 @@ const Register = () => {
                       ? "bg-indigo-500 dark:bg-indigo-700 text-white shadow-lg"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                     }`}
-                  onClick={() => setRole("student")}
+                  onClick={() => { setRole("student"); setRoleError(false); }}
                 >
                   <User size={24} />
                   <div className="text-center">
@@ -175,7 +178,7 @@ const Register = () => {
                       ? "bg-purple-600 dark:bg-purple-700 text-white shadow-lg"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                     }`}
-                  onClick={() => setRole("company")}
+                  onClick={() => { setRole("company"); setRoleError(false); }}
                 >
                   <Building size={24} />
                   <div className="text-center">
@@ -425,10 +428,10 @@ const Register = () => {
                           <SelectItem value="51-200" className="dark:focus:bg-purple-900 dark:focus:text-white">
                             51-200 人
                           </SelectItem>
-                          <SelectItem value="201-1000" className="dark:focus:bg-purple-900 dark:focus:text-white">
-                            201-1000 人
+                          <SelectItem value="201-500" className="dark:focus:bg-purple-900 dark:focus:text-white">
+                            201-500 人
                           </SelectItem>
-                          <SelectItem value="1000+" className="dark:focus:bg-purple-900 dark:focus:text-white">1000+ 人</SelectItem>
+                          <SelectItem value="500+" className="dark:focus:bg-purple-900 dark:focus:text-white">500+ 人</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

@@ -1,4 +1,3 @@
-// routes/applications.ts
 import express from "express";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import {
@@ -10,32 +9,21 @@ import {
   updateApplicationStatus,
   addRoundResult,
 } from "../controllers/applicationController.js";
+import {
+  validateCreateApplication,
+  validateUpdateStatus,
+  validateAddRoundResult,
+} from "../middlewares/validators/applicationValidators.js";
+import validate from "../middlewares/validators/validate.js";
 
 const router = express.Router();
 
-// ✅ Create new application
-router.post("/", authMiddleware("student"), createApplication);
-
-// ✅ Get all applications (admin use case)
+router.post("/", authMiddleware("student"), validateCreateApplication, validate, createApplication);
 router.get("/", authMiddleware("admin"), getAllApplications);
-
-// ✅ Get applications of logged-in user
 router.get("/mine", authMiddleware("student"), getMyApplications);
-
 router.get("/job/:jobId", authMiddleware("company"), getJobApplications);
-router.get(
-  "/:applicationId",
-  authMiddleware(["student", "company"]),
-  getApplicationById
-);
-
-router.post("/:applicationId/round", authMiddleware("student"), addRoundResult);
-
-// ✅ Update application status
-router.patch(
-  "/:applicationId",
-  authMiddleware("company"),
-  updateApplicationStatus
-);
+router.get("/:applicationId", authMiddleware(["student", "company"]), getApplicationById);
+router.post("/:applicationId/round", authMiddleware("student"), validateAddRoundResult, validate, addRoundResult);
+router.patch("/:applicationId", authMiddleware("company"), validateUpdateStatus, validate, updateApplicationStatus);
 
 export default router;

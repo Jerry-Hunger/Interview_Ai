@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "@/utils/axiosInstance";
+import { useMyApplications } from "@/hooks/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { Briefcase, ChevronDown, ChevronUp } from "lucide-react";
 
 type Application = {
@@ -39,28 +39,10 @@ const statusColors: Record<Application["status"], string> = {
 
 const StudentApplicationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: applications = [], isPending: loading } = useMyApplications();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
   );
-
-  useEffect(() => {
-    const fetchApplications = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosInstance.get("/applications/mine", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        setApplications(res.data || []);
-      } catch (err) {
-        console.error("Error fetching applications", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchApplications();
-  }, []);
 
   const groupedApps: Record<Application["status"], Application[]> = {
     applied: [],
@@ -82,11 +64,10 @@ const StudentApplicationsPage: React.FC = () => {
     }));
   };
 
-  if (loading) return <div className="p-6 text-gray-600 dark:text-gray-300">加载中...</div>;
+  if (loading) return <><PageSkeleton variant="table" /></>;
 
   return (
     <>
-      <Navigation />
       <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
         <h2 className="text-3xl font-bold flex items-center gap-2 mb-6">
           <Briefcase className="w-7 h-7 text-blue-600 dark:text-blue-400" />

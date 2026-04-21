@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import PracticeInterview from "@/components/practice/PracticeInterview";
 import PracticeResults from "@/components/practice/PracticeResults";
 import { useToast } from "@/hooks/use-toast";
+import { useApplicationDetail } from "@/hooks/api";
 
 type Step = "waiting" | "interview" | "results";
 
@@ -58,9 +59,9 @@ type InterviewResult = {
 const ApplicationDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
+  const { data: application, isPending } = useApplicationDetail(id!);
+  const job = (application as ApplicationType)?.jobId as JobType | null;
 
-  const [application, setApplication] = useState<ApplicationType | null>(null);
-  const [job, setJob] = useState<JobType | null>(null);
   const [resumeText, setResumeText] = useState<string>("");
 
   const [currentStep, setCurrentStep] = useState<Step>("waiting");
@@ -76,26 +77,6 @@ const ApplicationDetail = () => {
     chatHistory: [],
   });
   const [interviewResults, setInterviewResults] = useState<InterviewResult | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axiosInstance.get(`/applications/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        setApplication(res.data);
-        setJob(res.data.jobId);
-      } catch {
-        toast({
-          title: "错误",
-          description: "加载申请详情失败",
-          variant: "destructive",
-        });
-      }
-    };
-    fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
 
   const handleStartInterview = async () => {
     try {
@@ -235,18 +216,13 @@ const ApplicationDetail = () => {
     }
   };
 
-  if (!application || !job) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center text-gray-600 dark:text-gray-300">
-        加载中...
-      </div>
-    );
+  if (isPending || !application || !job) {
+    return <PageSkeleton variant="detail" />;
   }
 
   if (currentStep === "waiting") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
-        <Navigation />
         <div className="max-w-3xl mx-auto py-12 px-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             {job.title}
@@ -399,7 +375,6 @@ const ApplicationDetail = () => {
   if (currentStep === "results") {
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Navigation />
         <PracticeResults interview={interviewResults} navigate={() => {}} />
       </div>
     );

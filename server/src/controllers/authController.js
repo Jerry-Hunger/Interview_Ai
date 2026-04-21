@@ -192,12 +192,16 @@ export const register = async (req, res) => {
     if (role === "student") {
       profileData.fullName = rest.name || "";
       profileData.education = rest.education || "";
-      profileData.skills = rest.skills || [];
+      profileData.skills = typeof rest.skills === "string" && rest.skills.trim()
+        ? rest.skills.split(/[,，、\s]+/).filter(Boolean)
+        : [];
     } else {
       profileData.companyName = rest.name || "";
       profileData.industry = rest.industry || "";
       profileData.companySize = rest.companySize || "";
-      profileData.roleOffered = rest.roleOffered || [];
+      profileData.roleOffered = typeof rest.roleOffered === "string" && rest.roleOffered.trim()
+        ? rest.roleOffered.split(/[,，、\s]+/).filter(Boolean)
+        : [];
     }
 
     await ProfileModel.create(profileData);
@@ -228,6 +232,10 @@ export const login = async (req, res) => {
 
     const ProfileModel = getProfileModel(user.role);
     const profile = await ProfileModel.findById(user._id).select("-password");
+
+    if (!profile) {
+      return res.status(400).json({ message: "账户数据不完整，请联系管理员或重新注册" });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },

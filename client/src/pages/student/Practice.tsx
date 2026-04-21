@@ -1,11 +1,12 @@
-import { useEffect, useState, useRef } from "react";
-import Navigation from "@/components/Navigation";
-import PracticeSetup from "@/components/practice/PracticeSetup";
-import PracticeInterview from "@/components/practice/PracticeInterview";
+import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import axiosInstance from "@/utils/axiosInstance";
-import PracticeResults from "@/components/practice/PracticeResults";
+
+const PracticeSetup = lazy(() => import("@/components/practice/PracticeSetup"));
+const PracticeInterview = lazy(() => import("@/components/practice/PracticeInterview"));
+const PracticeResults = lazy(() => import("@/components/practice/PracticeResults"));
 
 type Step = "setup" | "interview" | "results";
 type InterviewPhase = "answering" | "ended";
@@ -560,14 +561,15 @@ const Practice = () => {
   if (currentStep === "setup") {
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Navigation />
-        <PracticeSetup
-          setupData={setupData}
-          setSetupData={setSetupData}
-          handleSetupSubmit={handleSetupSubmit}
-          navigate={navigate}
-          isStarting={isStarting}
-        />
+        <Suspense fallback={<PageSkeleton variant="form" />}>
+          <PracticeSetup
+            setupData={setupData}
+            setSetupData={setSetupData}
+            handleSetupSubmit={handleSetupSubmit}
+            navigate={navigate}
+            isStarting={isStarting}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -584,50 +586,50 @@ const Practice = () => {
     const effectiveCurrentRound = navState?.currentRound || currentRound;
     
     if (!effectiveSetupData || !effectiveSetupData.role) {
-      return (
-        <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center">
-          <div className="text-gray-500 dark:text-gray-400">加载中...</div>
-        </div>
-      );
+      return <PageSkeleton variant="form" />;
     }
     
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <PracticeInterview
-          setupData={effectiveSetupData}
-          interviewState={interviewState}
-          setInterviewState={setInterviewState}
-          handleAnswerSubmit={handleAnswerSubmit}
-          handleEndInterview={handleEndInterview}
-          handleQuit={handleQuit}
-          toast={toast}
-          isLoading={isLoading}
-          interviewPhase={interviewPhase}
-          streamingMessage={streamingMessage}
-          currentRound={effectiveCurrentRound}
-        />
+        <Suspense fallback={<PageSkeleton variant="form" />}>
+          <PracticeInterview
+            setupData={effectiveSetupData}
+            interviewState={interviewState}
+            setInterviewState={setInterviewState}
+            handleAnswerSubmit={handleAnswerSubmit}
+            handleEndInterview={handleEndInterview}
+            handleQuit={handleQuit}
+            toast={toast}
+            isLoading={isLoading}
+            interviewPhase={interviewPhase}
+            streamingMessage={streamingMessage}
+            currentRound={effectiveCurrentRound}
+          />
+        </Suspense>
       </div>
     );
   }
   if (currentStep === "results") {
     return (
       <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Navigation />
-        <PracticeResults interview={interviewResults} navigate={navigate} setupData={setupData} />
+        <Suspense fallback={<PageSkeleton variant="form" />}>
+          <PracticeResults interview={interviewResults} navigate={navigate} setupData={setupData} />
+        </Suspense>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#101322]">
-      <Navigation />
-      <PracticeSetup
-        setupData={setupData}
-        setSetupData={setSetupData}
-        handleSetupSubmit={handleSetupSubmit}
-        navigate={navigate}
-        isStarting={isStarting}
-      />
+      <Suspense fallback={<PageSkeleton variant="form" />}>
+        <PracticeSetup
+          setupData={setupData}
+          setSetupData={setSetupData}
+          handleSetupSubmit={handleSetupSubmit}
+          navigate={navigate}
+          isStarting={isStarting}
+        />
+      </Suspense>
     </div>
   );
 };

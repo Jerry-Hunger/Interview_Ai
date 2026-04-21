@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Building, Upload, Trash2, X, Eye } from "lucide-react";
+import { Building, Upload, Trash2, X, Eye, Briefcase, Clock } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
-import Navigation from "@/components/Navigation";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
+import { useNavigate } from "react-router-dom";
+import { useCompanyProfile, useCompanyJobs } from "@/hooks/api";
 
 type CompanyUser = {
   companyName?: string;
@@ -49,10 +51,19 @@ const COMPANY_SIZES = [
   { value: "500+", label: "500+人" },
 ];
 
+type JobItem = {
+  _id: string;
+  title: string;
+  skills: string[];
+  status: string;
+  createdAt: string;
+};
+
 const CompanyProfilePage = () => {
+  const { data: profileData, isPending, refetch: refetchProfile } = useCompanyProfile();
+  const { data: publishedJobs = [] } = useCompanyJobs();
   const [company, setCompany] = useState<CompanyUser | null>(null);
   const [originalCompany, setOriginalCompany] = useState<CompanyUser | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -60,24 +71,15 @@ const CompanyProfilePage = () => {
   const [newRoleTag, setNewRoleTag] = useState("");
   const { toast } = useToast();
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const navigate = useNavigate();
 
+  // 同步 React Query 数据到本地 state
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
-    try {
-      const res = await axiosInstance.get("/company/profile", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setCompany(res.data);
-      setOriginalCompany(res.data);
-    } catch (err) {
-      console.error("获取企业信息失败:", err);
-    } finally {
-      setLoading(false);
+    if (profileData) {
+      setCompany(profileData as CompanyUser);
+      setOriginalCompany(profileData as CompanyUser);
     }
-  };
+  }, [profileData]);
 
   const handlePhotosUpload = async (files: FileList) => {
     setUploadingPhotos(true);
@@ -175,7 +177,7 @@ const CompanyProfilePage = () => {
       toast({ title: "保存成功" });
       setIsEditing(false);
       setCardValues({});
-      await fetchProfile();
+      await refetchProfile();
     } catch (err) {
       console.error("保存失败:", err);
       toast({ title: "保存失败", variant: "destructive" });
@@ -203,12 +205,8 @@ const CompanyProfilePage = () => {
     handleCardChange("roleOffered", current.filter((t) => t !== tag));
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen text-gray-600 dark:text-gray-300">
-        加载中...
-      </div>
-    );
+  if (isPending) {
+    return <PageSkeleton variant="form" />;
   }
 
   const c = company as CompanyUser;
@@ -219,7 +217,6 @@ const CompanyProfilePage = () => {
 
   return (
     <>
-      <Navigation />
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
           <CardHeader>
@@ -453,6 +450,7 @@ const CompanyProfilePage = () => {
                       src={photo}
                       alt={`环境照片 ${index + 1}`}
                       className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                      loading="lazy"
                       onClick={() => setPreviewPhoto(photo)}
                     />
                     <div className="absolute inset-0 bg-black/40 dark:bg-black/60 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center gap-2">
@@ -499,6 +497,75 @@ const CompanyProfilePage = () => {
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">最多 10 张，每张不超过 5MB</p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 已发布职位 */}
+        <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-xl font-bold text-purple-700 dark:text-purple-300">
+              <div className="flex items-center gap-2">
+                <Briefcase size={20} /> 已发布职位
+              </div>
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                共 {publishedJobs.length} 个
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {publishedJobs.length > 0 ? (
+              <div className="space-y-3">
+                {publishedJobs.map((job) => (
+                  <div
+                    key={job._id}
+                    onClick={() => navigate("/company/jobs")}
+                    className="group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+                        {job.title}
+                      </h4>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        job.status === "open"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+                      }`}>
+                        {job.status === "open" ? "招聘中" : "已关闭"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(job.skills || []).slice(0, 5).map((skill) => (
+                        <span key={skill} className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                          {skill}
+                        </span>
+                      ))}
+                      {(job.skills || []).length > 5 && (
+                        <span className="text-xs text-gray-400">+{job.skills.length - 5}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} />
+                        {new Date(job.createdAt).toLocaleDateString("zh-CN")}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
+                <Briefcase size={40} className="mb-3 opacity-50" />
+                <p className="text-sm">暂无已发布职位</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/company/jobs")}
+                  className="mt-3 border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950"
+                >
+                  发布新职位
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

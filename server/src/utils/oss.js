@@ -52,3 +52,8 @@ export const isValidImageType = (ext) => {
 export const isValidResumeType = (ext) => {
   return ['pdf', 'doc', 'docx'].includes(ext);
 };
+
+export const getSignedUrl = (objectKey, expiresInSeconds = 3600) => {
+  const client = getOSSClient();
+  return client.signatureUrl(objectKey, { expires: expiresInSeconds });
+};

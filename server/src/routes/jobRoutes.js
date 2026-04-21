@@ -1,4 +1,3 @@
-// routes/jobRoutes.js
 import express from "express";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import {
@@ -10,34 +9,17 @@ import {
   getJobDetail,
   companyJobs,
 } from "../controllers/jobController.js";
+import { validateCreateJob, validateApplyJob } from "../middlewares/validators/jobValidators.js";
+import validate from "../middlewares/validators/validate.js";
 
 const router = express.Router();
 
-// Company creates job with rounds
-router.post("/", authMiddleware(["company"]), createJob);
-
-// Candidate views available jobs
+router.post("/", authMiddleware(["company"]), validateCreateJob, validate, createJob);
 router.get("/", authMiddleware(["student"]), listJobs);
-
 router.get("/company", authMiddleware(["company"]), companyJobs);
-
-// Candidate applies (with resume upload)
-router.post("/:jobId/apply", authMiddleware(["student"]), applyJob);
-
+router.post("/:jobId/apply", authMiddleware(["student"]), validateApplyJob, validate, applyJob);
 router.get("/:jobId", authMiddleware(["student", "company"]), getJobDetail);
-
-// Company views applications
-router.get(
-  "/:jobId/applications",
-  authMiddleware(["company"]),
-  getApplications
-);
-
-// Company approves/rejects final
-router.patch(
-  "/applications/:id/status",
-  authMiddleware(["company"]),
-  updateApplicationStatus
-);
+router.get("/:jobId/applications", authMiddleware(["company"]), getApplications);
+router.patch("/applications/:id/status", authMiddleware(["company"]), updateApplicationStatus);
 
 export default router;
