@@ -6,7 +6,7 @@ export const validateCreateApplication = [
 
 export const validateUpdateStatus = [
   param("applicationId").isMongoId().withMessage("无效的申请 ID"),
-  body("status").isIn(["applied", "reviewing", "interview", "accepted", "rejected"]).withMessage("无效的申请状态"),
+  body("status").isIn(["applied", "in-progress", "selected", "final-selected", "rejected"]).withMessage("无效的申请状态"),
 ];
 
 export const validateAddRoundResult = [

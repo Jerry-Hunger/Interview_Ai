@@ -61,27 +61,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#101322]">
-      <nav className="bg-white dark:bg-[#181A2A] border-b border-gray-200 dark:border-gray-700 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">IP</span>
-              </div>
-              <span className="font-bold text-xl text-indigo-700 dark:text-indigo-400">IntelliHire</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/login">
-                <Button variant="ghost" className="text-indigo-600 dark:text-indigo-400">登录</Button>
-              </Link>
-              <Link to="/register">
-                <Button className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white hover:shadow-lg">立即开始</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       <section className="relative overflow-hidden bg-gradient-to-br from-white to-indigo-50 dark:from-[#101322] dark:to-[#181A2A] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-8">

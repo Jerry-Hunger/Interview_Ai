@@ -98,7 +98,7 @@ const variants = {
 const PageSkeleton = ({ variant = "dashboard", className }: PageSkeletonProps) => {
   const Component = variants[variant];
   return (
-    <div className={className}>
+    <div className={`min-h-screen bg-gray-50 dark:bg-[#0f172a] ${className ?? ""}`}>
       <Component />
     </div>
   );

@@ -3,6 +3,7 @@ import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import axiosInstance from "@/utils/axiosInstance";
+import { useStudentProfile, useResumeText } from "@/hooks/api";
 
 const PracticeSetup = lazy(() => import("@/components/practice/PracticeSetup"));
 const PracticeInterview = lazy(() => import("@/components/practice/PracticeInterview"));
@@ -92,6 +93,9 @@ const Practice = () => {
   const location = useLocation();
   const { toast } = useToast();
 
+  const { data: userProfile } = useStudentProfile();
+  const { data: resumeText } = useResumeText(userProfile?.resumeId);
+
   useEffect(() => {
     const state = location.state as {
       continueRound?: boolean;
@@ -155,28 +159,10 @@ const Practice = () => {
   }, [location.state]);
 
   useEffect(() => {
-    if (setupData.resume) return;
-
-    const fetchUserResume = async () => {
-      try {
-        const res = await axiosInstance.get("/auth/me", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        const resumeId = res.data.user?.resumeId;
-        if (resumeId) {
-          const textRes = await axiosInstance.get(`/resume/${resumeId}/text`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          });
-          if (textRes.data.text) {
-            setSetupData((prev) => ({ ...prev, resume: textRes.data.text }));
-          }
-        }
-      } catch (err) {
-        console.error("获取用户简历失败:", err);
-      }
-    };
-    fetchUserResume();
-  }, [setupData.resume]);
+    if (resumeText && !setupData.resume) {
+      setSetupData((prev) => ({ ...prev, resume: resumeText }));
+    }
+  }, [resumeText, setupData.resume]);
 
   useEffect(() => {
     isMountedRef.current = true;

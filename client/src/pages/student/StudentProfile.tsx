@@ -9,7 +9,7 @@ import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useStudentProfile } from "@/hooks/api";
+import { useStudentProfile, useResumeDetail } from "@/hooks/api";
 
 type UserType = {
   avatarUrl?: string;
@@ -35,6 +35,8 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
+  const { data: resumeDetail } = useResumeDetail((user as UserType)?.resumeId);
+
   // 同步 React Query 数据到本地 state（用于 mutation 后更新）
   useEffect(() => {
     if (user) {
@@ -42,25 +44,11 @@ const ProfilePage = () => {
     }
   }, [user]);
 
-  // 获取简历文件名
   useEffect(() => {
-    const fetchResumeName = async () => {
-      const resumeId = (user as UserType)?.resumeId;
-      if (resumeId) {
-        try {
-          const resumeRes = await axiosInstance.get(`/resume/${resumeId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          });
-          if (resumeRes.data.fileName) {
-            setResumeFileName(resumeRes.data.fileName);
-          }
-        } catch {
-          // resume fetch error ignored
-        }
-      }
-    };
-    fetchResumeName();
-  }, [user]);
+    if (resumeDetail?.fileName) {
+      setResumeFileName(resumeDetail.fileName);
+    }
+  }, [resumeDetail?.fileName]);
 
   const handleAvatarUploadSuccess = (url: string) => {
     setCurrentUser((prev: UserType | null) => (prev ? { ...prev, avatarUrl: url } : null));

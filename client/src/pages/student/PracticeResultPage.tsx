@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import PracticeResult from "@/components/practice/PracticeResults";
 import { Button } from "@/components/ui/button";
-import Navigation from "@/components/Navigation";
 
 const PracticeResultPage = () => {
   const location = useLocation();
@@ -22,7 +21,6 @@ const PracticeResultPage = () => {
 
   return (
     <>
-      <Navigation />
       <div className="min-h-screen bg-white dark:bg-[#101322]">
         <div className="max-w-5xl mx-auto px-6 py-10">
           <PracticeResult

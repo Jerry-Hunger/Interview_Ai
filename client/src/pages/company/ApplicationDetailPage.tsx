@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "@/utils/axiosInstance";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import ResumeViewer from "@/components/resume/ResumeViewer";
-import { useApplicationDetail } from "@/hooks/api";
+import { useApplicationDetail, useUpdateApplicationStatus } from "@/hooks/api";
 
 type Application = {
   _id: string;
@@ -57,30 +56,19 @@ const ApplicationDetailPage: React.FC = () => {
   const navigate = useNavigate();
 
   const { data: application, isPending, error, } = useApplicationDetail(applicationId!);
+  const updateStatus = useUpdateApplicationStatus();
   const [showResume, setShowResume] = useState(false);
-  const [updating, setUpdating] = useState(false);
 
-  const updateStatus = async (newStatus: Application["status"]) => {
+  const handleStatusUpdate = (newStatus: Application["status"]) => {
     if (!application) return;
-    setUpdating(true);
-    try {
-      await axiosInstance.patch(
-        `/applications/${(application as Application)._id}`,
-        { status: newStatus },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      // Note: after mutation, React Query will need invalidation for full refresh
-      // For now we rely on the local state update pattern
-    } catch (err) {
-      console.error("更新状态失败", err);
-      alert("更新状态失败");
-    } finally {
-      setUpdating(false);
-    }
+    updateStatus.mutate(
+      { id: (application as Application)._id, status: newStatus },
+      {
+        onError: () => {
+          alert("更新状态失败");
+        },
+      }
+    );
   };
 
   if (isPending) return <PageSkeleton variant="detail" />;
@@ -161,15 +149,34 @@ const ApplicationDetailPage: React.FC = () => {
             {app.status === "applied" && (
               <>
                 <Button
-                  onClick={() => updateStatus("in-progress")}
-                  disabled={updating}
+                  onClick={() => handleStatusUpdate("in-progress")}
+                  disabled={updateStatus.isPending}
                   className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:text-white dark:hover:bg-indigo-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   批准 → 进入面试
                 </Button>
                 <Button
-                  onClick={() => updateStatus("rejected")}
-                  disabled={updating}
+                  onClick={() => handleStatusUpdate("rejected")}
+                  disabled={updateStatus.isPending}
+                  className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  拒绝
+                </Button>
+              </>
+            )}
+
+            {app.status === "in-progress" && (
+              <>
+                <Button
+                  onClick={() => handleStatusUpdate("selected")}
+                  disabled={updateStatus.isPending}
+                  className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  通过本轮
+                </Button>
+                <Button
+                  onClick={() => handleStatusUpdate("rejected")}
+                  disabled={updateStatus.isPending}
                   className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   拒绝
@@ -179,8 +186,8 @@ const ApplicationDetailPage: React.FC = () => {
 
             {app.status === "selected" && (
               <Button
-                onClick={() => updateStatus("final-selected")}
-                disabled={updating}
+                onClick={() => handleStatusUpdate("final-selected")}
+                disabled={updateStatus.isPending}
                 className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 最终批准

@@ -28,7 +28,7 @@ export const useJobs = (filters: Record<string, string>) => {
     queryKey: ["jobs", filters],
     queryFn: async () => {
       const res = await axiosInstance.get(`/jobs?${params.toString()}`, authHeader());
-      return res.data || [];
+      return res.data?.jobs || [];
     },
     staleTime: 60 * 1000,
   });
@@ -39,7 +39,7 @@ export const useJobDetail = (id: string) =>
     queryKey: ["jobs", id],
     queryFn: async () => {
       const res = await axiosInstance.get(`/jobs/${id}`, authHeader());
-      return res.data;
+      return res.data?.job;
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
@@ -51,7 +51,7 @@ export const useMyApplications = () =>
     queryKey: ["applications", "mine"],
     queryFn: async () => {
       const res = await axiosInstance.get("/applications/mine", authHeader());
-      return res.data || [];
+      return res.data?.applications || [];
     },
     staleTime: 60 * 1000,
   });
@@ -61,7 +61,7 @@ export const useApplicationDetail = (id: string) =>
     queryKey: ["applications", id],
     queryFn: async () => {
       const res = await axiosInstance.get(`/applications/${id}`, authHeader());
-      return res.data;
+      return res.data?.application;
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
@@ -72,7 +72,7 @@ export const useJobApplications = (jobId: string) =>
     queryKey: ["applications", "job", jobId],
     queryFn: async () => {
       const res = await axiosInstance.get(`/applications/job/${jobId}`, authHeader());
-      return res.data || [];
+      return res.data?.applications || [];
     },
     enabled: !!jobId,
     staleTime: 60 * 1000,
@@ -105,9 +105,10 @@ export const useCompanyJobs = () =>
     queryKey: ["company", "jobs"],
     queryFn: async () => {
       const res = await axiosInstance.get("/jobs/company", authHeader());
-      return res.data || [];
+      return res.data?.jobs || [];
     },
     staleTime: 60 * 1000,
+    refetchOnMount: "always",
   });
 
 export const useCompanyProfile = () =>
@@ -120,13 +121,100 @@ export const useCompanyProfile = () =>
     staleTime: 2 * 60 * 1000,
   });
 
+// ─── Company Mutations ───
+export const useCreateJob = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title: string; description: string; skills: string[]; rounds: unknown[] }) =>
+      axiosInstance.post("/jobs", data, authHeader()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company", "jobs"] });
+      qc.invalidateQueries({ queryKey: ["company", "dashboard"] });
+    },
+  });
+};
+
+export const useUpdateApplicationStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      axiosInstance.patch(`/applications/${id}`, { status }, authHeader()),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ["applications", id] });
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      qc.invalidateQueries({ queryKey: ["company", "dashboard"] });
+    },
+  });
+};
+
+export const useUpdateCompanyProfile = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      axiosInstance.put("/company/profile", data, authHeader()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company", "profile"] });
+    },
+  });
+};
+
+export const useUploadPhotos = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (files: FileList) => {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => formData.append("files", file));
+      const res = await axiosInstance.post("/upload/photos", formData, {
+        headers: { "Content-Type": "multipart/form-data", ...authHeader().headers },
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company", "profile"] });
+    },
+  });
+};
+
+export const useDeleteCompanyPhoto = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (url: string) =>
+      axiosInstance.delete("/company/photos", { ...authHeader(), data: { url } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company", "profile"] });
+    },
+  });
+};
+
 // ─── Student ───
 export const useStudentProfile = () =>
   useQuery({
     queryKey: ["student", "profile"],
     queryFn: async () => {
-      const res = await axiosInstance.get("/resume/profile", authHeader());
-      return res.data;
+      const res = await axiosInstance.get("/auth/me", authHeader());
+      return { ...res.data?.user, role: res.data?.role };
     },
     staleTime: 2 * 60 * 1000,
+  });
+
+export const useResumeText = (resumeId: string | undefined) =>
+  useQuery({
+    queryKey: ["resume", resumeId, "text"],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/resume/${resumeId}/text`, authHeader());
+      return res.data.text as string;
+    },
+    enabled: !!resumeId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const useResumeDetail = (resumeId: string | undefined) =>
+  useQuery({
+    queryKey: ["resume", resumeId],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/resume/${resumeId}`, authHeader());
+      return res.data;
+    },
+    enabled: !!resumeId,
+    staleTime: 5 * 60 * 1000,
   });

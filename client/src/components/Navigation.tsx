@@ -25,13 +25,13 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [role, setRole] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(() => localStorage.getItem("role"));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
 
   useEffect(() => {
     setRole(localStorage.getItem("role"));
     setToken(localStorage.getItem("token"));
-  }, []);
+  }, [location.pathname]);
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
@@ -82,14 +82,21 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <div
+            className="flex items-center space-x-2 cursor-pointer"
+            onClick={() => {
+              if (token && role === "student") navigate("/student/dashboard");
+              else if (token && role === "company") navigate("/company/dashboard");
+              else navigate("/");
+            }}
+          >
             <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">IP</span>
             </div>
             <span className="font-bold text-xl text-indigo-700 dark:text-indigo-400">
               IntelliHire
             </span>
-          </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">

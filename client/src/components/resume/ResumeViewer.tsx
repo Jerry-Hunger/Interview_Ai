@@ -22,6 +22,11 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
     let cancelled = false;
     let xhr: XMLHttpRequest | null = null;
 
+    // 兜底：无论流是否正常结束，最多 15 秒后标记完成
+    const fallbackTimer = setTimeout(() => {
+      if (!cancelled) setIsStreaming(false);
+    }, 15000);
+
     const startStream = (text: string) => {
       if (cancelled) return;
 
@@ -30,44 +35,51 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
       xhr.setRequestHeader("Content-Type", "application/json");
       xhr.setRequestHeader("Authorization", `Bearer ${localStorage.getItem("token")}`);
 
-      let accumulated = "";
+      let lastProcessedIndex = 0;
 
-      xhr.onprogress = () => {
+      const markDone = () => {
+        if (!cancelled) {
+          setIsStreaming(false);
+        }
+      };
+
+      xhr.onreadystatechange = () => {
         if (cancelled || !xhr) return;
-        const newData = xhr.responseText.slice(accumulated.length);
-        accumulated += newData;
-
-        const lines = newData.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) {
-                setError(data.error);
-                return;
+        if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
+          const fullText = xhr.responseText;
+          const freshData = fullText.slice(lastProcessedIndex);
+          if (freshData) {
+            lastProcessedIndex += freshData.length;
+            const lines = freshData.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.error) {
+                    setError(data.error);
+                    return;
+                  }
+                  if (data.done) {
+                    markDone();
+                    return;
+                  }
+                  if (data.content) {
+                    setDisplayedContent((prev) => prev + data.content);
+                  }
+                } catch {
+                  // ignore parse errors
+                }
               }
-              if (data.done) {
-                setIsStreaming(false);
-                return;
-              }
-              if (data.content) {
-                setDisplayedContent((prev) => prev + data.content);
-              }
-            } catch {
-              // ignore parse errors
             }
           }
+        }
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          markDone();
         }
       };
 
       xhr.onerror = () => {
         if (!cancelled) {
-          setError("简历格式化失败");
-        }
-      };
-
-      xhr.onload = () => {
-        if (!cancelled && xhr && xhr.status !== 200) {
           setError("简历格式化失败");
         }
       };
@@ -106,6 +118,7 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
 
     return () => {
       cancelled = true;
+      clearTimeout(fallbackTimer);
       if (xhr) xhr.abort();
     };
   }, [resumeTextProp, resumeId]);

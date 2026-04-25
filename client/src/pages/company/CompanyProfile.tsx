@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Building, Upload, Trash2, X, Eye, Briefcase, Clock } from "lucide-react";
-import axiosInstance from "@/utils/axiosInstance";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { useNavigate } from "react-router-dom";
-import { useCompanyProfile, useCompanyJobs } from "@/hooks/api";
+import { useCompanyProfile, useCompanyJobs, useUpdateCompanyProfile, useUploadPhotos, useDeleteCompanyPhoto } from "@/hooks/api";
+import { INDUSTRIES, COMPANY_SIZES } from "@/constants/industries";
 
 type CompanyUser = {
   companyName?: string;
@@ -27,30 +27,6 @@ type CompanyUser = {
   roleOffered?: string[];
 };
 
-const INDUSTRIES = [
-  "互联网",
-  "金融",
-  "教育",
-  "医疗健康",
-  "电子商务",
-  "游戏",
-  "企业服务",
-  "硬件/物联网",
-  "汽车交通",
-  "房产家居",
-  "餐饮旅游",
-  "广告营销",
-  "其他",
-];
-
-const COMPANY_SIZES = [
-  { value: "1-10", label: "1-10人" },
-  { value: "11-50", label: "11-50人" },
-  { value: "51-200", label: "51-200人" },
-  { value: "201-500", label: "201-500人" },
-  { value: "500+", label: "500+人" },
-];
-
 type JobItem = {
   _id: string;
   title: string;
@@ -60,12 +36,13 @@ type JobItem = {
 };
 
 const CompanyProfilePage = () => {
-  const { data: profileData, isPending, refetch: refetchProfile } = useCompanyProfile();
+  const { data: profileData, isPending } = useCompanyProfile();
   const { data: publishedJobs = [] } = useCompanyJobs();
-  const [company, setCompany] = useState<CompanyUser | null>(null);
-  const [originalCompany, setOriginalCompany] = useState<CompanyUser | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const updateProfile = useUpdateCompanyProfile();
+  const uploadPhotos = useUploadPhotos();
+  const deletePhoto = useDeleteCompanyPhoto();
+  const [company, setCompany] = useState<CompanyUser | null>(profileData ? (profileData as CompanyUser) : null);
+  const [originalCompany, setOriginalCompany] = useState<CompanyUser | null>(profileData ? (profileData as CompanyUser) : null);
   const [isEditing, setIsEditing] = useState(false);
   const [cardValues, setCardValues] = useState<Partial<CompanyUser>>({});
   const [newRoleTag, setNewRoleTag] = useState("");
@@ -81,46 +58,31 @@ const CompanyProfilePage = () => {
     }
   }, [profileData]);
 
-  const handlePhotosUpload = async (files: FileList) => {
-    setUploadingPhotos(true);
-    try {
-      const formData = new FormData();
-      Array.from(files).forEach((file) => {
-        formData.append("files", file);
-      });
-      const res = await axiosInstance.post("/upload/photos", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      if (res.data.success) {
-        const newPhotos = [...(company?.companyPhotos || []), ...res.data.urls].slice(0, 10);
-        setCompany((prev) => prev ? { ...prev, companyPhotos: newPhotos } : null);
-        toast({ title: "照片上传成功" });
-      }
-    } catch (err) {
-      console.error("上传失败:", err);
-      toast({ title: "上传失败", variant: "destructive" });
-    } finally {
-      setUploadingPhotos(false);
-    }
+  const handlePhotosUpload = (files: FileList) => {
+    uploadPhotos.mutate(files, {
+      onSuccess: (data) => {
+        if (data?.success) {
+          const newPhotos = [...(company?.companyPhotos || []), ...data.urls].slice(0, 10);
+          setCompany((prev) => prev ? { ...prev, companyPhotos: newPhotos } : null);
+          toast({ title: "照片上传成功" });
+        }
+      },
+      onError: () => {
+        toast({ title: "上传失败", variant: "destructive" });
+      },
+    });
   };
 
-  const handleDeletePhoto = async (url: string) => {
-    try {
-      await axiosInstance.delete("/company/photos", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        data: { url },
-      });
-      setCompany((prev) => prev ? {
-        ...prev,
-        companyPhotos: (prev.companyPhotos || []).filter(p => p !== url)
-      } : null);
-      toast({ title: "照片已删除" });
-    } catch (err) {
-      console.error("删除失败:", err);
-    }
+  const handleDeletePhoto = (url: string) => {
+    deletePhoto.mutate(url, {
+      onSuccess: () => {
+        setCompany((prev) => prev ? {
+          ...prev,
+          companyPhotos: (prev.companyPhotos || []).filter(p => p !== url)
+        } : null);
+        toast({ title: "照片已删除" });
+      },
+    });
   };
 
   const startEdit = () => {
@@ -142,48 +104,43 @@ const CompanyProfilePage = () => {
     return (cardValues[field] ?? (company as CompanyUser)?.[field]) as string | string[] | undefined;
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const updates: Partial<CompanyUser> = {};
-      const c = company as CompanyUser;
-      const orig = originalCompany as CompanyUser;
+  const handleSave = () => {
+    const updates: Partial<CompanyUser> = {};
+    const c = company as CompanyUser;
+    const orig = originalCompany as CompanyUser;
 
-      if (cardValues.industry !== undefined && cardValues.industry !== orig.industry) {
-        updates.industry = cardValues.industry;
-      }
-      if (cardValues.companySize !== undefined && cardValues.companySize !== orig.companySize) {
-        updates.companySize = cardValues.companySize;
-      }
-      if (cardValues.roleOffered !== undefined) {
-        updates.roleOffered = cardValues.roleOffered;
-      }
-      if (c.companyName !== undefined && c.companyName !== orig.companyName) {
-        updates.companyName = c.companyName;
-      }
-      if (c.companyDescription !== orig.companyDescription) {
-        updates.companyDescription = c.companyDescription;
-      }
-      if (c.companyLocation !== orig.companyLocation) {
-        updates.companyLocation = c.companyLocation;
-      }
-      if (c.companyWebsite !== orig.companyWebsite) {
-        updates.companyWebsite = c.companyWebsite;
-      }
-
-      await axiosInstance.put("/company/profile", updates, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      toast({ title: "保存成功" });
-      setIsEditing(false);
-      setCardValues({});
-      await refetchProfile();
-    } catch (err) {
-      console.error("保存失败:", err);
-      toast({ title: "保存失败", variant: "destructive" });
-    } finally {
-      setSaving(false);
+    if (cardValues.industry !== undefined && cardValues.industry !== orig.industry) {
+      updates.industry = cardValues.industry;
     }
+    if (cardValues.companySize !== undefined && cardValues.companySize !== orig.companySize) {
+      updates.companySize = cardValues.companySize;
+    }
+    if (cardValues.roleOffered !== undefined) {
+      updates.roleOffered = cardValues.roleOffered;
+    }
+    if (c.companyName !== undefined && c.companyName !== orig.companyName) {
+      updates.companyName = c.companyName;
+    }
+    if (c.companyDescription !== orig.companyDescription) {
+      updates.companyDescription = c.companyDescription;
+    }
+    if (c.companyLocation !== orig.companyLocation) {
+      updates.companyLocation = c.companyLocation;
+    }
+    if (c.companyWebsite !== orig.companyWebsite) {
+      updates.companyWebsite = c.companyWebsite;
+    }
+
+    updateProfile.mutate(updates, {
+      onSuccess: () => {
+        toast({ title: "保存成功" });
+        setIsEditing(false);
+        setCardValues({});
+      },
+      onError: () => {
+        toast({ title: "保存失败", variant: "destructive" });
+      },
+    });
   };
 
   const updateField = (field: keyof CompanyUser, value: string | string[]) => {
@@ -239,16 +196,16 @@ const CompanyProfilePage = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleSave}
-                    disabled={saving}
+                    disabled={updateProfile.isPending}
                     className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-950"
                   >
-                    {saving ? "保存中..." : "确认"}
+                    {updateProfile.isPending ? "保存中..." : "确认"}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={cancelEdit}
-                    disabled={saving}
+                    disabled={updateProfile.isPending}
                     className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"
                   >
                     取消
@@ -482,14 +439,14 @@ const CompanyProfilePage = () => {
                       accept="image/jpeg,image/png,image/webp"
                       multiple
                       onChange={(e) => e.target.files && handlePhotosUpload(e.target.files)}
-                      disabled={uploadingPhotos}
+                      disabled={uploadPhotos.isPending}
                       className="hidden"
                       id="photos-upload"
                     />
                     <Label htmlFor="photos-upload" className="cursor-pointer flex flex-col items-center">
                       <Upload size={24} className="text-gray-400 mb-1 dark:text-gray-500" />
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {uploadingPhotos ? "上传中..." : "上传照片"}
+                        {uploadPhotos.isPending ? "上传中..." : "上传照片"}
                       </span>
                     </Label>
                   </div>
@@ -518,7 +475,7 @@ const CompanyProfilePage = () => {
                 {publishedJobs.map((job) => (
                   <div
                     key={job._id}
-                    onClick={() => navigate("/company/jobs")}
+                    onClick={() => navigate(`/company/job/${job._id}`)}
                     className="group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 transition-all cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-2">

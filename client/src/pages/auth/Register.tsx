@@ -31,6 +31,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
+import { INDUSTRIES } from "@/constants/industries";
 
 const Register = () => {
   const [role, setRole] = useState<"student" | "company" | null>(null);
@@ -393,15 +394,11 @@ const Register = () => {
                           <SelectValue placeholder="选择行业" />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-[#23263A] text-gray-900 dark:text-white">
-                          <SelectItem value="科技" className="dark:focus:bg-purple-900 dark:focus:text-white">科技</SelectItem>
-                          <SelectItem value="金融" className="dark:focus:bg-purple-900 dark:focus:text-white">金融</SelectItem>
-                          <SelectItem value="医疗" className="dark:focus:bg-purple-900 dark:focus:text-white">医疗</SelectItem>
-                          <SelectItem value="教育" className="dark:focus:bg-purple-900 dark:focus:text-white">教育</SelectItem>
-                          <SelectItem value="零售" className="dark:focus:bg-purple-900 dark:focus:text-white">零售</SelectItem>
-                          <SelectItem value="制造业" className="dark:focus:bg-purple-900 dark:focus:text-white">
-                            制造业
-                          </SelectItem>
-                          <SelectItem value="其他" className="dark:focus:bg-purple-900 dark:focus:text-white">其他</SelectItem>
+                          {INDUSTRIES.map((ind) => (
+                            <SelectItem key={ind} value={ind} className="dark:focus:bg-purple-900 dark:focus:text-white">
+                              {ind}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

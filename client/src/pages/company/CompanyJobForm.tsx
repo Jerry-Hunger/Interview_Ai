@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "@/utils/axiosInstance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PlusCircle, Trash } from "lucide-react";
-import Navigation from "@/components/Navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useCreateJob } from "@/hooks/api";
 
 type Round = {
   roundNumber: number;
@@ -29,11 +28,11 @@ type Round = {
 const CompanyJobForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const createJob = useCreateJob();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
-  const [submitting, setSubmitting] = useState(false);
 
   const addRound = () => {
     setRounds([
@@ -59,7 +58,7 @@ const CompanyJobForm = () => {
     setRounds(rounds.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!title.trim()) {
       toast({ title: "请填写职位名称", variant: "destructive" });
       return;
@@ -69,27 +68,22 @@ const CompanyJobForm = () => {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const token = localStorage.getItem("token");
-      await axiosInstance.post(
-        "/jobs",
-        { title, description, skills, rounds },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast({ title: "职位发布成功" });
-      navigate("/company/jobs");
-    } catch (err) {
-      console.error("创建职位失败:", err);
-      toast({ title: "创建职位失败，请重试", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
+    createJob.mutate(
+      { title, description, skills, rounds },
+      {
+        onSuccess: () => {
+          toast({ title: "职位发布成功" });
+          navigate("/company/jobs");
+        },
+        onError: () => {
+          toast({ title: "创建职位失败，请重试", variant: "destructive" });
+        },
+      }
+    );
   };
 
   return (
     <>
-      <Navigation />
       <div className="max-w-4xl mx-auto py-10 px-6">
         <Card className="shadow-xl bg-white dark:bg-[#181A2A] text-gray-900 dark:text-gray-100 transition-colors">
           <CardHeader>
@@ -258,10 +252,10 @@ const CompanyJobForm = () => {
 
             <Button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={createJob.isPending}
               className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? "发布中..." : "发布职位"}
+              {createJob.isPending ? "发布中..." : "发布职位"}
             </Button>
           </CardContent>
         </Card>
