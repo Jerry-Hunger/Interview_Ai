@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useEmblaCarousel from "embla-carousel-react";
 import {
-  Calendar,
   Gauge,
   CheckCircle,
   XCircle,
@@ -14,7 +13,6 @@ import {
   BarChart,
   Play,
   Sparkles,
-  Target,
   TrendingUp,
   Clock,
   ArrowRight,
@@ -47,27 +45,13 @@ const statusMeta = (raw: string) => {
   };
 };
 
-type Interview = {
-  _id: string;
-  result: "success" | "failure" | "quit" | "Quit";
-  difficulty: string;
-  type: "practice" | "company";
-  createdAt: string;
-  rounds?: number;
-  currentRound?: number;
-  chatHistory?: { type: string; content: string; timestamp: string }[];
-  feedbacks?: string[];
-  finalFeedback?: string;
-  roleSummary?: string;
-};
-
 const difficultyConfig = {
-  easy: { label: "简单", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
-  medium: { label: "中等", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
-  hard: { label: "困难", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-100 dark:bg-rose-900/30" },
+  beginner: { label: "初级", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
+  intermediate: { label: "中级", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
+  senior: { label: "高级", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-100 dark:bg-rose-900/30" },
 };
 
-const StatCard = ({ title, value, icon: Icon, gradient, delay }: { title: string; value: number; icon: any; gradient: string; delay: number }) => (
+const StatCard = ({ title, value, icon: Icon, gradient }: { title: string; value: number; icon: any; gradient: string; }) => (
   <Card className="relative rounded-2xl overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 group">
     <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.08] group-hover:opacity-[0.12] transition-opacity`} />
     <CardContent className="relative p-6 flex items-center justify-between">
@@ -119,14 +103,14 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
 
   const total = interviews.length;
-  const passed = interviews.filter((i) => i.result === "success").length;
-  const failed = interviews.filter((i) => i.result === "failure").length;
-  const quit = interviews.filter((i) => i.result === "quit").length;
+  const passed = interviews.filter((i: { result: string }) => i.result === "success").length;
+  const failed = interviews.filter((i: { result: string }) => i.result === "failure").length;
+  const quit = interviews.filter((i: { result: string }) => i.result === "quit").length;
 
   const groups = {
-    通过: interviews.filter((i) => i.result === "success"),
-    未通过: interviews.filter((i) => i.result === "failure"),
-    已退出: interviews.filter((i) => i.result === "quit"),
+    通过: interviews.filter((i: { result: string }) => i.result === "success"),
+    未通过: interviews.filter((i: { result: string }) => i.result === "failure"),
+    已退出: interviews.filter((i: { result: string }) => i.result === "quit"),
   };
 
   if (isPending) {
@@ -151,21 +135,14 @@ const StudentDashboard = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">追踪你的练习进度</p>
             </div>
           </div>
-          <Button
-            onClick={() => navigate("/student/practice")}
-            className="gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all"
-          >
-            <Play className="w-4 h-4" />
-            开始练习
-          </Button>
         </div>
 
         {/* 统计卡片 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="总面试数" value={total} icon={BarChart} gradient="from-indigo-500 to-purple-600" delay={0} />
-          <StatCard title="通过" value={passed} icon={CheckCircle} gradient="from-emerald-500 to-teal-500" delay={1} />
-          <StatCard title="未通过" value={failed} icon={XCircle} gradient="from-rose-500 to-pink-500" delay={2} />
-          <StatCard title="已退出" value={quit} icon={AlertCircle} gradient="from-amber-500 to-orange-500" delay={3} />
+          <StatCard title="总面试数" value={total} icon={BarChart} gradient="from-indigo-500 to-purple-600" />
+          <StatCard title="通过" value={passed} icon={CheckCircle} gradient="from-emerald-500 to-teal-500" />
+          <StatCard title="未通过" value={failed} icon={XCircle} gradient="from-rose-500 to-pink-500" />
+          <StatCard title="已退出" value={quit} icon={AlertCircle} gradient="from-amber-500 to-orange-500" />
         </div>
 
         {/* 通过率提示 */}
@@ -219,9 +196,9 @@ const StudentDashboard = () => {
 
               {/* 轮播卡片 */}
               <Carousel>
-                {items.map((i, index) => {
+                {items.map((i: { result: string; difficulty: string, _id: string, currentRound?: number, rounds?: number, type?: string, createdAt: string }, index: number) => {
                   const meta = statusMeta(i.result);
-                  const diff = difficultyConfig[i.difficulty as keyof typeof difficultyConfig] || difficultyConfig.medium;
+                  const diff = difficultyConfig[i.difficulty as keyof typeof difficultyConfig] || difficultyConfig.beginner;
 
                   return (
                     <Card

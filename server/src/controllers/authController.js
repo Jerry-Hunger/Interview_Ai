@@ -155,7 +155,7 @@ export const githubCallback = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&role=${user.role}`);
+    res.redirect(`${process.env.FRONTEND_URL.split(',')[0]}/login?token=${token}&role=${user.role}`);
   } catch (err) {
     console.error("GitHub OAuth error:", err.message);
     res.status(500).json({ error: "GitHub 登录失败，请重试" });

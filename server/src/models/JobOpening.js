@@ -9,7 +9,7 @@ const roundSchema = new mongoose.Schema({
   },
   difficulty: {
     type: String,
-    enum: ["easy", "medium", "hard"],
+    enum: ["beginner", "intermediate", "senior"],
     required: true,
   },
   topic: { type: String },

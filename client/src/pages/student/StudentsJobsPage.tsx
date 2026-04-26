@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useJobs, useMyApplications, useApplyJob } from "@/hooks/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, Filter, MapPin, Building2, Clock, Layers, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
@@ -31,18 +31,10 @@ type Job = {
   companyLocation?: string;
 };
 
-type Application = {
-  _id: string;
-  jobId: { _id: string } | string;
-  status: string;
-  currentRound?: string;
-  createdAt?: string;
-};
-
 const difficultyConfig = {
-  easy: { label: "简单", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  medium: { label: "中等", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  hard: { label: "困难", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
+  beginner: { label: "初级", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  intermediate: { label: "中级", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  senior: { label: "高级", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
 };
 
 const StudentJobsPage: React.FC = () => {
@@ -75,8 +67,18 @@ const StudentJobsPage: React.FC = () => {
     setSearchParams(params);
   };
 
+  const handleResetFilters = () => {
+    setFilters({
+      company: "",
+      rounds: "",
+      type: "",
+      status: "open",
+    });
+    setSearchParams(new URLSearchParams());
+  };
+
   const appliedJobIds = new Set(
-    applications.map((a) => {
+    applications.map((a: { jobId: { _id: string } | string }) => {
       const jobId = a.jobId;
       const id = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
       return String(id ?? "");
@@ -103,7 +105,9 @@ const StudentJobsPage: React.FC = () => {
     const diff = difficultyConfig[job.difficulty as keyof typeof difficultyConfig];
 
     return (
-      <Card className="group rounded-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300">
+      <Card className="group rounded-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+        {/* 顶部渐变装饰条 */}
+        <div className={`h-1 ${isOpen ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500' : 'bg-gradient-to-r from-gray-400 via-gray-500 to-gray-600'}`} />
         {/* 卡片头部 - 渐变背景 */}
         <div className={`relative p-5 ${isOpen ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600' : 'bg-gradient-to-r from-gray-500 via-gray-600 to-gray-700'}`}>
           {/* 状态标签 */}
@@ -263,13 +267,13 @@ const StudentJobsPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
       <div className="max-w-7xl mx-auto py-10 px-4 space-y-6">
         {/* 页面标题 */}
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Briefcase className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Briefcase className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">职位列表</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">发现适合你的机会</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">职位列表</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">发现适合你的机会</p>
           </div>
         </div>
 
@@ -301,8 +305,6 @@ const StudentJobsPage: React.FC = () => {
                   <SelectItem value="1">1轮</SelectItem>
                   <SelectItem value="2">2轮</SelectItem>
                   <SelectItem value="3">3轮</SelectItem>
-                  <SelectItem value="4">4轮</SelectItem>
-                  <SelectItem value="4+">4轮以上</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -332,6 +334,15 @@ const StudentJobsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={handleResetFilters}
+                className="bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700"
+              >
+                重置
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -344,7 +355,9 @@ const StudentJobsPage: React.FC = () => {
           <>
             {jobs.length === 0 ? (
               <div className="text-center py-16 bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
-                <Briefcase className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Briefcase className="w-10 h-10 text-slate-400 dark:text-slate-500" />
+                </div>
                 <p className="text-slate-500 dark:text-slate-400">暂无符合条件的职位</p>
               </div>
             ) : (

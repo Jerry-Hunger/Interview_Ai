@@ -21,6 +21,7 @@ Thumbs.db
 
 # Claude Code working directory
 .claude/
+claude_dev*.md
 
 # Spec workflow user templates
 .spec-workflow/user-templates/

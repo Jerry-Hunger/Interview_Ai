@@ -200,9 +200,7 @@ const PracticeSetup = ({
               <SelectContent className="bg-white dark:bg-[#23263A]">
                 <SelectItem value="behavioral" className="text-gray-900 dark:text-gray-100">行为面试</SelectItem>
                 <SelectItem value="technical" className="text-gray-900 dark:text-gray-100">技术面试</SelectItem>
-                <SelectItem value="system-design" className="text-gray-900 dark:text-gray-100">系统设计</SelectItem>
-                <SelectItem value="coding" className="text-gray-900 dark:text-gray-100">编程挑战</SelectItem>
-                <SelectItem value="mixed" className="text-gray-900 dark:text-gray-100">综合面试</SelectItem>
+                <SelectItem value="hr" className="text-gray-900 dark:text-gray-100">HR 面试</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -224,7 +222,7 @@ const PracticeSetup = ({
                 <SelectValue placeholder="选择轮次" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
-                {[1, 2, 3, 4].map((num) => (
+                {[1, 2, 3].map((num) => (
                   <SelectItem key={num} value={String(num)} className="text-gray-900 dark:text-gray-100">
                     {num} 轮
                   </SelectItem>

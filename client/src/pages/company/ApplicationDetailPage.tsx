@@ -4,7 +4,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ResumeViewer from "@/components/resume/ResumeViewer";
+import { MessageSquare } from "lucide-react";
 import { useApplicationDetail, useUpdateApplicationStatus } from "@/hooks/api";
 
 type Application = {
@@ -58,6 +60,7 @@ const ApplicationDetailPage: React.FC = () => {
   const { data: application, isPending, error, } = useApplicationDetail(applicationId!);
   const updateStatus = useUpdateApplicationStatus();
   const [showResume, setShowResume] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const handleStatusUpdate = (newStatus: Application["status"]) => {
     if (!application) return;
@@ -83,6 +86,12 @@ const ApplicationDetailPage: React.FC = () => {
   const completedRounds = app.history?.length || 0;
   const totalRounds = app.jobId.rounds?.length || 0;
 
+  const normalizeStatus = (status: string): Application["status"] => {
+    if (status === "in-process") return "in-progress";
+    return status as Application["status"];
+  };
+  const normalizedStatus = normalizeStatus(app.status);
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
       <Card className="rounded-2xl shadow-lg bg-white dark:bg-[#181c2f]">
@@ -92,15 +101,21 @@ const ApplicationDetailPage: React.FC = () => {
               {app.candidateId?.fullName} - {app.jobId?.title}
             </CardTitle>
             <Badge
-              variant={
-                app.status === "final-selected"
-                  ? "secondary"
-                  : app.status === "rejected"
-                  ? "destructive"
-                  : "secondary"
+              className={
+                normalizedStatus === "rejected"
+                  ? "bg-red-500 text-white"
+                  : normalizedStatus === "in-progress"
+                  ? "bg-amber-500 text-white"
+                  : normalizedStatus === "applied"
+                  ? "bg-blue-500 text-white"
+                  : normalizedStatus === "selected"
+                  ? "bg-green-500 text-white"
+                  : normalizedStatus === "final-selected"
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-500 text-white"
               }
             >
-              {statusLabels[app.status] || app.status}
+              {statusLabels[normalizedStatus] || normalizedStatus}
             </Badge>
           </div>
         </CardHeader>
@@ -150,7 +165,7 @@ const ApplicationDetailPage: React.FC = () => {
               返回
             </Button>
 
-            {app.status === "applied" && (
+            {normalizedStatus === "applied" && (
               <>
                 <Button
                   onClick={() => handleStatusUpdate("in-progress")}
@@ -169,7 +184,47 @@ const ApplicationDetailPage: React.FC = () => {
               </>
             )}
 
-            {app.status === "in-progress" && (
+            {normalizedStatus === "in-progress" && app.history && app.history.length > 0 && (
+              <Dialog open={showFeedback} onOpenChange={setShowFeedback}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    查看面试反馈
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>面试反馈</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {app.history.map((h, idx) => (
+                      <div key={idx} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-[#23263A]">
+                        <div className="flex justify-between mb-2">
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            第 {h.roundNumber} 轮面试反馈
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {h.result === "success" ? "通过" : "未通过"}
+                          </span>
+                        </div>
+                        {h.feedback ? (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                            {h.feedback}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-400 dark:text-gray-500">暂无反馈</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {normalizedStatus === "in-progress" && (
               <>
                 <Button
                   onClick={() => handleStatusUpdate("selected")}
@@ -188,7 +243,7 @@ const ApplicationDetailPage: React.FC = () => {
               </>
             )}
 
-            {app.status === "selected" && (
+            {normalizedStatus === "selected" && (
               <Button
                 onClick={() => handleStatusUpdate("final-selected")}
                 disabled={updateStatus.isPending}

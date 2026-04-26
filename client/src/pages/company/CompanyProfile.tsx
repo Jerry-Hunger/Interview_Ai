@@ -1,17 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Building, Upload, Trash2, X, Eye, Briefcase, Clock } from "lucide-react";
+import { Building, Upload, Trash2, X, Eye } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
-import { useNavigate } from "react-router-dom";
-import { useCompanyProfile, useCompanyJobs, useUpdateCompanyProfile, useUploadPhotos, useDeleteCompanyPhoto } from "@/hooks/api";
+import { useCompanyProfile, useUpdateCompanyProfile, useUploadPhotos, useDeleteCompanyPhoto } from "@/hooks/api";
 import { INDUSTRIES, COMPANY_SIZES } from "@/constants/industries";
+import MarkdownText from "@/components/resume/MarkdownText";
 
 type CompanyUser = {
   companyName?: string;
@@ -27,17 +26,8 @@ type CompanyUser = {
   roleOffered?: string[];
 };
 
-type JobItem = {
-  _id: string;
-  title: string;
-  skills: string[];
-  status: string;
-  createdAt: string;
-};
-
 const CompanyProfilePage = () => {
   const { data: profileData, isPending } = useCompanyProfile();
-  const { data: publishedJobs = [] } = useCompanyJobs();
   const updateProfile = useUpdateCompanyProfile();
   const uploadPhotos = useUploadPhotos();
   const deletePhoto = useDeleteCompanyPhoto();
@@ -48,7 +38,6 @@ const CompanyProfilePage = () => {
   const [newRoleTag, setNewRoleTag] = useState("");
   const { toast } = useToast();
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   // 同步 React Query 数据到本地 state
   useEffect(() => {
@@ -129,6 +118,9 @@ const CompanyProfilePage = () => {
     }
     if (c.companyWebsite !== orig.companyWebsite) {
       updates.companyWebsite = c.companyWebsite;
+    }
+    if (c.email !== orig.email) {
+      updates.email = c.email;
     }
 
     updateProfile.mutate(updates, {
@@ -357,23 +349,33 @@ const CompanyProfilePage = () => {
                   id="email"
                   type="email"
                   value={company?.email || ""}
-                  disabled
+                  onChange={(e) => updateField("email", e.target.value)}
                   placeholder="用于给候选人发送面试邀请"
-                  className="placeholder:text-gray-400 dark:placeholder:text-gray-500 opacity-60"
+                  disabled={!isEditing}
+                  className="placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="companyDescription" className="text-gray-700 dark:text-gray-300">公司简介</Label>
-                <Textarea
-                  id="companyDescription"
-                  value={company?.companyDescription || ""}
-                  onChange={(e) => updateField("companyDescription", e.target.value)}
-                  placeholder="请输入公司简介"
-                  rows={4}
-                  disabled={!isEditing}
-                  className="placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:opacity-80"
-                />
+                {isEditing ? (
+                  <Textarea
+                    id="companyDescription"
+                    value={company?.companyDescription || ""}
+                    onChange={(e) => updateField("companyDescription", e.target.value)}
+                    placeholder="请输入公司简介（支持 Markdown 语法）"
+                    rows={4}
+                    className="placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  />
+                ) : (
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-indigo-50/50 dark:from-gray-800/50 dark:to-indigo-900/20 border border-slate-100 dark:border-gray-700">
+                    {company?.companyDescription ? (
+                      <MarkdownText content={company.companyDescription} />
+                    ) : (
+                      <p className="text-gray-400 dark:text-gray-500">暂无公司简介</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,75 +460,6 @@ const CompanyProfilePage = () => {
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">最多 10 张，每张不超过 5MB</p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* 已发布职位 */}
-        <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181c2f]">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-xl font-bold text-purple-700 dark:text-purple-300">
-              <div className="flex items-center gap-2">
-                <Briefcase size={20} /> 已发布职位
-              </div>
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                共 {publishedJobs.length} 个
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {publishedJobs.length > 0 ? (
-              <div className="space-y-3">
-                {publishedJobs.map((job) => (
-                  <div
-                    key={job._id}
-                    onClick={() => navigate(`/company/job/${job._id}`)}
-                    className="group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
-                        {job.title}
-                      </h4>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        job.status === "open"
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
-                      }`}>
-                        {job.status === "open" ? "招聘中" : "已关闭"}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {(job.skills || []).slice(0, 5).map((skill) => (
-                        <span key={skill} className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
-                          {skill}
-                        </span>
-                      ))}
-                      {(job.skills || []).length > 5 && (
-                        <span className="text-xs text-gray-400">+{job.skills.length - 5}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} />
-                        {new Date(job.createdAt).toLocaleDateString("zh-CN")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
-                <Briefcase size={40} className="mb-3 opacity-50" />
-                <p className="text-sm">暂无已发布职位</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/company/jobs")}
-                  className="mt-3 border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950"
-                >
-                  发布新职位
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
 

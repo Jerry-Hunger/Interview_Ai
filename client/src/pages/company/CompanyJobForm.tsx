@@ -21,7 +21,6 @@ type Round = {
   type: string;
   difficulty: string;
   topic: string;
-  duration: number;
   notes: string;
 };
 
@@ -35,14 +34,17 @@ const CompanyJobForm = () => {
   const [rounds, setRounds] = useState<Round[]>([]);
 
   const addRound = () => {
+    if (rounds.length >= 3) {
+      toast({ title: "最多只能添加3轮面试", variant: "destructive" });
+      return;
+    }
     setRounds([
       ...rounds,
       {
         roundNumber: rounds.length + 1,
         type: "technical",
-        difficulty: "medium",
+        difficulty: "intermediate",
         topic: "",
-        duration: 30,
         notes: "",
       },
     ]);
@@ -140,7 +142,8 @@ const CompanyJobForm = () => {
                   type="button"
                   variant="outline"
                   onClick={addRound}
-                  className="dark:border-gray-700 dark:text-gray-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  disabled={rounds.length >= 3}
+                  className="dark:border-gray-700 dark:text-gray-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <PlusCircle className="mr-2" size={16} /> 添加环节
                 </Button>
@@ -199,9 +202,9 @@ const CompanyJobForm = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-[#23263A]">
-                          <SelectItem value="easy" className="text-gray-900 dark:text-gray-100">简单</SelectItem>
-                          <SelectItem value="medium" className="text-gray-900 dark:text-gray-100">中等</SelectItem>
-                          <SelectItem value="hard" className="text-gray-900 dark:text-gray-100">困难</SelectItem>
+                          <SelectItem value="beginner" className="text-gray-900 dark:text-gray-100">初级（0-2年）</SelectItem>
+                          <SelectItem value="intermediate" className="text-gray-900 dark:text-gray-100">中级（2-5年）</SelectItem>
+                          <SelectItem value="senior" className="text-gray-900 dark:text-gray-100">高级（5年以上）</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -215,20 +218,6 @@ const CompanyJobForm = () => {
                         value={round.topic}
                         onChange={(e) =>
                           updateRound(index, "topic", e.target.value)
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 mb-1">
-                        时长（分钟）
-                      </Label>
-                      <Input
-                        type="number"
-                        className="bg-gray-50 dark:bg-[#0E1117] border-gray-300 dark:border-gray-700"
-                        value={round.duration}
-                        onChange={(e) =>
-                          updateRound(index, "duration", e.target.value)
                         }
                       />
                     </div>

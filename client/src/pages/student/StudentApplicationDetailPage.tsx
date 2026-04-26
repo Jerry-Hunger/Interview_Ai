@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import PracticeInterview from "@/components/practice/PracticeInterview";
 import PracticeResults from "@/components/practice/PracticeResults";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationDetail } from "@/hooks/api";
-import { Loader2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Loader2, Hourglass, XCircle, CheckCircle, Trophy, Clock, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Step = "waiting" | "interview" | "results";
 
@@ -58,8 +58,21 @@ type InterviewResult = {
   finalFeedback?: string;
 };
 
+const difficultyMap: Record<string, string> = {
+  beginner: "初级（0-2年）",
+  intermediate: "中级（2-5年）",
+  senior: "高级（5年以上）",
+};
+
+const roundTypeMap: Record<string, string> = {
+  behavioral: "行为面",
+  technical: "技术面",
+  hr: "HR面",
+};
+
 const ApplicationDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { data: application, isPending } = useApplicationDetail(id!);
   const job = (application as ApplicationType)?.jobId as JobType | null;
@@ -104,11 +117,11 @@ const ApplicationDetail = () => {
       setIsStartingInterview(true);
 
       const res = await axiosInstance.post("/interview/start", {
-        role: job.title,
+        role: job?.title,
         resume: resumeToUse,
-        roundType: job.rounds[application.currentRound]?.type || "综合面试",
-        topic: job.rounds[application.currentRound]?.description || "",
-        difficulty: job.difficulty,
+        roundType: job?.rounds[application.currentRound]?.type || "综合面试",
+        topic: job?.rounds[application.currentRound]?.description || "",
+        difficulty: job?.difficulty,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -167,10 +180,10 @@ const ApplicationDetail = () => {
           {
             history: updatedChatHistory,
             resumeText: resumeText,
-            roleSummary: job.title,
-            roundType: job.rounds[application.currentRound]?.type,
-            customTopic: job.rounds[application.currentRound]?.description,
-            difficulty: job.difficulty,
+            roleSummary: job?.title,
+            roundType: job?.rounds[application.currentRound]?.type,
+            customTopic: job?.rounds[application.currentRound]?.description,
+            difficulty: job?.difficulty,
             typeOfInterview: "company",
           },
           {
@@ -204,10 +217,10 @@ const ApplicationDetail = () => {
           chatHistory: updatedChatHistory,
           answer: interviewState.answer,
           resume: resumeText,
-          role: job.title,
-          roundType: job.rounds[application.currentRound]?.type,
-          topic: job.rounds[application.currentRound]?.description,
-          difficulty: job.difficulty,
+          role: job?.title,
+          roundType: job?.rounds[application.currentRound]?.type,
+          topic: job?.rounds[application.currentRound]?.description,
+          difficulty: job?.difficulty,
         });
 
         const nextQuestion = res.data.message;
@@ -248,21 +261,53 @@ const ApplicationDetail = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
         <div className="max-w-3xl mx-auto py-12 px-6 space-y-6">
+          <Button
+            variant="outline"
+            onClick={() => navigate(-1)}
+            className="mb-4 text-indigo-500 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+          >
+            返回
+          </Button>
           {/* 职位信息卡片 */}
           <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {job.title}
-            </h1>
-            <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">
-              {job.description}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                难度：{job.difficulty}
-              </span>
-              {job.company && (
-                <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                  {job.company.name}
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-lg">{job.title?.charAt(0) || "岗"}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {job.title}
+                </h1>
+                {job.company && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    {job.company.name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 职位描述 - 优化展示 */}
+            <div className="mt-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">职位描述</span>
+              </div>
+              <div className="pl-3 space-y-2">
+                {job.description?.split('\n').filter(Boolean).map((para, idx) => (
+                  <p key={idx} className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">
+                    {para}
+                  </p>
+                )) || (
+                  <p className="text-slate-500 dark:text-slate-400 italic">暂无职位描述</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              {job.rounds && job.rounds.length > 0 && (
+                <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                  难度：{job.rounds.map((r, i) => difficultyMap[r.difficulty] || r.difficulty).join(" → ")}
                 </span>
               )}
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -279,7 +324,7 @@ const ApplicationDetail = () => {
             </h2>
             {application.status === "applied" && (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
-                <span className="text-2xl">⏳</span>
+                <Hourglass className="w-6 h-6 text-blue-500" />
                 <div>
                   <p className="font-medium text-blue-700 dark:text-blue-300">等待企业审核</p>
                   <p className="text-sm text-blue-600 dark:text-blue-400">请耐心等待，企业正在处理您的申请</p>
@@ -288,7 +333,7 @@ const ApplicationDetail = () => {
             )}
             {application.status === "rejected" && (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30">
-                <span className="text-2xl">❌</span>
+                <XCircle className="w-6 h-6 text-red-500" />
                 <div>
                   <p className="font-medium text-red-700 dark:text-red-300">很遗憾，您的申请已被拒绝</p>
                   <p className="text-sm text-red-600 dark:text-red-400">可以尝试申请其他职位</p>
@@ -297,7 +342,7 @@ const ApplicationDetail = () => {
             )}
             {application.status === "selected" && (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
-                <span className="text-2xl">⚡</span>
+                <Trophy className="w-6 h-6 text-amber-500" />
                 <div>
                   <p className="font-medium text-amber-700 dark:text-amber-300">您已通过！</p>
                   <p className="text-sm text-amber-600 dark:text-amber-400">等待最终审核结果</p>
@@ -306,7 +351,7 @@ const ApplicationDetail = () => {
             )}
             {application.status === "final-selected" && (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">
-                <span className="text-2xl">🎉</span>
+                <Trophy className="w-6 h-6 text-emerald-500" />
                 <div>
                   <p className="font-bold text-emerald-700 dark:text-emerald-300">恭喜！您已最终通过</p>
                   <p className="text-sm text-emerald-600 dark:text-emerald-400">期待您的新工作</p>
@@ -316,13 +361,13 @@ const ApplicationDetail = () => {
             {application.status === "in-progress" && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30">
-                  <span className="text-2xl">👉</span>
+                  <Clock className="w-6 h-6 text-indigo-500" />
                   <div>
                     <p className="font-medium text-indigo-700 dark:text-indigo-300">
                       当前进度：第 {application.currentRound + 1} 轮 / 共 {job.rounds?.length || 0} 轮
                     </p>
                     <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                      下一轮：{job.rounds[application.currentRound]?.type || "综合面试"}
+                      下一轮：{roundTypeMap[job.rounds[application.currentRound]?.type] || job.rounds[application.currentRound]?.type || "综合面试"}
                     </p>
                   </div>
                 </div>
@@ -337,7 +382,7 @@ const ApplicationDetail = () => {
                           ? "bg-indigo-500 text-white ring-4 ring-indigo-200 dark:ring-indigo-800"
                           : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
                       }`}>
-                        {idx < application.currentRound ? "✓" : idx + 1}
+                        {idx < application.currentRound ? <Check className="w-4 h-4" /> : idx + 1}
                       </div>
                       {idx < (job.rounds?.length || 0) - 1 && (
                         <div className={`w-8 h-1 rounded ${
@@ -382,14 +427,14 @@ const ApplicationDetail = () => {
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-gray-800 dark:text-gray-200">
-                        第 {round.roundNumber} 轮：{job.rounds[round.roundNumber - 1]?.type || "未知"}
+                        第 {round.roundNumber} 轮：{roundTypeMap[job.rounds[round.roundNumber - 1]?.type] || job.rounds[round.roundNumber - 1]?.type || "未知"}
                       </p>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5 ${
                         round.result === "success"
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                       }`}>
-                        {round.result === "success" ? "通过 ✓" : "未通过 ✗"}
+                        {round.result === "success" ? <><Check className="w-3.5 h-3.5" />通过</> : <><X className="w-3.5 h-3.5" />未通过</>}
                       </span>
                     </div>
                     {round.feedback && (
@@ -414,7 +459,7 @@ const ApplicationDetail = () => {
                 </h2>
                 <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100/50 dark:border-amber-800/20">
                   <p className="font-medium text-amber-800 dark:text-amber-300">
-                    第 {application.currentRound + 1} 轮：{job.rounds[application.currentRound]?.type}
+                    第 {application.currentRound + 1} 轮：{roundTypeMap[job.rounds[application.currentRound]?.type] || job.rounds[application.currentRound]?.type}
                   </p>
                   {job.rounds[application.currentRound]?.description && (
                     <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
@@ -454,11 +499,11 @@ const ApplicationDetail = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
         <PracticeInterview
           setupData={{
-            role: job.title,
+            role: job?.title,
             resume: resumeText,
-            roundType: job.rounds[application.currentRound]?.type,
-            topic: job.rounds[application.currentRound]?.description,
-            difficulty: job.difficulty,
+            roundType: job?.rounds[application.currentRound]?.type,
+            topic: job?.rounds[application.currentRound]?.description,
+            difficulty: job?.difficulty,
           }}
           interviewState={interviewState}
           setInterviewState={setInterviewState}

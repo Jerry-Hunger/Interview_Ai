@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Calendar, Layers, Building2, MapPin, Globe, Sparkles, Clock, CheckCircle2, ArrowRight } from "lucide-react";
+import { Calendar, Layers, Building2, MapPin, Globe, Sparkles, Clock, CheckCircle2, ArrowRight, Briefcase } from "lucide-react";
 import { useJobDetail, useMyApplications, useApplyJob } from "@/hooks/api";
 import { useToast } from "@/hooks/use-toast";
+import MarkdownText from "@/components/resume/MarkdownText";
 
 type Round = {
   roundNumber?: number;
@@ -18,9 +19,15 @@ type Round = {
 };
 
 const difficultyConfig = {
-  easy: { label: "简单", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-400" },
-  medium: { label: "中等", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-400" },
-  hard: { label: "困难", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", dot: "bg-rose-400" },
+  beginner: { label: "初级（0-2年）", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-400" },
+  intermediate: { label: "中级（2-5年）", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-400" },
+  senior: { label: "高级（5年以上）", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", dot: "bg-rose-400" },
+};
+
+const roundTypeConfig: Record<string, { label: string; icon: string }> = {
+  behavioral: { label: "行为面", icon: "💬" },
+  technical: { label: "技术面", icon: "💻" },
+  hr: { label: "HR面", icon: "👤" },
 };
 
 const JobDetailPage: React.FC = () => {
@@ -32,7 +39,7 @@ const JobDetailPage: React.FC = () => {
   const [applying, setApplying] = useState(false);
   const { toast } = useToast();
 
-  const hasApplied = applications.some((a) => {
+  const hasApplied = applications.some((a: { jobId: string | { _id: string } }) => {
     const jobId = a.jobId;
     const jid = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
     return jid?.toString() === id?.toString();
@@ -70,6 +77,17 @@ const JobDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
       <div className="max-w-5xl mx-auto py-8 px-4 space-y-6">
+        {/* 页面标题 */}
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Briefcase className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">职位详情</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">查看职位信息并申请</p>
+          </div>
+        </div>
+
         {/* 公司信息卡片 */}
         {job.companyName && (
           <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-r from-white to-slate-50 dark:from-gray-900 dark:to-gray-800/50 overflow-hidden">
@@ -125,9 +143,9 @@ const JobDetailPage: React.FC = () => {
                         <Sparkles className="w-4 h-4 text-indigo-500" />
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">公司简介</span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {job.companyDescription}
-                      </p>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <MarkdownText content={job.companyDescription} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -138,6 +156,8 @@ const JobDetailPage: React.FC = () => {
 
         {/* 职位主卡片 */}
         <Card className="rounded-2xl shadow-xl border-0 bg-white dark:bg-gray-900 overflow-hidden">
+          {/* 顶部渐变装饰条 */}
+          <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
           <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -162,7 +182,7 @@ const JobDetailPage: React.FC = () => {
                 </Badge>
                 {job.difficulty && (
                   <Badge className="bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-                    {job.difficulty === "easy" ? "🌱 简单" : job.difficulty === "medium" ? "⚡ 中等" : job.difficulty === "hard" ? "🔥 困难" : job.difficulty}
+                    {job.difficulty === "beginner" ? "🌱 初级" : job.difficulty === "intermediate" ? "⚡ 中级" : job.difficulty === "senior" ? "🔥 高级" : job.difficulty}
                   </Badge>
                 )}
               </div>
@@ -216,7 +236,7 @@ const JobDetailPage: React.FC = () => {
                 </div>
                 <div className="pl-10 space-y-4">
                   {(job.rounds as Round[]).map((r: Round, idx: number) => {
-                    const diff = difficultyConfig[r.difficulty as keyof typeof difficultyConfig] || difficultyConfig.medium;
+                    const diff = difficultyConfig[r.difficulty as keyof typeof difficultyConfig] || difficultyConfig.beginner;
                     return (
                       <div key={idx} className="relative p-5 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-800/50 dark:to-gray-800 border border-slate-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                         {/* 轮次标记 */}
@@ -230,7 +250,7 @@ const JobDetailPage: React.FC = () => {
                         <div className="flex justify-between items-start gap-4">
                           <div className="space-y-1">
                             <div className="font-semibold text-gray-900 dark:text-white text-lg">
-                              {r.type ?? `第 ${idx + 1} 轮面试`}
+                              {roundTypeConfig[r.type]?.icon} {roundTypeConfig[r.type]?.label ?? r.type ?? `第 ${idx + 1} 轮面试`}
                             </div>
                             {r.topic && (
                               <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
