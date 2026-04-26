@@ -122,21 +122,21 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E1B4B]/50 dark:to-[#0F172A] p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500 dark:bg-indigo-700 shadow-lg mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg mb-4">
             <span className="text-white font-bold text-2xl">IP</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            InterviewPro
+            IntelliHire
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
             登录您的账户
           </p>
         </div>
 
-        <Card className="shadow-xl border-0 bg-white dark:bg-gray-800 ring ring-gray-900/5 rounded-lg">
+        <Card className="shadow-xl border-0 bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md ring ring-white/10 rounded-2xl">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center text-gray-900 dark:text-white">
               欢迎回来
@@ -146,7 +146,7 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className={`space-y-3 p-3 rounded-lg transition-all ${roleError ? "bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 animate-pulse" : ""}`}>
+            <div className={`space-y-3 p-3 rounded-xl transition-all ${roleError ? "bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 animate-pulse" : "bg-slate-50 dark:bg-slate-800/50"}`}>
               <Label className="text-base font-medium text-gray-900 dark:text-white">
                 我是：{roleError && <span className="text-red-500 text-sm ml-1">请选择角色</span>}
               </Label>
@@ -154,10 +154,10 @@ const Login = () => {
                 <Button
                   type="button"
                   variant={role === "student" ? "default" : "outline"}
-                  className={`h-16 flex-col space-y-2 ${
+                  className={`h-16 flex-col space-y-2 transition-all duration-200 ${
                     role === "student"
-                      ? "bg-indigo-500 dark:bg-indigo-700 text-white shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                      ? "bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
+                      : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600"
                   }`}
                   onClick={() => { setRole("student"); setRoleError(false); }}
                 >
@@ -167,10 +167,10 @@ const Login = () => {
                 <Button
                   type="button"
                   variant={role === "company" ? "default" : "outline"}
-                  className={`h-16 flex-col space-y-2 ${
+                  className={`h-16 flex-col space-y-2 transition-all duration-200 ${
                     role === "company"
-                      ? "bg-purple-600 dark:bg-purple-700 text-white shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                      ? "bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl"
+                      : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600"
                   }`}
                   onClick={() => { setRole("company"); setRoleError(false); }}
                 >
@@ -192,7 +192,7 @@ const Login = () => {
                 </Label>
                 <div className="relative">
                   <Mail
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 dark:text-slate-500"
                     size={16}
                   />
                   <Input
@@ -201,7 +201,7 @@ const Login = () => {
                     placeholder="请输入邮箱"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                    className="pl-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                     required
                   />
                 </div>
@@ -216,7 +216,7 @@ const Login = () => {
                 </Label>
                 <div className="relative">
                   <Lock
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 dark:text-slate-500"
                     size={16}
                   />
                   <Input
@@ -225,7 +225,7 @@ const Login = () => {
                     placeholder="请输入密码"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                    className="pl-10 pr-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                     required
                   />
                   <Button
@@ -243,7 +243,7 @@ const Login = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-indigo-500 dark:bg-indigo-700 text-white hover:shadow-lg transition-all duration-300"
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 size="lg"
                 disabled={loading}
               >
@@ -257,7 +257,7 @@ const Login = () => {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
+                className="w-full text-gray-900 dark:text-white border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 backdrop-blur-sm transition-all duration-200"
                 onClick={handleGithubLogin}
                 disabled={!role || githubLoading}
               >
@@ -285,11 +285,11 @@ const Login = () => {
             </div>
 
             <div className="text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 还没有账户？{" "}
                 <Link
                   to="/register"
-                  className="text-indigo-500 dark:text-indigo-400 hover:underline font-medium"
+                  className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:underline font-medium transition-colors"
                 >
                   立即注册
                 </Link>

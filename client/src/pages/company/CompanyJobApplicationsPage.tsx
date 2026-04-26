@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Users, ChevronDown, ChevronUp } from "lucide-react";
 import { useJobDetail, useJobApplications } from "@/hooks/api";
+import { statusColors, statusLabels } from "./shared/constants";
 
 type Job = {
   _id: string;
@@ -26,24 +27,6 @@ type Application = {
   createdAt: string;
 };
 
-const statusLabels: Record<Application["status"], string> = {
-  applied: "已申请",
-  "in-progress": "面试中",
-  selected: "已通过",
-  "final-selected": "最终通过",
-  rejected: "已拒绝",
-};
-
-const statusColors: Record<Application["status"], string> = {
-  applied: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "in-progress":
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  selected: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "final-selected":
-    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
-
 const CompanyJobApplicationsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -56,7 +39,11 @@ const CompanyJobApplicationsPage: React.FC = () => {
 
   const loading = jobLoading || appsLoading;
 
-  if (loading) return <PageSkeleton variant="table" />;
+  if (loading) return (
+    <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center">
+      <LoadingSpinner size="lg" text="加载中..." />
+    </div>
+  );
   if (jobError || appsError) return <div className="p-6 text-red-500">获取职位或申请列表失败</div>;
   if (!job) return <div className="p-6 text-gray-600 dark:text-gray-300">职位不存在</div>;
 

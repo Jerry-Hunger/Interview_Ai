@@ -207,22 +207,21 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 variant="secondary"
-                className="bg-white text-indigo-600 dark:bg-[#23263A] dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 shadow-lg"
+                className="bg-white text-indigo-600 hover:bg-indigo-100 shadow-lg font-semibold"
               >
                 免费开始
                 <ArrowRight size={16} className="ml-2" />
               </Button>
             </Link>
             <Link to="/login">
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="border-white text-white hover:bg-white/10"
+              <Button
+                size="lg"
+                className="bg-white/10 border-2 border-white/50 text-white hover:bg-white/20 hover:border-white font-semibold backdrop-blur-sm"
               >
-                已有账户？
+                已有账户？登录
               </Button>
             </Link>
           </div>

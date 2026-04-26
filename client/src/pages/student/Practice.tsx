@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import axiosInstance from "@/utils/axiosInstance";
@@ -128,6 +128,8 @@ const Practice = () => {
         currentRound: nextRound,
         totalRounds: effectiveSetupData.rounds,
         previousFeedback: state.previousFeedback,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).then((res) => {
         const firstQuestion = res.data.message;
         setCurrentStep("interview");
@@ -208,6 +210,8 @@ const Practice = () => {
         roundType: setupData.roundType,
         topic: setupData.topic,
         difficulty: setupData.difficulty,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
       const firstQuestion = res.data.message;
@@ -235,10 +239,11 @@ const Practice = () => {
       });
     } catch (error: unknown) {
       console.error("Error starting interview:", error);
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
       setIsStarting(false);
       toast({
         title: "错误",
-        description: "启动面试失败，请重试。",
+        description: `启动面试失败：${errorMessage}，请重试。`,
         variant: "destructive",
       });
     }
@@ -283,6 +288,7 @@ const Practice = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify({
           chatHistory: updatedChatHistory,
@@ -345,9 +351,10 @@ const Practice = () => {
       }
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
       toast({
         title: "错误",
-        description: "出错了，请重试。",
+        description: `出错了：${errorMessage}，请重试。`,
         variant: "destructive",
       });
     }
@@ -359,6 +366,13 @@ const Practice = () => {
     const navState = location.state as { setupData?: SetupData } | undefined;
     const effectiveSetupData = navState?.setupData || setupData;
     const effectiveRounds = effectiveSetupData.rounds;
+
+    if (!effectiveSetupData?.resume || !effectiveSetupData?.role) {
+      console.error("handleEndInterview: missing setupData", { effectiveSetupData });
+      setIsLoading(false);
+      toast({ title: "错误", description: "面试配置数据不完整", variant: "destructive" });
+      return;
+    }
 
     const feedbacks: string[] = [];
     let finalFeedback = "";
@@ -546,8 +560,8 @@ const Practice = () => {
 
   if (currentStep === "setup") {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Suspense fallback={<PageSkeleton variant="form" />}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+        <Suspense fallback={<LoadingSpinner size="lg" text="加载中..." />}>
           <PracticeSetup
             setupData={setupData}
             setSetupData={setSetupData}
@@ -572,12 +586,16 @@ const Practice = () => {
     const effectiveCurrentRound = navState?.currentRound || currentRound;
     
     if (!effectiveSetupData || !effectiveSetupData.role) {
-      return <PageSkeleton variant="form" />;
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+          <LoadingSpinner size="lg" text="加载中..." />
+        </div>
+      );
     }
-    
+
     return (
-      <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Suspense fallback={<PageSkeleton variant="form" />}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+        <Suspense fallback={<LoadingSpinner size="lg" text="加载中..." />}>
           <PracticeInterview
             setupData={effectiveSetupData}
             interviewState={interviewState}
@@ -597,8 +615,8 @@ const Practice = () => {
   }
   if (currentStep === "results") {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#101322]">
-        <Suspense fallback={<PageSkeleton variant="form" />}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+        <Suspense fallback={<LoadingSpinner size="lg" text="加载中..." />}>
           <PracticeResults interview={interviewResults} navigate={navigate} setupData={setupData} />
         </Suspense>
       </div>
@@ -606,8 +624,8 @@ const Practice = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#101322]">
-      <Suspense fallback={<PageSkeleton variant="form" />}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+      <Suspense fallback={<LoadingSpinner size="lg" text="加载中..." />}>
         <PracticeSetup
           setupData={setupData}
           setSetupData={setSetupData}

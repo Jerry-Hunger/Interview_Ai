@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useJobs, useMyApplications, useApplyJob } from "@/hooks/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { Briefcase, Filter } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { Briefcase, Filter, MapPin, Building2, Clock, Layers, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ type Job = {
   title: string;
   description?: string;
   skills?: string[];
-  rounds?: { type?: string; description?: string }[];
+  rounds?: { type?: string; difficulty?: string; duration?: number }[];
   difficulty?: string;
   createdAt?: string;
   status?: "open" | "closed";
@@ -38,10 +39,17 @@ type Application = {
   createdAt?: string;
 };
 
+const difficultyConfig = {
+  easy: { label: "简单", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  medium: { label: "中等", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  hard: { label: "困难", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
+};
+
 const StudentJobsPage: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [filters, setFilters] = useState({
     company: searchParams.get("company") || "",
@@ -59,7 +67,7 @@ const StudentJobsPage: React.FC = () => {
     const normalizedValue = value === "all" ? "" : value;
     const newFilters = { ...filters, [key]: normalizedValue };
     setFilters(newFilters);
-    
+
     const params = new URLSearchParams();
     Object.entries(newFilters).forEach(([k, v]) => {
       if (v) params.append(k, v);
@@ -79,11 +87,11 @@ const StudentJobsPage: React.FC = () => {
     setApplyingId(jobId);
     try {
       await applyMutation.mutateAsync(jobId);
+      toast({ title: "申请成功", description: "请等待HR审核" });
     } catch (err: unknown) {
       console.error("Apply failed", err);
       const axiosError = err as { response?: { data?: { msg?: string } } };
-      const msg = axiosError.response?.data?.msg ?? "申请失败，请重试。";
-      alert(msg);
+      toast({ title: "申请失败", description: axiosError.response?.data?.msg ?? "申请失败，请重试。", variant: "destructive" });
     } finally {
       setApplyingId(null);
     }
@@ -91,64 +99,159 @@ const StudentJobsPage: React.FC = () => {
 
   const renderJobCard = (job: Job, type: "open" | "closed" | "applied") => {
     const alreadyApplied = appliedJobIds.has(String(job._id));
+    const isOpen = type === "open";
+    const diff = difficultyConfig[job.difficulty as keyof typeof difficultyConfig];
 
     return (
-      <Card
-        key={job._id}
-        className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl transition-all bg-white dark:bg-gray-900"
-      >
-        <CardHeader className="flex flex-col gap-2">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              {job.companyLogoUrl && (
-                <img src={job.companyLogoUrl} alt="" loading="lazy" className="w-10 h-10 object-contain mb-2 rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+      <Card className="group rounded-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300">
+        {/* 卡片头部 - 渐变背景 */}
+        <div className={`relative p-5 ${isOpen ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600' : 'bg-gradient-to-r from-gray-500 via-gray-600 to-gray-700'}`}>
+          {/* 状态标签 */}
+          <div className="absolute top-4 right-4">
+            <Badge className={isOpen
+              ? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+              : "bg-white/20 text-white/80 border border-white/20 backdrop-blur-sm"
+            }>
+              {isOpen ? "✅ 招聘中" : "❌ 已结束"}
+            </Badge>
+          </div>
+
+          {/* 公司 Logo + 职位信息 */}
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-xl bg-white shadow-md p-1.5 flex items-center justify-center overflow-hidden shrink-0">
+              {job.companyLogoUrl ? (
+                <img src={job.companyLogoUrl} alt="" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              ) : (
+                <div className="w-full h-full rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <Building2 className="w-7 h-7 text-white" />
+                </div>
               )}
-              <CardTitle
-                className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:underline"
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3
+                className="text-xl font-bold text-white cursor-pointer hover:underline decoration-white/50"
                 onClick={() => navigate(`/student/jobs/${job._id}`)}
               >
                 {job.title}
-              </CardTitle>
+              </h3>
               {job.companyName && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">{job.companyName}</p>
+                <p className="text-white/80 text-sm mt-1 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" />
+                  {job.companyName}
+                </p>
               )}
               {job.companyLocation && (
-                <p className="text-xs text-gray-400 dark:text-gray-500">{job.companyLocation}</p>
+                <p className="text-white/60 text-xs mt-0.5 flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3" />
+                  {job.companyLocation}
+                </p>
               )}
             </div>
-            <Badge
-              variant={type === "open" ? "default" : type === "applied" ? "secondary" : "destructive"}
-              className="w-fit"
-            >
-              {type === "open" ? "招聘中" : type === "applied" ? "已申请" : "已结束"}
-            </Badge>
           </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{job.description}</p>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {(job.rounds || []).map((r, i) => (
-              <Badge key={i} variant="outline" className="text-xs">
-                {r.type === "technical" ? "技术面" : r.type === "behavioral" ? "行为面" : "HR面"}
+
+          {/* 难度标签 */}
+          {diff && (
+            <div className="absolute bottom-4 right-4">
+              <Badge className="bg-white/20 text-white border border-white/30 backdrop-blur-sm">
+                {diff.label}
               </Badge>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            技能要求：{(job.skills || []).join(", ")}
-          </p>
-          <div className="mt-4 flex gap-2">
-            {type === "open" && (
+            </div>
+          )}
+        </div>
+
+        {/* 卡片内容 */}
+        <CardContent className="p-5 space-y-4">
+          {/* 简介 */}
+          {job.description && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+              {job.description}
+            </p>
+          )}
+
+          {/* 技能要求 */}
+          {job.skills && job.skills.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>技能要求</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {job.skills.slice(0, 4).map((skill) => (
+                  <span key={skill} className="px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                    {skill}
+                  </span>
+                ))}
+                {job.skills.length > 4 && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    +{job.skills.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 面试环节 */}
+          {job.rounds && job.rounds.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <Layers className="w-3.5 h-3.5" />
+                <span>面试环节 · {job.rounds.length} 轮</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {job.rounds.map((r, i) => {
+                  const roundDiff = difficultyConfig[r.difficulty as keyof typeof difficultyConfig];
+                  return (
+                    <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-gray-800 border border-slate-100 dark:border-gray-700">
+                      <span className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                        {i + 1}
+                      </span>
+                      <span className="text-xs text-gray-700 dark:text-gray-300">
+                        {r.type === "technical" ? "技术面" : r.type === "behavioral" ? "行为面" : r.type || "面试"}
+                      </span>
+                      {roundDiff && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${roundDiff.color}`}>
+                          {roundDiff.label}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 底部操作栏 */}
+          <div className="pt-4 border-t border-slate-100 dark:border-gray-800 flex items-center justify-between gap-3">
+            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ""}
+            </span>
+            <div className="flex gap-2">
+              {isOpen && (
+                <Button
+                  onClick={() => applyJob(job._id)}
+                  disabled={applyingId === job._id || alreadyApplied}
+                  size="sm"
+                  className={`gap-1.5 ${alreadyApplied ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'} text-white shadow-md transition-all`}
+                >
+                  {alreadyApplied ? (
+                    <><CheckCircle2 className="w-3.5 h-3.5" /> 已申请</>
+                  ) : applyingId === job._id ? (
+                    "申请中..."
+                  ) : (
+                    <><span>立即申请</span><ArrowRight className="w-3.5 h-3.5" /></>
+                  )}
+                </Button>
+              )}
               <Button
-                onClick={() => applyJob(job._id)}
-                disabled={applyingId === job._id || alreadyApplied}
-                className="flex-1"
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/student/jobs/${job._id}`)}
+                className="gap-1.5"
               >
-                {alreadyApplied ? "已申请" : applyingId === job._id ? "申请中..." : "立即申请"}
+                查看详情
               </Button>
-            )}
-            <Button variant="outline" onClick={() => navigate(`/student/jobs/${job._id}`)}>
-              查看详情
-            </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -157,92 +260,101 @@ const StudentJobsPage: React.FC = () => {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto py-10 px-4">
-        <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white">
-          <Briefcase className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          职位列表
-        </h2>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
+      <div className="max-w-7xl mx-auto py-10 px-4 space-y-6">
+        {/* 页面标题 */}
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Briefcase className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">职位列表</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">发现适合你的机会</p>
+          </div>
+        </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 space-y-4">
+        {/* 筛选区域 */}
+        <div className="bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-sm rounded-2xl p-5 shadow-md border border-slate-200/50 dark:border-slate-700/50">
           <div className="flex items-center gap-2 mb-4">
-            <Filter size={18} className="text-gray-700 dark:text-gray-300" />
-            <span className="font-medium text-gray-700 dark:text-gray-300">筛选条件</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+              <Filter size={16} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <span className="font-semibold text-gray-900 dark:text-white">筛选条件</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">公司名称</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500 dark:text-gray-400">公司名称</Label>
               <Input
                 placeholder="搜索公司..."
                 value={filters.company}
                 onChange={(e) => handleFilterChange("company", e.target.value)}
+                className="bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700"
               />
             </div>
-            <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">面试轮次</Label>
-              <Select
-                value={filters.rounds}
-                onValueChange={(v) => handleFilterChange("rounds", v)}
-              >
-                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500 dark:text-gray-400">面试轮次</Label>
+              <Select value={filters.rounds} onValueChange={(v) => handleFilterChange("rounds", v)}>
+                <SelectTrigger className="bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700">
                   <SelectValue placeholder="不限" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-[#23263A]">
-                  <SelectItem value="1" className="text-gray-900 dark:text-gray-100">1轮</SelectItem>
-                  <SelectItem value="2" className="text-gray-900 dark:text-gray-100">2轮</SelectItem>
-                  <SelectItem value="3" className="text-gray-900 dark:text-gray-100">3轮</SelectItem>
-                  <SelectItem value="4" className="text-gray-900 dark:text-gray-100">4轮</SelectItem>
-                  <SelectItem value="4+" className="text-gray-900 dark:text-gray-100">4轮以上</SelectItem>
+                  <SelectItem value="1">1轮</SelectItem>
+                  <SelectItem value="2">2轮</SelectItem>
+                  <SelectItem value="3">3轮</SelectItem>
+                  <SelectItem value="4">4轮</SelectItem>
+                  <SelectItem value="4+">4轮以上</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">面试类型</Label>
-              <Select
-                value={filters.type}
-                onValueChange={(v) => handleFilterChange("type", v)}
-              >
-                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500 dark:text-gray-400">面试类型</Label>
+              <Select value={filters.type} onValueChange={(v) => handleFilterChange("type", v)}>
+                <SelectTrigger className="bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700">
                   <SelectValue placeholder="不限" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-[#23263A]">
-                  <SelectItem value="technical" className="text-gray-900 dark:text-gray-100">技术面</SelectItem>
-                  <SelectItem value="behavioral" className="text-gray-900 dark:text-gray-100">行为面</SelectItem>
-                  <SelectItem value="hr" className="text-gray-900 dark:text-gray-100">HR面</SelectItem>
+                  <SelectItem value="technical">技术面</SelectItem>
+                  <SelectItem value="behavioral">行为面</SelectItem>
+                  <SelectItem value="hr">HR面</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">职位状态</Label>
-              <Select
-                value={filters.status}
-                onValueChange={(v) => handleFilterChange("status", v)}
-              >
-                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500 dark:text-gray-400">职位状态</Label>
+              <Select value={filters.status} onValueChange={(v) => handleFilterChange("status", v)}>
+                <SelectTrigger className="bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-[#23263A]">
-                  <SelectItem value="open" className="text-gray-900 dark:text-gray-100">招聘中</SelectItem>
-                  <SelectItem value="closed" className="text-gray-900 dark:text-gray-100">已结束</SelectItem>
-                  <SelectItem value="all" className="text-gray-900 dark:text-gray-100">全部</SelectItem>
+                  <SelectItem value="open">招聘中</SelectItem>
+                  <SelectItem value="closed">已结束</SelectItem>
+                  <SelectItem value="all">全部</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </div>
 
+        {/* 职位列表 */}
         {loading ? (
-          <PageSkeleton variant="table" />
+          <div className="min-h-[50vh] flex items-center justify-center">
+            <LoadingSpinner size="lg" text="加载中..." />
+          </div>
         ) : (
           <>
             {jobs.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-10">暂无符合条件的职位</p>
+              <div className="text-center py-16 bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
+                <Briefcase className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                <p className="text-slate-500 dark:text-slate-400">暂无符合条件的职位</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {jobs.map((job) => renderJobCard(job, job.status === "open" ? "open" : "closed"))}
               </div>
             )}
           </>
         )}
+      </div>
       </div>
     </>
   );

@@ -434,7 +434,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
 
   return (
     <div className="w-full space-y-3">
-      <div className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer">
+      <div className="border-2 border-dashed border-indigo-300 dark:border-indigo-600/50 rounded-xl p-6 flex flex-col items-center justify-center text-center bg-indigo-50/30 dark:bg-indigo-900/10 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition cursor-pointer">
         <input
           type="file"
           accept=".pdf,.doc,.docx"

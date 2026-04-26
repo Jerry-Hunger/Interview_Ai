@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, Calendar } from "lucide-react";
 import { useCompanyJobs } from "@/hooks/api";
 
@@ -20,7 +20,11 @@ const CompanyJobsPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: jobs = [], isPending, error } = useCompanyJobs();
 
-  if (isPending) return <PageSkeleton variant="table" />;
+  if (isPending) return (
+    <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center">
+      <LoadingSpinner size="lg" text="加载中..." />
+    </div>
+  );
   if (error) return <div className="p-6 text-red-500">获取职位列表失败</div>;
 
   return (

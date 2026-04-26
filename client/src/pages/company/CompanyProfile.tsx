@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Building, Upload, Trash2, X, Eye, Briefcase, Clock } from "lucide-react";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -163,7 +163,11 @@ const CompanyProfilePage = () => {
   };
 
   if (isPending) {
-    return <PageSkeleton variant="form" />;
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center">
+        <LoadingSpinner size="lg" text="加载中..." />
+      </div>
+    );
   }
 
   const c = company as CompanyUser;
@@ -175,7 +179,7 @@ const CompanyProfilePage = () => {
   return (
     <>
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
+        <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181c2f]">
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-xl font-bold text-purple-700 dark:text-purple-300">
               <div className="flex items-center gap-2">
@@ -215,7 +219,7 @@ const CompanyProfilePage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-white dark:from-[#1a1c2e] dark:via-[#1f2033] dark:to-[#181A2A] rounded-2xl p-6 border border-indigo-100 dark:border-indigo-900/40 shadow-sm">
+            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-white dark:from-[#1a1c2e] dark:via-[#1f2033] dark:to-[#181c2f] rounded-2xl p-6 border border-indigo-100 dark:border-indigo-900/40 shadow-sm">
               <div className="flex items-start gap-5">
                 <div className="relative shrink-0">
                   <SimpleAvatarUploader
@@ -458,7 +462,7 @@ const CompanyProfilePage = () => {
         </Card>
 
         {/* 已发布职位 */}
-        <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
+        <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181c2f]">
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-xl font-bold text-purple-700 dark:text-purple-300">
               <div className="flex items-center gap-2">

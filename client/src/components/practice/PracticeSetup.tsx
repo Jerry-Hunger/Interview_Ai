@@ -51,20 +51,20 @@ const PracticeSetup = ({
       <Button
         variant="outline"
         onClick={() => navigate("/student/dashboard")}
-        className="mb-4 text-indigo-500 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+        className="mb-4 text-indigo-500 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
       >
         返回仪表盘
       </Button>
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
         模拟面试设置
       </h1>
-      <p className="text-gray-500 dark:text-gray-400">
+      <p className="text-slate-500 dark:text-slate-400">
         配置您的面试环节，获得最佳练习体验
       </p>
     </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Setup Form */}
-      <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
+      <Card className="shadow-lg bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400">
             <Target size={20} />
@@ -153,7 +153,7 @@ const PracticeSetup = ({
               onChange={(e) =>
                 setSetupData((prev) => ({ ...prev, role: e.target.value }))
               }
-              className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
             />
           </div>
           {/* Difficulty */}
@@ -169,7 +169,7 @@ const PracticeSetup = ({
                 setSetupData((prev) => ({ ...prev, difficulty: value }))
               }
             >
-              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
+              <SelectTrigger className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all">
                 <SelectValue placeholder="选择难度" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
@@ -194,7 +194,7 @@ const PracticeSetup = ({
                 setSetupData((prev) => ({ ...prev, roundType: value }))
               }
             >
-              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
+              <SelectTrigger className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all">
                 <SelectValue placeholder="选择面试类型" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
@@ -220,7 +220,7 @@ const PracticeSetup = ({
                 setSetupData((prev) => ({ ...prev, rounds: Number(value) }))
               }
             >
-              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
+              <SelectTrigger className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all">
                 <SelectValue placeholder="选择轮次" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
@@ -246,7 +246,7 @@ const PracticeSetup = ({
                 setSetupData((prev) => ({ ...prev, questionsPerRound: Number(value) }))
               }
             >
-              <SelectTrigger className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400">
+              <SelectTrigger className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all">
                 <SelectValue placeholder="选择问题数量" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-[#23263A]">
@@ -274,21 +274,31 @@ const PracticeSetup = ({
                 }))
               }
               rows={3}
-              className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
             />
           </div>
           <Button
             onClick={handleSetupSubmit}
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            disabled={isStarting}
+            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-70 disabled:cursor-not-allowed"
             size="lg"
           >
-            <Play size={16} className="mr-2" />
-            开始面试
+            {isStarting ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                准备面试中...
+              </>
+            ) : (
+              <>
+                <Play size={16} className="mr-2" />
+                开始面试
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
       {/* Preview/Tips */}
-      <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
+      <Card className="shadow-lg bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl">
         <CardHeader>
           <CardTitle className="text-indigo-500 dark:text-indigo-400">
             面试技巧
@@ -335,11 +345,11 @@ const PracticeSetup = ({
             ))}
           </div>
           <Separator />
-          <div className="p-4 bg-indigo-50 dark:bg-[#23263A] rounded-lg">
-            <h4 className="font-medium text-indigo-500 dark:text-indigo-400 mb-2">
+          <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+            <h4 className="font-medium text-indigo-600 dark:text-indigo-400 mb-2">
               面试内容预览
             </h4>
-            <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
               <li>• 共 {setupData.rounds} 轮面试，每轮 {setupData.questionsPerRound} 个问题</li>
               <li>• 实时反馈和评分</li>
               <li>• 详细的性能分析</li>

@@ -3,9 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { Calendar, Layers } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { Calendar, Layers, Building2, MapPin, Globe, Sparkles, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import { useJobDetail, useMyApplications, useApplyJob } from "@/hooks/api";
+import { useToast } from "@/hooks/use-toast";
 
 type Round = {
   roundNumber?: number;
@@ -16,20 +17,10 @@ type Round = {
   notes?: string;
 };
 
-type JobType = {
-  _id: string;
-  title: string;
-  description: string;
-  skills: string[];
-  rounds: Round[];
-  difficulty: string;
-  status: string;
-  createdAt: string;
-};
-
-type ApplicationType = {
-  _id: string;
-  jobId: { _id: string } | string;
+const difficultyConfig = {
+  easy: { label: "简单", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-400" },
+  medium: { label: "中等", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-400" },
+  hard: { label: "困难", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", dot: "bg-rose-400" },
 };
 
 const JobDetailPage: React.FC = () => {
@@ -39,6 +30,7 @@ const JobDetailPage: React.FC = () => {
   const { data: applications = [] } = useMyApplications();
   const applyMutation = useApplyJob();
   const [applying, setApplying] = useState(false);
+  const { toast } = useToast();
 
   const hasApplied = applications.some((a) => {
     const jobId = a.jobId;
@@ -48,127 +40,260 @@ const JobDetailPage: React.FC = () => {
 
   const handleApply = async () => {
     if (hasApplied) {
-      alert("您已申请过该职位。");
+      toast({ title: "您已申请过该职位", description: "请勿重复申请", variant: "destructive" });
       return;
     }
     setApplying(true);
     try {
       await applyMutation.mutateAsync(id!);
-      alert("申请成功！");
+      toast({ title: "申请成功", description: "请等待HR审核" });
     } catch (err: unknown) {
       console.error("Apply failed", err);
       const axiosError = err as { response?: { data?: { msg?: string } } };
-      alert(axiosError.response?.data?.msg ?? "申请失败");
+      toast({ title: "申请失败", description: axiosError.response?.data?.msg ?? "申请失败", variant: "destructive" });
     } finally {
       setApplying(false);
     }
   };
 
-  if (loading) return <PageSkeleton variant="detail" />;
-  if (!job) return <div className="p-6 text-gray-600 dark:text-gray-300">职位不存在</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
+      <LoadingSpinner size="lg" text="加载中..." />
+    </div>
+  );
+  if (!job) return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
+      <p className="text-gray-600 dark:text-gray-300">职位不存在</p>
+    </div>
+  );
 
   return (
-    <>
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        <Card className="rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {job.title}
-                </CardTitle>
-                <p className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  <Calendar className="w-4 h-4" />
-                  {new Date(job.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Badge
-                  variant={job.status === "closed" ? "destructive" : "default"}
-                >
-                  {job.status === "closed" ? "已结束" : "招聘中"}
-                </Badge>
-                {job.difficulty && <Badge className="dark:bg-gray-700 dark:text-gray-200">{job.difficulty}</Badge>}
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">
-                职位描述
-              </h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                {job.description}
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">
-                技能要求
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {(job.skills || []).map((s: string) => (
-                  <Badge key={s} className="text-sm dark:bg-gray-700 dark:text-gray-200">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Layers className="w-5 h-5" />
-                面试环节
-              </h3>
-              <div className="space-y-3">
-                {(job.rounds || []).map((r: Round, idx: number) => (
-                  <div
-                    key={idx}
-                    className="p-4 border rounded-lg bg-gray-50 dark:bg-[#23263A] border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex justify-between">
-                      <div>
-                        <div className="font-semibold text-gray-900 dark:text-white">
-                          {r.type ?? `第 ${idx + 1} 轮`}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {r.topic}
-                        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
+      <div className="max-w-5xl mx-auto py-8 px-4 space-y-6">
+        {/* 公司信息卡片 */}
+        {job.companyName && (
+          <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-r from-white to-slate-50 dark:from-gray-900 dark:to-gray-800/50 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+            <CardContent className="p-6">
+              <div className="flex items-start gap-5">
+                {/* Logo 区域 */}
+                <div className="shrink-0">
+                  {job.companyLogoUrl ? (
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-2xl bg-white shadow-lg border border-slate-100 p-1.5 flex items-center justify-center overflow-hidden">
+                        <img src={job.companyLogoUrl} alt={job.companyName} className="w-full h-full object-contain" />
                       </div>
-                      <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-                        <div>难度：{r.difficulty === "easy" ? "简单" : r.difficulty === "medium" ? "中等" : r.difficulty === "hard" ? "困难" : r.difficulty}</div>
-                        <div>时长：{r.duration ?? "-"} 分钟</div>
-                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
                     </div>
-                    {r.notes && (
-                      <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                        {r.notes}
-                      </p>
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                      <Building2 className="w-9 h-9 text-white" />
+                    </div>
+                  )}
+                </div>
+
+                {/* 公司信息 */}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {job.companyName}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-3 mt-2">
+                    {job.companyLocation && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
+                        <MapPin className="w-3.5 h-3.5 text-indigo-500" />{job.companyLocation}
+                      </span>
+                    )}
+                    {job.industry && (
+                      <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">{job.industry}</span>
+                    )}
+                    {job.companySize && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
+                        <Building2 className="w-3.5 h-3.5 text-purple-500" />{job.companySize} 人
+                      </span>
+                    )}
+                    {job.companyWebsite && (
+                      <a href={job.companyWebsite} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                        <Globe className="w-3.5 h-3.5" />官网
+                      </a>
                     )}
                   </div>
+
+                  {/* 公司简介 */}
+                  {job.companyDescription && (
+                    <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-slate-50 to-indigo-50/50 dark:from-gray-800/50 dark:to-indigo-900/20 border border-slate-100 dark:border-gray-700">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-indigo-500" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">公司简介</span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {job.companyDescription}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 职位主卡片 */}
+        <Card className="rounded-2xl shadow-xl border-0 bg-white dark:bg-gray-900 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-white drop-shadow-sm">{job.title}</h1>
+                <div className="flex items-center gap-4 mt-3">
+                  <span className="flex items-center gap-1.5 text-sm text-white/80">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(job.createdAt).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-sm text-white/80">
+                    <Clock className="w-4 h-4" />
+                    更新于 {new Date(job.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Badge className={job.status === "closed"
+                  ? "bg-rose-500/20 text-rose-200 border border-rose-500/30"
+                  : "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+                }>
+                  {job.status === "closed" ? "❌ 已结束" : "✅ 招聘中"}
+                </Badge>
+                {job.difficulty && (
+                  <Badge className="bg-white/20 text-white border border-white/30 backdrop-blur-sm">
+                    {job.difficulty === "easy" ? "🌱 简单" : job.difficulty === "medium" ? "⚡ 中等" : job.difficulty === "hard" ? "🔥 困难" : job.difficulty}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <CardContent className="p-6 space-y-8">
+            {/* 职位描述 */}
+            <div className="group">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">职位描述</h3>
+              </div>
+              <div className="pl-10">
+                <div className="p-5 rounded-xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-100 dark:border-indigo-800/50">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {job.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 技能要求 */}
+            <div className="group">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                  <Layers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">技能要求</h3>
+              </div>
+              <div className="pl-10 flex flex-wrap gap-2">
+                {(job.skills || []).map((s: string) => (
+                  <span key={s} className="px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    {s}
+                  </span>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button onClick={() => navigate(-1)} variant="outline">
-                返回
-              </Button>
-              {job.status !== "closed" && (
-                <Button onClick={handleApply} disabled={applying || hasApplied}>
-                  {hasApplied
-                    ? "已申请"
-                    : applying
-                    ? "申请中..."
-                    : "申请职位"}
-                </Button>
-              )}
+            {/* 面试环节 */}
+            {job.rounds && job.rounds.length > 0 && (
+              <div className="group">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center">
+                    <Layers className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">面试环节</h3>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">共 {job.rounds.length} 轮</span>
+                </div>
+                <div className="pl-10 space-y-4">
+                  {(job.rounds as Round[]).map((r: Round, idx: number) => {
+                    const diff = difficultyConfig[r.difficulty as keyof typeof difficultyConfig] || difficultyConfig.medium;
+                    return (
+                      <div key={idx} className="relative p-5 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-800/50 dark:to-gray-800 border border-slate-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                        {/* 轮次标记 */}
+                        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
+                          {idx + 1}
+                        </div>
+                        {/* 连接线 */}
+                        {idx < (job.rounds?.length ?? 0) - 1 && (
+                          <div className="absolute left-3 top-full w-0.5 h-4 bg-gradient-to-b from-indigo-300 to-transparent dark:from-indigo-600" />
+                        )}
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="space-y-1">
+                            <div className="font-semibold text-gray-900 dark:text-white text-lg">
+                              {r.type ?? `第 ${idx + 1} 轮面试`}
+                            </div>
+                            {r.topic && (
+                              <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                {r.topic}
+                              </div>
+                            )}
+                            {r.notes && (
+                              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 pl-0">
+                                💬 {r.notes}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${diff.color}`}>
+                              {diff.label}
+                            </span>
+                            {r.duration && (
+                              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <Clock className="w-3 h-3" />{r.duration} 分钟
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 申请按钮区域 */}
+            <div className="pt-6 border-t border-slate-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  {hasApplied && <><CheckCircle2 className="w-4 h-4 text-green-500" />您已申请该职位</>}
+                </div>
+                <div className="flex gap-3">
+                  <Button onClick={() => navigate(-1)} variant="outline" size="lg" className="gap-2">
+                    ← 返回
+                  </Button>
+                  {job.status !== "closed" && (
+                    <Button
+                      onClick={handleApply}
+                      disabled={applying || hasApplied}
+                      size="lg"
+                      className="gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all"
+                    >
+                      {hasApplied
+                        ? <>已申请 <CheckCircle2 className="w-4 h-4" /></>
+                        : applying
+                        ? "申请中..."
+                        : <>申请职位 <ArrowRight className="w-4 h-4" /></>
+                      }
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import ResumeViewer from "@/components/resume/ResumeViewer";
 import { useApplicationDetail, useUpdateApplicationStatus } from "@/hooks/api";
 
@@ -71,7 +71,11 @@ const ApplicationDetailPage: React.FC = () => {
     );
   };
 
-  if (isPending) return <PageSkeleton variant="detail" />;
+  if (isPending) return (
+    <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center">
+      <LoadingSpinner size="lg" text="加载中..." />
+    </div>
+  );
   if (error) return <div className="p-6 text-red-500">获取申请详情失败</div>;
   if (!application) return <div className="p-6 text-gray-600 dark:text-gray-300">申请不存在</div>;
 

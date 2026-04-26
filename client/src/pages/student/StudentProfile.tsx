@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Phone, MapPin, DollarSign, GraduationCap, Code, User } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import ResumeUploader from "@/components/practice/ResumeUploader";
 import ResumeViewer from "@/components/resume/ResumeViewer";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
@@ -166,12 +166,15 @@ const ProfilePage = () => {
   );
 
   if (isPending || !currentUser) {
-    return <PageSkeleton variant="form" />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+        <LoadingSpinner size="lg" text="加载中..." />
+      </div>
+    );
   }
 
   return (
-    <>
-      <div className="min-h-screen bg-white dark:bg-[#101322]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Card className="shadow-lg rounded-2xl bg-white dark:bg-[#181A2A]">
           <CardHeader>
@@ -311,8 +314,7 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
       </div>
-      </div>
-    </>
+    </div>
   );
 };
 

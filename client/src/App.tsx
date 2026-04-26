@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Navigation from "@/components/Navigation";
-import LoadingFallback from "@/components/LoadingFallback";
 
 const Index = React.lazy(() => import("./pages/Index"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
@@ -45,7 +44,7 @@ const App = () => (
           <Toaster />
           <BrowserRouter>
             <Navigation />
-            <Suspense fallback={<LoadingFallback />}>
+            <Suspense fallback={null}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />

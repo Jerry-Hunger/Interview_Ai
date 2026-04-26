@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import {
   Briefcase,
   Users,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useCompanyDashboard } from "@/hooks/api";
+import { statusColors, statusLabels } from "./shared/constants";
 
 const STAGES = [
   { key: "applied", label: "已申请", color: "#6366F1", bg: "bg-indigo-500" },
@@ -25,22 +26,6 @@ const STAGES = [
   { key: "finalSelected", label: "最终通过", color: "#8B5CF6", bg: "bg-violet-500" },
   { key: "rejected", label: "已拒绝", color: "#EF4444", bg: "bg-red-500" },
 ] as const;
-
-const statusLabels: Record<string, string> = {
-  applied: "已申请",
-  "in-progress": "面试中",
-  selected: "已通过",
-  "final-selected": "最终通过",
-  rejected: "已拒绝",
-};
-
-const statusColors: Record<string, string> = {
-  applied: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  "in-progress": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  selected: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  "final-selected": "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-  rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
 
 type Stats = {
   applied?: number;
@@ -128,21 +113,8 @@ const CompanyDashboard = () => {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
-        <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-          <div>
-            <Skeleton className="h-9 w-48 mb-2" />
-            <Skeleton className="h-5 w-72" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-28 rounded-2xl" />
-            ))}
-          </div>
-          <Skeleton className="h-80 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322] flex items-center justify-center">
+        <LoadingSpinner size="lg" text="加载中..." />
       </div>
     );
   }

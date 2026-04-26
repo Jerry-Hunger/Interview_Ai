@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import PracticeInterview from "@/components/practice/PracticeInterview";
 import PracticeResults from "@/components/practice/PracticeResults";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationDetail } from "@/hooks/api";
+import { Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 type Step = "waiting" | "interview" | "results";
 
@@ -77,6 +79,7 @@ const ApplicationDetail = () => {
     chatHistory: [],
   });
   const [interviewResults, setInterviewResults] = useState<InterviewResult | null>(null);
+  const [isStartingInterview, setIsStartingInterview] = useState(false);
 
   const handleStartInterview = async () => {
     try {
@@ -89,12 +92,25 @@ const ApplicationDetail = () => {
         setResumeText(resumeToUse);
       }
 
+      if (!resumeToUse) {
+        toast({
+          title: "错误",
+          description: "简历内容为空，请先上传简历",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsStartingInterview(true);
+
       const res = await axiosInstance.post("/interview/start", {
         role: job.title,
         resume: resumeToUse,
         roundType: job.rounds[application.currentRound]?.type || "综合面试",
         topic: job.rounds[application.currentRound]?.description || "",
         difficulty: job.difficulty,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
       const firstQuestion = res.data.message;
@@ -111,11 +127,15 @@ const ApplicationDetail = () => {
         ],
       }));
 
+      setIsStartingInterview(false);
       setCurrentStep("interview");
-      } catch {
+      } catch (error: unknown) {
+      setIsStartingInterview(false);
+      console.error("Error starting interview:", error);
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
       toast({
         title: "错误",
-        description: "启动面试失败",
+        description: `启动面试失败：${errorMessage}`,
         variant: "destructive",
       });
     }
@@ -217,92 +237,163 @@ const ApplicationDetail = () => {
   };
 
   if (isPending || !application || !job) {
-    return <PageSkeleton variant="detail" />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
+        <LoadingSpinner size="lg" text="加载中..." />
+      </div>
+    );
   }
 
   if (currentStep === "waiting") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
-        <div className="max-w-3xl mx-auto py-12 px-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {job.title}
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
-            {job.description}
-          </p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            难度：{job.difficulty}
-          </p>
-          {job.company && (
-            <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">
-              公司：{job.company.name}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
+        <div className="max-w-3xl mx-auto py-12 px-6 space-y-6">
+          {/* 职位信息卡片 */}
+          <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {job.title}
+            </h1>
+            <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">
+              {job.description}
             </p>
-          )}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                难度：{job.difficulty}
+              </span>
+              {job.company && (
+                <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                  {job.company.name}
+                </span>
+              )}
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                共 {job.rounds?.length || 0} 轮面试
+              </span>
+            </div>
+          </div>
 
-          <div className="mt-6 p-4 rounded-2xl bg-white dark:bg-[#181c2f] shadow-md">
-            <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-3">
+          {/* 申请状态卡片 */}
+          <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-4 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
               申请状态
             </h2>
             {application.status === "applied" && (
-              <p className="text-gray-700 dark:text-gray-300">
-                ⏳ 等待企业审核
-              </p>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                <span className="text-2xl">⏳</span>
+                <div>
+                  <p className="font-medium text-blue-700 dark:text-blue-300">等待企业审核</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">请耐心等待，企业正在处理您的申请</p>
+                </div>
+              </div>
             )}
             {application.status === "rejected" && (
-              <p className="text-red-500 dark:text-red-400 font-medium">
-                ❌ 很遗憾，您的申请已被拒绝
-              </p>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30">
+                <span className="text-2xl">❌</span>
+                <div>
+                  <p className="font-medium text-red-700 dark:text-red-300">很遗憾，您的申请已被拒绝</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">可以尝试申请其他职位</p>
+                </div>
+              </div>
             )}
             {application.status === "selected" && (
-              <p className="text-yellow-500 dark:text-yellow-400">
-                ⚡ 您已通过！等待最终审核
-              </p>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+                <span className="text-2xl">⚡</span>
+                <div>
+                  <p className="font-medium text-amber-700 dark:text-amber-300">您已通过！</p>
+                  <p className="text-sm text-amber-600 dark:text-amber-400">等待最终审核结果</p>
+                </div>
+              </div>
             )}
             {application.status === "final-selected" && (
-              <p className="text-green-500 dark:text-green-400 font-bold">
-                🎉 恭喜！您已最终通过
-              </p>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">
+                <span className="text-2xl">🎉</span>
+                <div>
+                  <p className="font-bold text-emerald-700 dark:text-emerald-300">恭喜！您已最终通过</p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">期待您的新工作</p>
+                </div>
+              </div>
             )}
             {application.status === "in-progress" && (
-              <div>
-                <p className="text-gray-700 dark:text-gray-300">
-                  👉 下一轮：{job.rounds[application.currentRound]?.type}
-                </p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30">
+                  <span className="text-2xl">👉</span>
+                  <div>
+                    <p className="font-medium text-indigo-700 dark:text-indigo-300">
+                      当前进度：第 {application.currentRound + 1} 轮 / 共 {job.rounds?.length || 0} 轮
+                    </p>
+                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                      下一轮：{job.rounds[application.currentRound]?.type || "综合面试"}
+                    </p>
+                  </div>
+                </div>
+                {/* 面试进度可视化 */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  {job.rounds?.map((_, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                        idx < application.currentRound
+                          ? "bg-emerald-500 text-white"
+                          : idx === application.currentRound
+                          ? "bg-indigo-500 text-white ring-4 ring-indigo-200 dark:ring-indigo-800"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                      }`}>
+                        {idx < application.currentRound ? "✓" : idx + 1}
+                      </div>
+                      {idx < (job.rounds?.length || 0) - 1 && (
+                        <div className={`w-8 h-1 rounded ${
+                          idx < application.currentRound
+                            ? "bg-emerald-500"
+                            : "bg-slate-200 dark:bg-slate-700"
+                        }`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
                 <button
                   onClick={handleStartInterview}
-                  className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90 shadow-lg dark:from-indigo-600 dark:to-purple-700"
+                  disabled={isStartingInterview}
+                  className="w-full mt-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 dark:from-indigo-600 dark:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  开始面试
+                  {isStartingInterview ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      准备面试中...
+                    </>
+                  ) : (
+                    <>开始第 {application.currentRound + 1} 轮面试</>
+                  )}
                 </button>
               </div>
             )}
           </div>
 
+          {/* 已完成面试历史 */}
           {application.history && application.history.length > 0 && (
-            <div className="mt-8 p-4 rounded-2xl bg-white dark:bg-[#181c2f] shadow-md">
-              <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-3">
+            <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
+              <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-4 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                 已完成的面试
               </h2>
               <ul className="space-y-4">
                 {application.history?.map((round: RoundHistory, idx: number) => (
                   <li
                     key={idx}
-                    className="p-3 border rounded-lg bg-gray-50 dark:bg-[#23263A] dark:border-gray-700"
+                    className="p-4 rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-[#23263A] dark:to-[#1C1E2C]"
                   >
-                    <p className="font-medium text-gray-800 dark:text-gray-200">
-                      第 {round.roundNumber} 轮：{job.rounds[round.roundNumber - 1]?.type || "未知"}
-                    </p>
-                    <p
-                      className={`mt-1 ${
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-gray-800 dark:text-gray-200">
+                        第 {round.roundNumber} 轮：{job.rounds[round.roundNumber - 1]?.type || "未知"}
+                      </p>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         round.result === "success"
-                          ? "text-green-500 dark:text-green-400"
-                          : "text-red-500 dark:text-red-400"
-                      }`}
-                    >
-                      结果：{round.result === "success" ? "通过" : "未通过"}
-                    </p>
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      }`}>
+                        {round.result === "success" ? "通过 ✓" : "未通过 ✗"}
+                      </span>
+                    </div>
                     {round.feedback && (
-                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                         反馈：{round.feedback}
                       </p>
                     )}
@@ -312,22 +403,31 @@ const ApplicationDetail = () => {
             </div>
           )}
 
+          {/* 即将到来的面试 */}
           {application.status === "in-progress" &&
             job.rounds &&
             application.currentRound < job.rounds.length && (
-              <div className="mt-8 p-4 rounded-2xl bg-white dark:bg-[#181c2f] shadow-md">
-                <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-3">
+              <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
+                <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                   即将到来的面试
                 </h2>
-                <p className="text-gray-700 dark:text-gray-300">
-                  下一轮：{job.rounds[application.currentRound]?.type} – {job.rounds[application.currentRound]?.description}
-                </p>
+                <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100/50 dark:border-amber-800/20">
+                  <p className="font-medium text-amber-800 dark:text-amber-300">
+                    第 {application.currentRound + 1} 轮：{job.rounds[application.currentRound]?.type}
+                  </p>
+                  {job.rounds[application.currentRound]?.description && (
+                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+                      {job.rounds[application.currentRound]?.description}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
           {interviewResults && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-[#181c2f] rounded-xl p-6 w-full max-w-2xl shadow-lg">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-[#1a1c29] rounded-2xl p-6 w-full max-w-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
                 <h3 className="text-lg font-semibold mb-4 text-indigo-600 dark:text-indigo-400">
                   面试结果
                 </h3>
@@ -337,7 +437,7 @@ const ApplicationDetail = () => {
                 />
                 <button
                   onClick={() => setInterviewResults(null)}
-                  className="cursor-pointer mt-4 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                  className="cursor-pointer mt-4 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 transition-colors"
                 >
                   关闭
                 </button>
@@ -351,7 +451,7 @@ const ApplicationDetail = () => {
 
   if (currentStep === "interview") {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#101322]">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
         <PracticeInterview
           setupData={{
             role: job.title,
@@ -374,7 +474,7 @@ const ApplicationDetail = () => {
 
   if (currentStep === "results") {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#101322]">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
         <PracticeResults interview={interviewResults} navigate={() => {}} />
       </div>
     );

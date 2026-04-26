@@ -85,7 +85,7 @@ const CompanyJobForm = () => {
   return (
     <>
       <div className="max-w-4xl mx-auto py-10 px-6">
-        <Card className="shadow-xl bg-white dark:bg-[#181A2A] text-gray-900 dark:text-gray-100 transition-colors">
+        <Card className="shadow-xl bg-white dark:bg-[#181c2f] text-gray-900 dark:text-gray-100 transition-colors">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
               创建职位
