@@ -169,7 +169,7 @@ export const concludeChunk = ({ chunkIndex, totalChunks, blockContent, roleSumma
 ## 第 ${chunkIndex + 1} 部分反馈
 
 ### 回答概述
-{根据以下候选人实际问答内容，用 2-3 句话概括他们回答了什么}
+你必须根据以下候选人实际问答内容，用 2-3 句话概括他们实际回答了什么，不要添加任何未在回答中提到的内容。
 
 ${blockContent}
 

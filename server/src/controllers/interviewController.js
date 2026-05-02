@@ -193,7 +193,9 @@ export const concludeInterview = async (req, res) => {
   );
 
   const finalPrompt = concludeFinal({
-    historyLength: filteredHistory.length,
+    // historyLength 应该是问题数量，而非对话条目数量
+    // 对话格式为 [Q1, A1, Q2, A2, ...]，所以问题数 = 条目数 / 2
+    historyLength: Math.ceil(filteredHistory.length / 2),
     chunksLength: chunks.length,
     roleSummary,
     difficulty,

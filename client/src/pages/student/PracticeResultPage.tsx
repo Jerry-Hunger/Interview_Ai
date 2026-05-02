@@ -26,7 +26,9 @@ const PracticeResultPage = () => {
           <PracticeResult
           interview={interview}
           navigate={navigate}
-          previousInterviewIds={location.state?.roundInterviewIds?.slice(0, -1)}
+          previousInterviewIds={location.state?.roundInterviewIds?.filter((id: string) => id !== interview._id)}
+          setupData={location.state?.setupData}
+          rounds={location.state?.rounds}
         />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +76,7 @@ const Practice = () => {
   const [currentRound, setCurrentRound] = useState(1);
   const [roundInterviewIds, setRoundInterviewIds] = useState<string[]>([]);
   const isMountedRef = useRef(true);
+  const hasTriggeredAutoEndRef = useRef(false);
 
   const [interviewState, setInterviewState] = useState<InterviewState>({
     currentQuestion: 1,
@@ -104,6 +105,11 @@ const Practice = () => {
       currentRound?: number;
       previousFeedback?: string;
     } | undefined;
+
+    // 计算每轮的问题数量（与后端 startInterviewContinuationRound 一致）
+    const getQuestionsForRound = (round: number): number => {
+      return Math.max(3, 5 - round + 1);
+    };
     
     if (state?.setupData) {
       setSetupData(state.setupData);
@@ -116,6 +122,7 @@ const Practice = () => {
       const nextRound = state.currentRound || currentRound + 1;
       setCurrentRound(nextRound);
       setInterviewPhase("answering");
+      hasTriggeredAutoEndRef.current = false;
       setIsStarting(true);
 
       axiosInstance.post("/interview/start", {
@@ -135,7 +142,7 @@ const Practice = () => {
         setCurrentStep("interview");
         setInterviewState({
           currentQuestion: 1,
-          totalQuestions: effectiveSetupData.questionsPerRound,
+          totalQuestions: getQuestionsForRound(nextRound),
           timeRemaining: 1800,
           isRecording: false,
           isCameraOn: true,
@@ -219,6 +226,7 @@ const Practice = () => {
       setIsStarting(false);
       setCurrentStep("interview");
       setInterviewPhase("answering");
+      hasTriggeredAutoEndRef.current = false;
 
       setInterviewState({
         currentQuestion: 1,
@@ -336,6 +344,7 @@ const Practice = () => {
           chatHistory: updatedChatHistory,
           answer: "",
           question: finalResponse,
+          isReprompt: isReprompt,
           ...(isReprompt || isLastQuestion ? {} : { currentQuestion: prev.currentQuestion + 1 }),
         }));
 
@@ -345,18 +354,42 @@ const Practice = () => {
             description: "您的回答需要更详细，请重新回答上一个问题",
             variant: "default",
           });
-        } else if (isLastQuestion) {
+        }
+
+        // 检查 AI 是否发送了结束面试的消息
+        const endKeywords = /本轮.*结束|面试到此结束|感谢.*参与|所有问题.*回答完毕/i;
+        if (endKeywords.test(finalResponse) && !hasTriggeredAutoEndRef.current) {
+          hasTriggeredAutoEndRef.current = true;
           setInterviewPhase("ended");
+          // 自动触发面试结束流程
+          setTimeout(() => {
+            handleEndInterview();
+          }, 100);
         }
       }
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      toast({
-        title: "错误",
-        description: `出错了：${errorMessage}，请重试。`,
-        variant: "destructive",
-      });
+      // 检查是否是429错误（请求过于频繁）
+      if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 429) {
+        toast({
+          title: "AI 忙碌中",
+          description: "AI 面试官需要休息一下，请稍后再试。",
+          variant: "destructive",
+        });
+      } else if (error && typeof error === 'object' && 'response' in error && (error as { response?: { status?: number } }).response?.status === 429) {
+        toast({
+          title: "AI 忙碌中",
+          description: "AI 面试官需要休息一下，请稍后再试。",
+          variant: "destructive",
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "未知错误";
+        toast({
+          title: "错误",
+          description: `出错了：${errorMessage}，请重试。`,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -402,6 +435,20 @@ const Practice = () => {
           totalRounds: effectiveRounds > 1 ? effectiveRounds : undefined,
         }),
       });
+
+      // 检查 HTTP 状态码
+      if (!response.ok) {
+        if (response.status === 429) {
+          setIsLoading(false);
+          toast({
+            title: "AI 忙碌中",
+            description: "AI 面试官需要休息一下，请稍后再试。",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(`服务器错误: ${response.status}`);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -481,6 +528,7 @@ const Practice = () => {
         finalFeedback,
         chatHistory: interviewState.chatHistory,
         feedbacks,
+        resumeText: effectiveSetupData.resume,  // 保存简历文本以便后续轮次使用
       };
 
       setIsLoading(false);
@@ -549,6 +597,19 @@ const Practice = () => {
       navigate("/student/practice-result", { state: { interview }, replace: true });
     } catch (error: unknown) {
       console.error("Error quitting interview:", error);
+      // 检查是否是429错误（请求过于频繁）
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 429) {
+          setIsLoading(false);
+          toast({
+            title: "AI 忙碌中",
+            description: "服务器繁忙，请稍后再试。",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       toast({
         title: "错误",
         description: "退出面试失败，请重试。",

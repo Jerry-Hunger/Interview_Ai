@@ -9,7 +9,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  Star,
   Play,
   Building,
   ArrowLeft,
@@ -21,8 +20,7 @@ import {
   Target,
   Clock,
   TrendingUp,
-  BookOpen,
-  ChevronRight,
+  BookOpen
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -35,7 +33,7 @@ type Interview = {
   role: string;
   difficulty: string;
   roundType: string;
-  result: "success" | "failure" | "Quit";
+  result: "success" | "failure" | "quit";
   feedback: string;
   transcript: { role: string; content: string }[];
   createdAt: string;
@@ -118,6 +116,7 @@ const PracticeResults = ({
   const totalRounds = state?.totalRounds || interview.rounds || 1;
   const isLastRound = currentRound >= totalRounds;
   const isSuccess = interview.result === "success";
+  const isQuit = interview.result === "quit" || interview.result === "Quit";
   const diff = difficultyConfig[interview.difficulty as keyof typeof difficultyConfig] || difficultyConfig.medium;
 
   const [pendingNextRound, setPendingNextRound] = useState<PendingNextRound | null>(null);
@@ -127,18 +126,20 @@ const PracticeResults = ({
     const stored = localStorage.getItem("pendingNextRound");
     if (!stored) return;
     const parsed: PendingNextRound = JSON.parse(stored);
+    // 设置 pendingNextRound 状态，无需等待 API 验证
+    // API 验证是可选的：即使失败，只要 localStorage 有值就允许继续
+    setPendingNextRound(parsed);
     axiosInstance
       .get(`/interview/${parsed.interviewId}`)
       .then((res) => {
         if (res.data.result) {
           localStorage.removeItem("pendingNextRound");
           setPendingNextRound(null);
-        } else {
-          setPendingNextRound(parsed);
         }
       })
       .catch(() => {
-        setPendingNextRound(parsed);
+        // API 失败时保持 pendingNextRound 状态不变
+        // 因为 localStorage 中有值说明用户已完成本轮面试
       });
   }, []);
 
@@ -165,7 +166,8 @@ const PracticeResults = ({
     if (pendingNextRound && pendingNextRound.interviewId === interview._id) return false;
     if (pendingNextRound) return true;
     if (previousInterviewIds.length > 0) {
-      return previousInterviewIds.every((id) => previousResults[id] === "success");
+      // 如果 API 调用失败导致 previousResults 为空字符串，仍允许继续（信任 localStorage 的状态）
+      return previousInterviewIds.every((id) => previousResults[id] === "success" || previousResults[id] === "");
     }
     return true;
   };
@@ -175,11 +177,12 @@ const PracticeResults = ({
     const nextRound = currentRound + 1;
     const setupDataWithInterview = {
       ...setupData,
-      role: setupData?.role || interview.roleSummary || "",
+      role: setupData?.role || interview.role || "",
       roundType: setupData?.roundType || interview.roundType || "",
       difficulty: setupData?.difficulty || interview.difficulty || "",
       rounds: setupData?.rounds || totalRounds || interview.rounds || 1,
       questionsPerRound: setupData?.questionsPerRound || 5,
+      resume: setupData?.resume || interview.resumeText || "",
     };
     navigate("/student/practice", {
       state: {
@@ -211,22 +214,24 @@ const PracticeResults = ({
       {/* 结果总览卡片 */}
       <Card className="rounded-2xl border-0 overflow-hidden shadow-xl">
         {/* 顶部渐变背景 */}
-        <div className={`h-2 bg-gradient-to-r ${isSuccess ? 'from-emerald-500 via-teal-500 to-cyan-500' : 'from-rose-500 via-pink-500 to-red-500'}`} />
+        <div className={`h-2 bg-gradient-to-r ${isQuit ? 'from-gray-500 via-slate-500 to-gray-600' : isSuccess ? 'from-emerald-500 via-teal-500 to-cyan-500' : 'from-rose-500 via-pink-500 to-red-500'}`} />
 
         {/* 主内容区 */}
         <CardContent className="p-6">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* 左侧 - 结果状态 */}
-            <div className={`lg:w-64 rounded-2xl p-6 flex flex-col items-center justify-center ${isSuccess ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' : 'bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20'}`}>
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${isSuccess ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/30' : 'bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/30'}`}>
-                {isSuccess ? (
+            <div className={`lg:w-64 rounded-2xl p-6 flex flex-col items-center justify-center ${isQuit ? 'bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20' : isSuccess ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' : 'bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20'}`}>
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${isQuit ? 'bg-gradient-to-br from-gray-500 to-slate-500 shadow-lg shadow-gray-500/30' : isSuccess ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/30' : 'bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/30'}`}>
+                {isQuit ? (
+                  <Clock className="w-10 h-10 text-white" />
+                ) : isSuccess ? (
                   <CheckCircle2 className="w-10 h-10 text-white" />
                 ) : (
                   <XCircle className="w-10 h-10 text-white" />
                 )}
               </div>
-              <h2 className={`text-2xl font-bold ${isSuccess ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                {isSuccess ? "恭喜通过" : "未通过"}
+              <h2 className={`text-2xl font-bold ${isQuit ? 'text-gray-600 dark:text-gray-400' : isSuccess ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {isQuit ? "已退出" : isSuccess ? "恭喜通过" : "未通过"}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {interview.type === "practice" ? "练习面试" : "企业面试"}

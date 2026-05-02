@@ -48,6 +48,7 @@ type InterviewState = {
   answer: string;
   question: string;
   chatHistory: ChatMessage[];
+  isReprompt?: boolean; // 标记当前是否为重新回答状态
 };
 
 interface SpeechRecognitionEvent extends Event {
@@ -287,8 +288,12 @@ const PracticeInterview = ({
                   <div className="flex items-center justify-center gap-1">
                     {Array.from({ length: interviewState.totalQuestions }, (_, i) => {
                       const questionNum = i + 1;
-                      const isCompleted = questionNum < interviewState.currentQuestion || (interviewPhase === "ended" && questionNum === interviewState.totalQuestions);
-                      const isCurrent = questionNum === interviewState.currentQuestion && interviewPhase !== "ended";
+                      // 如果是重新回答状态，当前问题数不变（不递增）
+                      // 否则：已完成当前问题（questionNum < currentQuestion）或者面试已结束
+                      const isCompleted = interviewState.isReprompt
+                        ? questionNum < interviewState.currentQuestion // 重新回答时，只标记之前的问题为完成
+                        : questionNum < interviewState.currentQuestion || (interviewPhase === "ended" && questionNum === interviewState.totalQuestions);
+                      const isCurrent = questionNum === interviewState.currentQuestion && !interviewState.isReprompt && interviewPhase !== "ended";
 
                       return (
                         <div
@@ -305,8 +310,10 @@ const PracticeInterview = ({
                     })}
                   </div>
                   <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                    {interviewPhase === "ended" 
+                    {interviewPhase === "ended"
                       ? `已完成 ${interviewState.totalQuestions} / ${interviewState.totalQuestions} 个问题`
+                      : interviewState.isReprompt
+                      ? `第 ${interviewState.currentQuestion} / ${interviewState.totalQuestions} 个问题（请详细回答）`
                       : `第 ${Math.min(interviewState.currentQuestion, interviewState.totalQuestions)} / ${interviewState.totalQuestions} 个问题`}
                   </p>
                 </div>
@@ -533,21 +540,43 @@ const PracticeInterview = ({
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleQuit}
-                        className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
-                      >
-                        退出面试
-                      </Button>
-                      <Button
-                        onClick={handleAnswerSubmit}
-                        className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!interviewState.answer.trim() || isLoading}
-                      >
-                        <Send size={14} className="mr-2" />
-                        {isLastQuestion ? "提交最后一题" : "提交回答"}
-                      </Button>
+                      {interviewPhase === "ended" ? (
+                        <Button
+                          onClick={handleEndInterview}
+                          disabled={isLoading}
+                          className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="animate-spin mr-2" size={18} />
+                              生成中...
+                            </>
+                          ) : (
+                            <>
+                              <FileText size={18} className="mr-2" />
+                              查看面试反馈
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={handleQuit}
+                            className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
+                          >
+                            退出面试
+                          </Button>
+                          <Button
+                            onClick={handleAnswerSubmit}
+                            className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 text-white font-semibold hover:shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!interviewState.answer.trim() || isLoading}
+                          >
+                            <Send size={14} className="mr-2" />
+                            {isLastQuestion ? "提交最后一题" : "提交回答"}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>
