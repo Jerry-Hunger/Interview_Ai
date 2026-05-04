@@ -189,6 +189,11 @@ const ApplicationDetail = () => {
     return /\[REPROMPT\]/i.test(text);
   };
 
+  // 移除 [REPROMPT] 标签，用于显示
+  const stripRepromptTag = (text: string): string => {
+    return text.replace(/\[REPROMPT\]/gi, "").trim();
+  };
+
   const handleAnswerSubmit = async () => {
     if (!interviewState.answer.trim()) {
       toast({
@@ -263,11 +268,16 @@ const ApplicationDetail = () => {
             description: "您的回答需要更详细，请重新回答上一个问题",
             variant: "default",
           });
+          // 移除 [REPROMPT] 标签后保存
+          const cleanedResponse = stripRepromptTag(finalResponse);
+          const cleanedChatHistory = updatedChatHistory.map((msg, idx) =>
+            idx === updatedChatHistory.length - 1 ? { ...msg, content: cleanedResponse } : msg
+          );
           setInterviewState((prev) => ({
             ...prev,
-            chatHistory: updatedChatHistory,
+            chatHistory: cleanedChatHistory,
             answer: "",
-            question: finalResponse,
+            question: cleanedResponse,
             isReprompt: true,
             currentQuestion: prev.currentQuestion,
           }));

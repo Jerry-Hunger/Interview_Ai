@@ -263,6 +263,11 @@ const Practice = () => {
     return /\[REPROMPT\]/i.test(text);
   };
 
+  // 移除 [REPROMPT] 标签，用于显示
+  const stripRepromptTag = (text: string): string => {
+    return text.replace(/\[REPROMPT\]/gi, "").trim();
+  };
+
   const handleAnswerSubmit = async () => {
     if (!interviewState.answer.trim()) {
       toast({
@@ -348,12 +353,13 @@ const Practice = () => {
             description: "您的回答需要更详细，请重新回答上一个问题",
             variant: "default",
           });
-          // 将 AI 的 reprompt 回复也保存到 chatHistory（包含提示和任何新问题）
+          // 移除 [REPROMPT] 标签后保存到 chatHistory
+          const cleanedResponse = stripRepromptTag(finalResponse);
           const repromptChatHistory = [
             ...updatedChatHistory,
             {
               type: "question" as const,
-              content: finalResponse,
+              content: cleanedResponse,
               timestamp: new Date().toLocaleTimeString(),
             },
           ];
@@ -361,7 +367,7 @@ const Practice = () => {
             ...prev,
             chatHistory: repromptChatHistory,
             answer: "",
-            question: finalResponse,
+            question: cleanedResponse,
             isReprompt: true,
             currentQuestion: prev.currentQuestion,
           }));
