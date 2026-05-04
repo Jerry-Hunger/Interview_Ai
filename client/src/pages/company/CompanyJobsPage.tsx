@@ -4,18 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, Calendar, Power, PowerOff } from "lucide-react";
-import { useCompanyJobs, useUpdateJobStatus } from "@/hooks/api";
+import { useCompanyJobs, useUpdateJobStatus, type Job } from "@/hooks/api";
 import { useToast } from "@/hooks/use-toast";
-
-type Job = {
-  _id: string;
-  title: string;
-  description: string;
-  createdAt: string;
-  status: "open" | "closed";
-  difficulty?: string;
-  skills?: string[];
-};
 
 const CompanyJobsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -78,7 +68,7 @@ const CompanyJobsPage: React.FC = () => {
                   </CardTitle>
                   <p className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
                     <Calendar className="w-3 h-3" />
-                    {new Date(job.createdAt).toLocaleDateString()}
+                    {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "未知"}
                   </p>
                 </CardHeader>
                 <CardContent>

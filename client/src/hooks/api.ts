@@ -5,6 +5,40 @@ const authHeader = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
+// ─── Common Types ───
+export type Job = {
+  _id: string;
+  title: string;
+  description?: string;
+  createdAt?: string;
+  status?: "open" | "closed";
+  difficulty?: string;
+  skills?: string[];
+};
+
+export type Application = {
+  _id: string;
+  jobId: { _id: string; title: string };
+  candidateId?: { _id: string; fullName: string; email?: string };
+  status: "applied" | "in-progress" | "selected" | "final-selected" | "rejected";
+  createdAt?: string;
+  currentRound?: number;
+};
+
+type CompanyDashboardData = {
+  stats?: {
+    applied?: number;
+    inProgress?: number;
+    selected?: number;
+    finalSelected?: number;
+    rejected?: number;
+    totalJobs?: number;
+    totalApplications?: number;
+  };
+  jobs?: Job[];
+  recentApplications?: Application[];
+};
+
 // ─── Interview ───
 export const useMyInterviews = () =>
   useQuery({
@@ -28,7 +62,7 @@ export const useJobs = (filters: Record<string, string>) => {
     queryKey: ["jobs", filters],
     queryFn: async () => {
       const res = await axiosInstance.get(`/jobs?${params.toString()}`, authHeader());
-      return res.data?.jobs || [];
+      return (res.data?.jobs || []) as Job[];
     },
     staleTime: 60 * 1000,
   });
@@ -51,7 +85,7 @@ export const useMyApplications = () =>
     queryKey: ["applications", "mine"],
     queryFn: async () => {
       const res = await axiosInstance.get("/applications/mine", authHeader());
-      return res.data?.applications || [];
+      return (res.data?.applications || []) as Application[];
     },
     staleTime: 60 * 1000,
   });
@@ -95,7 +129,7 @@ export const useCompanyDashboard = () =>
     queryKey: ["company", "dashboard"],
     queryFn: async () => {
       const res = await axiosInstance.get("/company/dashboard", authHeader());
-      return res.data;
+      return res.data as CompanyDashboardData;
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -105,7 +139,7 @@ export const useCompanyJobs = () =>
     queryKey: ["company", "jobs"],
     queryFn: async () => {
       const res = await axiosInstance.get("/jobs/company", authHeader());
-      return res.data?.jobs || [];
+      return (res.data?.jobs || []) as Job[];
     },
     staleTime: 60 * 1000,
     refetchOnMount: "always",

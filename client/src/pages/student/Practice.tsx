@@ -142,7 +142,7 @@ const Practice = () => {
         setCurrentStep("interview");
         setInterviewState({
           currentQuestion: 1,
-          totalQuestions: getQuestionsForRound(nextRound),
+          totalQuestions: getQuestionsForRound(),
           timeRemaining: 1800,
           isRecording: false,
           isCameraOn: true,
@@ -702,7 +702,7 @@ const Practice = () => {
       </div>
     );
   }
-  if (currentStep === "results") {
+  if (currentStep === "results" && interviewResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A] flex items-center justify-center">
         <Suspense fallback={<LoadingSpinner size="lg" text="加载中..." />}>

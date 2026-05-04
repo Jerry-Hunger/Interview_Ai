@@ -76,9 +76,7 @@ interface SpeechRecognitionInstance {
   onend: (() => void) | null;
 }
 
-type ToastFunc = {
-  (props: { title: string; description?: string; variant?: string }): void;
-};
+type ToastFunc = (props: { title: string; description?: string; variant?: "default" | "destructive" | null }) => void;
 
 type PracticeInterviewProps = {
   setupData: SetupData;
@@ -103,10 +101,11 @@ const PracticeInterview = ({
   handleQuit,
   toast,
   isLoading = false,
-  interviewPhase = "answering",
+  interviewPhase = "answering" as "answering" | "ended",
   streamingMessage,
   currentRound = 1,
 }: PracticeInterviewProps) => {
+  const phase: "answering" | "ended" = (interviewPhase as "answering" | "ended") ?? "answering";
   const currentQuestion = interviewState.question;
   const isLastQuestion =
     interviewState.currentQuestion >= interviewState.totalQuestions;
@@ -292,8 +291,8 @@ const PracticeInterview = ({
                       // 否则：已完成当前问题（questionNum < currentQuestion）或者面试已结束
                       const isCompleted = interviewState.isReprompt
                         ? questionNum < interviewState.currentQuestion // 重新回答时，只标记之前的问题为完成
-                        : questionNum < interviewState.currentQuestion || (interviewPhase === "ended" && questionNum === interviewState.totalQuestions);
-                      const isCurrent = questionNum === interviewState.currentQuestion && !interviewState.isReprompt && interviewPhase !== "ended";
+                        : questionNum < interviewState.currentQuestion || (phase === "ended" && questionNum === interviewState.totalQuestions);
+                      const isCurrent = questionNum === interviewState.currentQuestion && !interviewState.isReprompt && phase !== "ended";
 
                       return (
                         <div
@@ -310,7 +309,7 @@ const PracticeInterview = ({
                     })}
                   </div>
                   <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                    {interviewPhase === "ended"
+                    {phase === "ended"
                       ? `已完成 ${interviewState.totalQuestions} / ${interviewState.totalQuestions} 个问题`
                       : interviewState.isReprompt
                       ? `第 ${interviewState.currentQuestion} / ${interviewState.totalQuestions} 个问题（请详细回答）`
@@ -446,7 +445,7 @@ const PracticeInterview = ({
             </Card>
 
             {/* Answer Input */}
-            {interviewPhase === "ended" ? (
+            {phase === "ended" ? (
               <Card className="shadow-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-900/30 dark:to-purple-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
                 <CardContent className="py-8 text-center">
                   <CheckCircle className="mx-auto mb-4 text-green-500 dark:text-green-400" size={48} />
@@ -541,7 +540,7 @@ const PracticeInterview = ({
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      {interviewPhase === "ended" ? (
+                      {(phase as string) === "ended" ? (
                         <Button
                           onClick={handleEndInterview}
                           disabled={isLoading}

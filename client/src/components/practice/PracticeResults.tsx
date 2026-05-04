@@ -33,7 +33,7 @@ type Interview = {
   role: string;
   difficulty: string;
   roundType: string;
-  result: "success" | "failure" | "quit";
+  result: "success" | "failure" | "quit" | "Quit";
   feedback: string;
   transcript: { role: string; content: string }[];
   createdAt: string;
@@ -182,7 +182,7 @@ const PracticeResults = ({
       difficulty: setupData?.difficulty || interview.difficulty || "",
       rounds: setupData?.rounds || totalRounds || interview.rounds || 1,
       questionsPerRound: setupData?.questionsPerRound || 5,
-      resume: setupData?.resume || interview.resumeText || "",
+      resume: setupData?.resume || "",
     };
     navigate("/student/practice", {
       state: {

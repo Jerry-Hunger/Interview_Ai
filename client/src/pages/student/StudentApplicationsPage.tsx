@@ -1,23 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMyApplications } from "@/hooks/api";
+import { useMyApplications, type Application } from "@/hooks/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, ChevronDown, ChevronUp } from "lucide-react";
-
-type Application = {
-  _id: string;
-  jobId: { _id: string; title: string };
-  status:
-    | "applied"
-    | "in-progress"
-    | "selected"
-    | "final-selected"
-    | "rejected";
-  createdAt: string;
-  currentRound?: number;
-};
 
 const statusLabels: Record<Application["status"], string> = {
   applied: "已申请",
@@ -125,7 +112,7 @@ const StudentApplicationsPage: React.FC = () => {
                             {app.jobId?.title}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            申请时间：{new Date(app.createdAt).toLocaleDateString()}
+                            申请时间：{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : "未知"}
                           </p>
                           {app.currentRound !== undefined && (
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

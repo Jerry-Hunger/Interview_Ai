@@ -250,7 +250,7 @@ const JobDetailPage: React.FC = () => {
                         <div className="flex justify-between items-start gap-4">
                           <div className="space-y-1">
                             <div className="font-semibold text-gray-900 dark:text-white text-lg">
-                              {roundTypeConfig[r.type]?.icon} {roundTypeConfig[r.type]?.label ?? r.type ?? `第 ${idx + 1} 轮面试`}
+                              {roundTypeConfig[r.type ?? ""]?.icon} {roundTypeConfig[r.type ?? ""]?.label ?? r.type ?? `第 ${idx + 1} 轮面试`}
                             </div>
                             {r.topic && (
                               <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5">

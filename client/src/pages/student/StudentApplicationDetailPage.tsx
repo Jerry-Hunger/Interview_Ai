@@ -795,9 +795,6 @@ const ApplicationDetail = () => {
           handleAnswerSubmit={handleAnswerSubmit}
           handleEndInterview={handleEndInterview}
           handleQuit={handleQuit}
-          formatTime={(s: number) =>
-            `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`
-          }
           toast={toast}
           isLoading={isLoading}
           interviewPhase={interviewPhase}
