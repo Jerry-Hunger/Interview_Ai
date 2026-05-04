@@ -106,9 +106,9 @@ const Practice = () => {
       previousFeedback?: string;
     } | undefined;
 
-    // 计算每轮的问题数量（与后端 startInterviewContinuationRound 一致）
-    const getQuestionsForRound = (round: number): number => {
-      return Math.max(3, 5 - round + 1);
+    // 计算每轮的问题数量（每轮固定为配置的问题数目）
+    const getQuestionsForRound = (_round: number): number => {
+      return setupData.questionsPerRound || 5;
     };
     
     if (state?.setupData) {
@@ -159,7 +159,8 @@ const Practice = () => {
         });
       }).catch((err) => {
         console.error("Error starting next round:", err);
-        toast({ title: "错误", description: "启动下一轮面试失败", variant: "destructive" });
+        const errorMessage = err?.response?.data?.error || err?.message || "启动下一轮面试失败";
+        toast({ title: "错误", description: errorMessage, variant: "destructive" });
       }).finally(() => {
         setIsStarting(false);
       });
@@ -258,12 +259,8 @@ const Practice = () => {
   };
 
   const isPerfunctoryReprompt = (text: string): boolean => {
-    const rePromptPatterns = [
-      /重新回答|请详细说明|请解释|请具体说明|请阐述|展开说说|说得更具体|详细一点|深入一点/i,
-      /敷衍|过于简单|不够深入|不够具体|答非所问/i,
-      /您的回答|你的回答.*问题|回答.*相关|涉及.*核心/i,
-    ];
-    return rePromptPatterns.some(pattern => pattern.test(text));
+    // 只检测明确的 [REPROMPT] 标签，不做模糊匹配
+    return /\[REPROMPT\]/i.test(text);
   };
 
   const handleAnswerSubmit = async () => {
@@ -312,6 +309,12 @@ const Practice = () => {
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("respond-stream error:", response.status, errorText);
+        throw new Error(`服务器错误: ${response.status}`);
+      }
+
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
@@ -338,22 +341,31 @@ const Practice = () => {
           timestamp: new Date().toLocaleTimeString(),
         });
 
-        setStreamingMessage("");
-        setInterviewState((prev) => ({
-          ...prev,
-          chatHistory: updatedChatHistory,
-          answer: "",
-          question: finalResponse,
-          isReprompt: isReprompt,
-          ...(isReprompt || isLastQuestion ? {} : { currentQuestion: prev.currentQuestion + 1 }),
-        }));
-
+        // 如果是 reprompt，永远不触发结束（AI 可能先说"请详细说明"再继续问）
         if (isReprompt) {
           toast({
             title: "请完善您的回答",
             description: "您的回答需要更详细，请重新回答上一个问题",
             variant: "default",
           });
+          // 将 AI 的 reprompt 回复也保存到 chatHistory（包含提示和任何新问题）
+          const repromptChatHistory = [
+            ...updatedChatHistory,
+            {
+              type: "question" as const,
+              content: finalResponse,
+              timestamp: new Date().toLocaleTimeString(),
+            },
+          ];
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: repromptChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: true,
+            currentQuestion: prev.currentQuestion,
+          }));
+          return;
         }
 
         // 检查 AI 是否发送了结束面试的消息
@@ -361,10 +373,26 @@ const Practice = () => {
         if (endKeywords.test(finalResponse) && !hasTriggeredAutoEndRef.current) {
           hasTriggeredAutoEndRef.current = true;
           setInterviewPhase("ended");
-          // 自动触发面试结束流程
-          setTimeout(() => {
-            handleEndInterview();
-          }, 100);
+          // 先更新 chatHistory 确保结束消息被记录
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: updatedChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: false,
+          }));
+          // 不再自动触发面试结束流程，由用户手动点击按钮
+          return;
+        } else {
+          // 正常继续下一题
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: updatedChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: false,
+            currentQuestion: isLastQuestion ? prev.currentQuestion : prev.currentQuestion + 1,
+          }));
         }
       }
     } catch (error: unknown) {

@@ -105,8 +105,9 @@ export const respondNormal = ({ chatHistory, answer, resume, role, roundType, to
 
   【强制规则】
   如果最新回答符合以上任意一条"敷衍/不相关"标准：
-  → 必须直接回复："请详细回答上一道问题，不要敷衍。"
+  → 必须以"[REPROMPT]"开头回复，内容包含"请详细回答上一道问题，不要敷衍。"
   → 禁止继续提问，禁止说"好的，我了解了"，禁止跳过此问题
+  → 回复格式示例：[REPROMPT]请详细回答上一道问题，不要敷衍。[/REPROMPT]
 
   如果最新回答不符合"敷衍/不相关"标准：
   → 简要肯定回答
@@ -152,8 +153,9 @@ ${historyFormatted}
 
 【强制规则】
 如果最新回答符合以上任意一条"敷衍/不相关"标准：
-→ 必须直接回复："请详细回答上一道问题，不要敷衍。"
+→ 必须以"[REPROMPT]"开头回复，内容包含"请详细回答上一道问题，不要敷衍。"
 → 禁止给出总结，禁止结束面试
+→ 回复格式示例：[REPROMPT]请详细回答上一道问题，不要敷衍。[/REPROMPT]
 
 如果最新回答不符合"敷衍/不相关"标准：
 → 对回答进行点评和总结
@@ -208,7 +210,7 @@ export const concludeFinal = ({ historyLength, chunksLength, roleSummary, diffic
 
 【面试基本信息】
 - 面试总问题数：${historyLength} 个
-- 评估块数：${chunksLength} 个（每 5 个问答为一块）
+- 评估块数：${chunksLength} 个（每 3 个问答为一块）
 - 应聘职位：${roleSummary}
 - 难度级别：${difficulty || "中等"}
 - 简历摘要：${resumeText}

@@ -5,6 +5,14 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
+// Token 过期处理函数（导出供其他模块使用）
+export const handleTokenExpiration = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  // 使用 window.location 跳转以确保页面完全刷新
+  window.location.href = "/login?expired=true";
+};
+
 // 添加请求拦截器，自动携带 Authorization 头
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -15,6 +23,22 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 添加响应拦截器，处理 401 错误（Token 过期或无效）
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // 仅处理 401 错误（未授权/Token 过期）
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      // 避免在登录页重复处理
+      if (currentPath !== "/login" && currentPath !== "/register") {
+        handleTokenExpiration();
+      }
+    }
     return Promise.reject(error);
   }
 );

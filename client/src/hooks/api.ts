@@ -186,6 +186,18 @@ export const useDeleteCompanyPhoto = () => {
   });
 };
 
+export const useUpdateJobStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ jobId, status }: { jobId: string; status: "open" | "closed" }) =>
+      axiosInstance.patch(`/jobs/${jobId}/status`, { status }, authHeader()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company", "jobs"] });
+      qc.invalidateQueries({ queryKey: ["company", "dashboard"] });
+    },
+  });
+};
+
 // ─── Student ───
 export const useStudentProfile = () =>
   useQuery({

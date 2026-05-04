@@ -166,3 +166,27 @@ export const companyJobs = async (req, res) => {
     error(res, "获取职位列表失败");
   }
 };
+
+export const updateJobStatus = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { status } = req.body;
+
+    if (!["open", "closed"].includes(status)) {
+      return error(res, "无效的职位状态，仅支持 open 或 closed", 400);
+    }
+
+    const job = await JobOpening.findOne({ _id: jobId, companyId: req.user.id });
+    if (!job) {
+      return error(res, "职位不存在或无权操作", 404);
+    }
+
+    job.status = status;
+    await job.save();
+
+    success(res, { msg: `职位已${status === "open" ? "开启" : "关闭"}`, job });
+  } catch (err) {
+    console.error("Error updating job status:", err);
+    error(res, "更新职位状态失败");
+  }
+};

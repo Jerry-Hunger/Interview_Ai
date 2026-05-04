@@ -1,6 +1,7 @@
 import Application from "../models/Application.js";
 import { createApplicationForStudent } from "../services/applicationService.js";
 import { success, error } from "../utils/apiResponse.js";
+import { sendInterviewApprovalEmail } from "../utils/emailService.js";
 
 export const createApplication = async (req, res) => {
   try {
@@ -38,6 +39,20 @@ export const getMyApplications = async (req, res) => {
       .populate("resumeId")
       .sort({ createdAt: -1 });
 
+    // 如果申请的 resumeId 为空，尝试获取学生当前的简历
+    const Student = (await import("../models/Student.js")).default;
+    const Resume = (await import("../models/Resume.js")).default;
+    const student = await Student.findById(candidateId);
+
+    for (const app of applications) {
+      if (!app.resumeId && student?.resumeId) {
+        const resume = await Resume.findById(student.resumeId);
+        if (resume) {
+          app.resumeId = resume;
+        }
+      }
+    }
+
     return success(res, { applications });
   } catch (err) {
     console.error("getMyApplications error:", err);
@@ -51,6 +66,23 @@ export const getJobApplications = async (req, res) => {
     const applications = await Application.find({ jobId })
       .populate("candidateId")
       .populate("resumeId");
+
+    // 如果申请的 resumeId 为空，尝试获取学生当前的简历
+    const Student = (await import("../models/Student.js")).default;
+    const Resume = (await import("../models/Resume.js")).default;
+
+    for (const app of applications) {
+      if (!app.resumeId && app.candidateId?._id) {
+        const student = await Student.findById(app.candidateId._id);
+        if (student?.resumeId) {
+          const resume = await Resume.findById(student.resumeId);
+          if (resume) {
+            app.resumeId = resume;
+          }
+        }
+      }
+    }
+
     success(res, { applications });
   } catch (err) {
     console.error("Error fetching job applications:", err);
@@ -70,6 +102,20 @@ export const getApplicationById = async (req, res) => {
     if (!application) {
       return error(res, "申请记录不存在", 404);
     }
+
+    // 如果申请的 resumeId 为空或不存在，尝试获取学生当前的简历
+    if (!application.resumeId && application.candidateId?._id) {
+      const Student = (await import("../models/Student.js")).default;
+      const student = await Student.findById(application.candidateId._id);
+      if (student?.resumeId) {
+        const Resume = (await import("../models/Resume.js")).default;
+        const resume = await Resume.findById(student.resumeId);
+        if (resume) {
+          application.resumeId = resume;
+        }
+      }
+    }
+
     success(res, { application });
   } catch (err) {
     console.error("Error fetching application:", err);
@@ -93,15 +139,51 @@ export const updateApplicationStatus = async (req, res) => {
       return error(res, "无效的状态值", 400);
     }
 
-    const application = await Application.findById(applicationId);
+    const application = await Application.findById(applicationId)
+      .populate("jobId")
+      .populate("candidateId");
     if (!application) {
       return error(res, "申请记录不存在", 404);
+    }
+
+    const previousStatus = application.status;  // 记录旧状态
+
+    // 当企业将状态从 in-progress 设为 selected 时，
+    // 意味着企业认可当前轮次，允许进入下一轮（对于多轮面试）
+    // 此时更新 currentRound，以便学生端能看到下一轮信息
+    if (previousStatus === "in-progress" && status === "selected") {
+      application.currentRound = application.currentRound + 1;
     }
 
     application.status = status;
     await application.save();
 
-    success(res, { message: "状态更新成功", application });
+    // 当状态从 "applied" 变为 "in-progress" 时，发送面试批准邮件
+    if (previousStatus === "applied" && status === "in-progress") {
+      const candidate = application.candidateId;
+      const job = application.jobId;
+
+      if (candidate?.email) {
+        const Company = (await import("../models/Company.js")).default;
+        const company = await Company.findById(job?.companyId).select("companyName");
+
+        sendInterviewApprovalEmail(
+          candidate.email,
+          candidate.fullName || "",
+          company?.companyName || "本公司",
+          job?.title || "该职位"
+        ).catch(err => {
+          console.error("Async email send error:", err);
+        });
+      }
+    }
+
+    const updated = await Application.findById(applicationId)
+      .populate("jobId")
+      .populate("candidateId")
+      .populate("resumeId");
+
+    success(res, { message: "状态更新成功", application: updated });
   } catch (err) {
     console.error("Error updating status:", err);
     error(res, "服务器错误");

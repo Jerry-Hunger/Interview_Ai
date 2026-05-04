@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -8,8 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useApplicationDetail } from "@/hooks/api";
 import { Loader2, Hourglass, XCircle, CheckCircle, Trophy, Clock, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Step = "waiting" | "interview" | "results";
+
+type InterviewPhase = "answering" | "ended";
 
 type RoundHistory = {
   roundNumber: number;
@@ -19,7 +23,7 @@ type RoundHistory = {
 
 type ApplicationType = {
   _id: string;
-  jobId: { title: string; description: string; difficulty: string; rounds: { type?: string; description?: string }[] };
+  jobId: { title: string; description: string; difficulty: string; rounds: { type?: string; description?: string; difficulty?: string }[] };
   resumeId?: { _id: string; fileUrl: string; fileName: string; fileType: string };
   status: string;
   currentRound: number;
@@ -30,7 +34,7 @@ type JobType = {
   title: string;
   description: string;
   difficulty: string;
-  rounds: { type?: string; description?: string }[];
+  rounds: { type?: string; description?: string; difficulty?: string }[];
   company?: { name: string };
 };
 
@@ -52,10 +56,22 @@ type InterviewState = {
   chatHistory: ChatMessage[];
 };
 
-type InterviewResult = {
+type Interview = {
   _id: string;
-  result: string;
+  type: "practice" | "company";
+  role: string;
+  difficulty: string;
+  roundType: string;
+  rounds: number;
+  currentRound?: number;
+  result: "success" | "failure" | "Quit";
+  feedback: string;
+  transcript: { role: string; content: string }[];
+  createdAt: string;
   finalFeedback?: string;
+  chatHistory?: { type: string; content: string; timestamp: string }[];
+  feedbacks?: string[];
+  roleSummary?: string;
 };
 
 const difficultyMap: Record<string, string> = {
@@ -68,6 +84,9 @@ const roundTypeMap: Record<string, string> = {
   behavioral: "行为面",
   technical: "技术面",
   hr: "HR面",
+  coding: "编程面",
+  "system-design": "系统设计",
+  mixed: "综合面试",
 };
 
 const ApplicationDetail = () => {
@@ -80,6 +99,8 @@ const ApplicationDetail = () => {
   const [resumeText, setResumeText] = useState<string>("");
 
   const [currentStep, setCurrentStep] = useState<Step>("waiting");
+  const [interviewPhase, setInterviewPhase] = useState<InterviewPhase>("answering");
+  const [streamingMessage, setStreamingMessage] = useState("");
   const [interviewState, setInterviewState] = useState<InterviewState>({
     currentQuestion: 1,
     totalQuestions: 5,
@@ -91,13 +112,15 @@ const ApplicationDetail = () => {
     question: "",
     chatHistory: [],
   });
-  const [interviewResults, setInterviewResults] = useState<InterviewResult | null>(null);
+  const [interviewResults, setInterviewResults] = useState<Interview | null>(null);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const hasTriggeredAutoEndRef = useRef(false);
 
   const handleStartInterview = async () => {
     try {
       let resumeToUse = resumeText;
-      if (!resumeToUse && application.resumeId?._id) {
+      if (!resumeToUse && application?.resumeId?._id) {
         const rtRes = await axiosInstance.get(`/resume/${application.resumeId._id}/text`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
@@ -119,8 +142,8 @@ const ApplicationDetail = () => {
       const res = await axiosInstance.post("/interview/start", {
         role: job?.title,
         resume: resumeToUse,
-        roundType: job?.rounds[application.currentRound]?.type || "综合面试",
-        topic: job?.rounds[application.currentRound]?.description || "",
+        roundType: job?.rounds[application!.currentRound]?.type || "综合面试",
+        topic: job?.rounds[application!.currentRound]?.description || "",
         difficulty: job?.difficulty,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -128,8 +151,19 @@ const ApplicationDetail = () => {
 
       const firstQuestion = res.data.message;
 
-      setInterviewState((prev: InterviewState) => ({
-        ...prev,
+      setIsStartingInterview(false);
+      setCurrentStep("interview");
+      setInterviewPhase("answering");
+      hasTriggeredAutoEndRef.current = false;
+
+      setInterviewState({
+        currentQuestion: 1,
+        totalQuestions: 5,
+        timeRemaining: 1800,
+        isRecording: false,
+        isCameraOn: true,
+        isMicOn: false,
+        answer: "",
         question: firstQuestion,
         chatHistory: [
           {
@@ -138,11 +172,8 @@ const ApplicationDetail = () => {
             timestamp: new Date().toLocaleTimeString(),
           },
         ],
-      }));
-
-      setIsStartingInterview(false);
-      setCurrentStep("interview");
-      } catch (error: unknown) {
+      });
+    } catch (error: unknown) {
       setIsStartingInterview(false);
       console.error("Error starting interview:", error);
       const errorMessage = error instanceof Error ? error.message : "未知错误";
@@ -152,6 +183,10 @@ const ApplicationDetail = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const isPerfunctoryReprompt = (text: string): boolean => {
+    return /\[REPROMPT\]/i.test(text);
   };
 
   const handleAnswerSubmit = async () => {
@@ -174,76 +209,324 @@ const ApplicationDetail = () => {
     ];
 
     try {
-      if (interviewState.currentQuestion >= interviewState.totalQuestions) {
-        const res = await axiosInstance.post(
-          "/interview/conclude",
-          {
-            history: updatedChatHistory,
-            resumeText: resumeText,
-            roleSummary: job?.title,
-            roundType: job?.rounds[application.currentRound]?.type,
-            customTopic: job?.rounds[application.currentRound]?.description,
-            difficulty: job?.difficulty,
-            typeOfInterview: "company",
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+      const isLastQuestion = interviewState.currentQuestion >= interviewState.totalQuestions;
+      setStreamingMessage("");
+      const fullResponse: string[] = [];
 
-        const { interview } = res.data;
-
-        await axiosInstance.post(
-          `/applications/${application._id}/round`,
-          {
-            roundNumber: application.currentRound + 1,
-            interviewId: interview._id,
-            result: interview.result,
-            feedback: interview.finalFeedback || "",
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-
-        setInterviewResults(interview);
-        setCurrentStep("results");
-      } else {
-        const res = await axiosInstance.post("/interview/respond", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/respond-stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+        body: JSON.stringify({
           chatHistory: updatedChatHistory,
           answer: interviewState.answer,
           resume: resumeText,
           role: job?.title,
-          roundType: job?.rounds[application.currentRound]?.type,
-          topic: job?.rounds[application.currentRound]?.description,
+          roundType: job?.rounds[application!.currentRound]?.type,
+          topic: job?.rounds[application!.currentRound]?.description,
           difficulty: job?.difficulty,
-        });
+          isLastQuestion,
+        }),
+      });
 
-        const nextQuestion = res.data.message;
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        setIsLoading(true);
+        let done = false;
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            const chunk = decoder.decode(value, { stream: !done });
+            fullResponse.push(chunk);
+            setStreamingMessage(fullResponse.join(""));
+          }
+        }
+        setIsLoading(false);
+
+        const finalResponse = fullResponse.join("").trim();
+        const isReprompt = isPerfunctoryReprompt(finalResponse);
 
         updatedChatHistory.push({
           type: "question",
-          content: nextQuestion,
+          content: finalResponse,
           timestamp: new Date().toLocaleTimeString(),
         });
 
-        setInterviewState((prev: InterviewState) => ({
-          ...prev,
-          chatHistory: updatedChatHistory,
-          currentQuestion: prev.currentQuestion + 1,
-          question: nextQuestion,
-          answer: "",
-        }));
+        if (isReprompt) {
+          toast({
+            title: "请完善您的回答",
+            description: "您的回答需要更详细，请重新回答上一个问题",
+            variant: "default",
+          });
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: updatedChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: true,
+            currentQuestion: prev.currentQuestion,
+          }));
+          return;
+        }
+
+        const endKeywords = /本轮.*结束|面试到此结束|感谢.*参与|所有问题.*回答完毕/i;
+        if (endKeywords.test(finalResponse) && !hasTriggeredAutoEndRef.current) {
+          hasTriggeredAutoEndRef.current = true;
+          setInterviewPhase("ended");
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: updatedChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: false,
+          }));
+          return;
+        } else {
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: updatedChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: false,
+            currentQuestion: isLastQuestion ? prev.currentQuestion : prev.currentQuestion + 1,
+          }));
+        }
       }
-    } catch {
-      console.error("Error in interview flow");
+    } catch (error: unknown) {
+      console.error("Error in interview flow:", error);
+      if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 429) {
+        toast({
+          title: "AI 忙碌中",
+          description: "AI 面试官需要休息一下，请稍后再试。",
+          variant: "destructive",
+        });
+      } else if (error && typeof error === 'object' && 'response' in error && (error as { response?: { status?: number } }).response?.status === 429) {
+        toast({
+          title: "AI 忙碌中",
+          description: "AI 面试官需要休息一下，请稍后再试。",
+          variant: "destructive",
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "未知错误";
+        toast({
+          title: "错误",
+          description: `出错了：${errorMessage}，请重试。`,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleQuit = async () => {
+    setIsLoading(true);
+    try {
+      const res = await axiosInstance.post(
+        "/interview/conclude",
+        {
+          history: interviewState.chatHistory,
+          resumeText: resumeText,
+          roleSummary: job?.title,
+          roundType: job?.rounds[application!.currentRound]?.type || "技术面试",
+          customTopic: job?.rounds[application!.currentRound]?.description || "",
+          difficulty: job?.difficulty || "intermediate",
+          typeOfInterview: "company",
+          result: "Quit",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const { interview } = res.data;
+
+      setInterviewResults(interview);
+      setCurrentStep("results");
+    } catch (error: unknown) {
+      console.error("Error quitting interview:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 429) {
+          setIsLoading(false);
+          toast({
+            title: "AI 忙碌中",
+            description: "服务器繁忙，请稍后再试。",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       toast({
         title: "错误",
-        description: "面试过程中出错了",
+        description: "退出面试失败，请重试。",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const handleEndInterview = async () => {
+    setIsLoading(true);
+
+    // 调试：检查数据是否正确
+    console.log("handleEndInterview - job:", job);
+    console.log("handleEndInterview - application:", application);
+    console.log("job?.difficulty:", job?.difficulty);
+    console.log("job?.rounds:", job?.rounds);
+    console.log("application.currentRound:", application?.currentRound);
+    console.log("round info:", job?.rounds?.[application?.currentRound || 0]);
+
+    const feedbacks: string[] = [];
+    let finalFeedback = "";
+    let interviewId = "";
+    let result = "";
+    let currentChunkIndex = -1;
+    let phase: "idle" | "chunk" | "final" = "idle";
+    let buffer = "";
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/conclude-stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          history: interviewState.chatHistory,
+          resumeText: resumeText,
+          roleSummary: job?.title,
+          roundType: job?.rounds[application!.currentRound]?.type || "技术面试",
+          customTopic: job?.rounds[application!.currentRound]?.description || "",
+          difficulty: job?.difficulty || "intermediate",
+          typeOfInterview: "company",
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          setIsLoading(false);
+          toast({
+            title: "AI 忙碌中",
+            description: "AI 面试官需要休息一下，请稍后再试。",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(`服务器错误: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("无法读取响应流");
+      }
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+
+          if (phase === "idle") {
+            if (trimmedLine.startsWith("[CHUNK_START:")) {
+              const match = trimmedLine.match(/\[CHUNK_START:(\d+)\]/);
+              if (match) {
+                currentChunkIndex = parseInt(match[1], 10);
+                feedbacks[currentChunkIndex] = "";
+                phase = "chunk";
+                setStreamingMessage(`正在生成第 ${currentChunkIndex + 1} 部分反馈...`);
+              }
+            } else if (trimmedLine === "[FINAL_START]") {
+              phase = "final";
+              setStreamingMessage("正在生成最终评估...");
+            }
+          } else if (phase === "chunk") {
+            if (trimmedLine.startsWith("[CHUNK_END:")) {
+              phase = "idle";
+            } else {
+              if (!feedbacks[currentChunkIndex]) feedbacks[currentChunkIndex] = "";
+              feedbacks[currentChunkIndex] += trimmedLine + "\n";
+            }
+          } else if (phase === "final") {
+            if (trimmedLine.startsWith("[DONE:")) {
+              const match = trimmedLine.match(/\[DONE:([^:]+):([^\]]+)\]/);
+              if (match) {
+                interviewId = match[1];
+                result = match[2];
+              }
+            } else if (!trimmedLine.startsWith("[")) {
+              finalFeedback += trimmedLine + "\n";
+            }
+          }
+        }
+      }
+
+      if (buffer.trim() && phase === "final" && !buffer.trim().startsWith("[")) {
+        finalFeedback += buffer.trim() + "\n";
+      }
+
+      if (!interviewId) {
+        throw new Error("生成反馈失败：未收到面试ID");
+      }
+
+      finalFeedback = finalFeedback.trim();
+
+      const interview = {
+        _id: interviewId,
+        type: "company" as const,
+        role: job?.title || "",
+        difficulty: job?.difficulty || "",
+        roundType: job?.rounds[application!.currentRound]?.type || "",
+        rounds: job?.rounds?.length || 1,
+        currentRound: application!.currentRound + 1,
+        result: result as "success" | "failure" | "Quit",
+        feedback: "",
+        transcript: [],
+        createdAt: new Date().toISOString(),
+        finalFeedback,
+        chatHistory: interviewState.chatHistory,
+        feedbacks,
+      };
+
+      setIsLoading(false);
+
+      await axiosInstance.post(
+        `/applications/${application!._id}/round`,
+        {
+          roundNumber: application!.currentRound + 1,
+          interviewId: interview._id,
+          result: interview.result,
+          feedback: interview.finalFeedback || "",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      setInterviewResults(interview);
+      setCurrentStep("results");
+    } catch (error: unknown) {
+      setIsLoading(false);
+      console.error("Error ending interview:", error);
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
+      toast({
+        title: "错误",
+        description: `生成反馈失败：${errorMessage}`,
         variant: "destructive",
       });
     }
@@ -307,7 +590,7 @@ const ApplicationDetail = () => {
             <div className="mt-5 flex flex-wrap gap-3">
               {job.rounds && job.rounds.length > 0 && (
                 <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                  难度：{job.rounds.map((r, i) => difficultyMap[r.difficulty] || r.difficulty).join(" → ")}
+                  难度：{job.rounds.map((r, i) => difficultyMap[r.difficulty || job.difficulty] || r.difficulty || job.difficulty).join(" → ")}
                 </span>
               )}
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -360,20 +643,31 @@ const ApplicationDetail = () => {
             )}
             {application.status === "in-progress" && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30">
-                  <Clock className="w-6 h-6 text-indigo-500" />
-                  <div>
-                    <p className="font-medium text-indigo-700 dark:text-indigo-300">
-                      当前进度：第 {application.currentRound + 1} 轮 / 共 {job.rounds?.length || 0} 轮
-                    </p>
-                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                      下一轮：{roundTypeMap[job.rounds[application.currentRound]?.type] || job.rounds[application.currentRound]?.type || "综合面试"}
-                    </p>
+                {/* 检查是否有面试失败的历史记录 */}
+                {application.history && application.history.some((h: RoundHistory) => h.result === "failure") ? (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30">
+                    <XCircle className="w-6 h-6 text-red-500" />
+                    <div>
+                      <p className="font-medium text-red-700 dark:text-red-300">面试未通过</p>
+                      <p className="text-sm text-red-600 dark:text-red-400">您已无法继续此职位的面试流程</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30">
+                    <Clock className="w-6 h-6 text-indigo-500" />
+                    <div>
+                      <p className="font-medium text-indigo-700 dark:text-indigo-300">
+                        当前进度：第 {application.currentRound + 1} 轮 / 共 {job.rounds?.length || 0} 轮
+                      </p>
+                      <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                        下一轮：{roundTypeMap[job.rounds[application.currentRound]?.type || ''] || job.rounds[application.currentRound]?.type || "综合面试"}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {/* 面试进度可视化 */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  {job.rounds?.map((_, idx) => (
+                  {job.rounds?.map((_: unknown, idx: number) => (
                     <div key={idx} className="flex items-center gap-2">
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                         idx < application.currentRound
@@ -394,20 +688,23 @@ const ApplicationDetail = () => {
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={handleStartInterview}
-                  disabled={isStartingInterview}
-                  className="w-full mt-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 dark:from-indigo-600 dark:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isStartingInterview ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      准备面试中...
-                    </>
-                  ) : (
-                    <>开始第 {application.currentRound + 1} 轮面试</>
-                  )}
-                </button>
+                {/* 如果有失败历史则不显示开始面试按钮 */}
+                {!application.history?.some((h: RoundHistory) => h.result === "failure") && (
+                  <button
+                    onClick={handleStartInterview}
+                    disabled={isStartingInterview}
+                    className="w-full mt-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 dark:from-indigo-600 dark:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isStartingInterview ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        准备面试中...
+                      </>
+                    ) : (
+                      <>开始第 {application.currentRound + 1} 轮面试</>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -427,7 +724,7 @@ const ApplicationDetail = () => {
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-gray-800 dark:text-gray-200">
-                        第 {round.roundNumber} 轮：{roundTypeMap[job.rounds[round.roundNumber - 1]?.type] || job.rounds[round.roundNumber - 1]?.type || "未知"}
+                        第 {round.roundNumber} 轮：{roundTypeMap[job.rounds[round.roundNumber - 1]?.type || ''] || job.rounds[round.roundNumber - 1]?.type || "未知"}
                       </p>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5 ${
                         round.result === "success"
@@ -438,9 +735,14 @@ const ApplicationDetail = () => {
                       </span>
                     </div>
                     {round.feedback && (
-                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        反馈：{round.feedback}
-                      </p>
+                      <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        <span className="font-medium">反馈：</span>
+                        <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {round.feedback}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -448,10 +750,11 @@ const ApplicationDetail = () => {
             </div>
           )}
 
-          {/* 即将到来的面试 */}
+          {/* 即将到来的面试 - 只有在有失败历史时不显示 */}
           {application.status === "in-progress" &&
             job.rounds &&
-            application.currentRound < job.rounds.length && (
+            application.currentRound < job.rounds.length &&
+            !application.history?.some((h: RoundHistory) => h.result === "failure") && (
               <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
                 <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-3 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
@@ -459,7 +762,7 @@ const ApplicationDetail = () => {
                 </h2>
                 <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100/50 dark:border-amber-800/20">
                   <p className="font-medium text-amber-800 dark:text-amber-300">
-                    第 {application.currentRound + 1} 轮：{roundTypeMap[job.rounds[application.currentRound]?.type] || job.rounds[application.currentRound]?.type}
+                    第 {application.currentRound + 1} 轮：{roundTypeMap[job.rounds[application.currentRound]?.type || ''] || job.rounds[application.currentRound]?.type}
                   </p>
                   {job.rounds[application.currentRound]?.description && (
                     <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
@@ -469,26 +772,6 @@ const ApplicationDetail = () => {
                 </div>
               </div>
             )}
-
-          {interviewResults && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-[#1a1c29] rounded-2xl p-6 w-full max-w-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
-                <h3 className="text-lg font-semibold mb-4 text-indigo-600 dark:text-indigo-400">
-                  面试结果
-                </h3>
-                <PracticeResults
-                  interview={interviewResults}
-                  navigate={() => setInterviewResults(null)}
-                />
-                <button
-                  onClick={() => setInterviewResults(null)}
-                  className="cursor-pointer mt-4 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 transition-colors"
-                >
-                  关闭
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -499,19 +782,26 @@ const ApplicationDetail = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
         <PracticeInterview
           setupData={{
-            role: job?.title,
+            role: job?.title || "",
             resume: resumeText,
-            roundType: job?.rounds[application.currentRound]?.type,
-            topic: job?.rounds[application.currentRound]?.description,
-            difficulty: job?.difficulty,
+            roundType: job?.rounds[application.currentRound]?.type || "",
+            topic: job?.rounds[application.currentRound]?.description || "",
+            difficulty: job?.difficulty || "",
+            rounds: job?.rounds?.length || 1,
+            questionsPerRound: 5,
           }}
           interviewState={interviewState}
           setInterviewState={setInterviewState}
           handleAnswerSubmit={handleAnswerSubmit}
+          handleEndInterview={handleEndInterview}
+          handleQuit={handleQuit}
           formatTime={(s: number) =>
             `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`
           }
           toast={toast}
+          isLoading={isLoading}
+          interviewPhase={interviewPhase}
+          streamingMessage={streamingMessage}
         />
       </div>
     );
@@ -520,7 +810,22 @@ const ApplicationDetail = () => {
   if (currentStep === "results") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 dark:from-[#0F172A] dark:via-[#1E293B]/50 dark:to-[#0F172A]">
-        <PracticeResults interview={interviewResults} navigate={() => {}} />
+        <PracticeResults
+          interview={interviewResults!}
+          navigate={(path: string) => {
+            navigate(path);
+          }}
+          setupData={{
+            role: job?.title || "",
+            resume: resumeText,
+            difficulty: job?.difficulty || "",
+            roundType: job?.rounds[application.currentRound]?.type || "",
+            topic: job?.rounds[application.currentRound]?.description || "",
+            rounds: job?.rounds?.length || 1,
+            questionsPerRound: 5,
+          }}
+          rounds={job?.rounds?.length}
+        />
       </div>
     );
   }

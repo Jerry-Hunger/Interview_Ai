@@ -3,8 +3,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Briefcase, Calendar } from "lucide-react";
-import { useCompanyJobs } from "@/hooks/api";
+import { Briefcase, Calendar, Power, PowerOff } from "lucide-react";
+import { useCompanyJobs, useUpdateJobStatus } from "@/hooks/api";
+import { useToast } from "@/hooks/use-toast";
 
 type Job = {
   _id: string;
@@ -18,7 +19,32 @@ type Job = {
 
 const CompanyJobsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { data: jobs = [], isPending, error } = useCompanyJobs();
+  const updateJobStatus = useUpdateJobStatus();
+
+  const handleToggleStatus = (e: React.MouseEvent, job: Job) => {
+    e.stopPropagation();
+    const newStatus = job.status === "open" ? "closed" : "open";
+    updateJobStatus.mutate(
+      { jobId: job._id, status: newStatus },
+      {
+        onSuccess: () => {
+          toast({
+            title: "更新成功",
+            description: `职位已${newStatus === "open" ? "开启" : "关闭"}`,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "更新失败",
+            description: "职位状态更新失败，请重试",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
 
   if (isPending) return (
     <div className="min-h-screen bg-white dark:bg-[#101322] flex items-center justify-center">
@@ -75,15 +101,30 @@ const CompanyJobsPage: React.FC = () => {
 
                   <div className="flex justify-between items-center">
                     <Badge
-                      variant={
-                        job.status === "closed" ? "destructive" : "default"
-                      }
+                      className={job.status === "closed" ? "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200" : ""}
                     >
                       {job.status === "closed" ? "已结束" : "招聘中"}
                     </Badge>
-                    {job.difficulty && (
-                      <Badge className="text-xs dark:bg-gray-700 dark:text-gray-200">{job.difficulty}</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {job.difficulty && (
+                        <Badge className="text-xs dark:bg-gray-700 dark:text-gray-200">{job.difficulty}</Badge>
+                      )}
+                      <button
+                        onClick={(e) => handleToggleStatus(e, job)}
+                        className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                          job.status === "open"
+                            ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
+                            : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                        }`}
+                        title={job.status === "open" ? "关闭职位" : "开启职位"}
+                      >
+                        {job.status === "open" ? (
+                          <PowerOff className="w-4 h-4" />
+                        ) : (
+                          <Power className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

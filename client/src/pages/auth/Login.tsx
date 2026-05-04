@@ -31,13 +31,24 @@ const Login = () => {
   useEffect(() => {
     const token = searchParams.get("token");
     const userRole = searchParams.get("role");
+    const expired = searchParams.get("expired");
+
+    // Token 过期提示
+    if (expired === "true") {
+      toast({
+        title: "登录已过期",
+        description: "您的登录已过期，请重新登录",
+        variant: "destructive",
+      });
+    }
+
     if (token) {
       setGithubLoading(false);
       localStorage.setItem("token", token);
       localStorage.setItem("role", userRole || "student");
       navigate(userRole === "company" ? "/company/dashboard" : "/student/dashboard");
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -370,7 +370,6 @@ const PracticeSetup = ({
                 正在生成第一个问题...
               </p>
             </div>
-            <Progress value={undefined} className="w-full [&>div]:bg-gradient-to-r [&>div]:from-indigo-500 [&>div]:to-purple-500 [&>div]:animate-pulse" />
             <p className="text-xs text-gray-400 dark:text-gray-500">请稍候，这可能需要几秒钟</p>
           </div>
         </div>

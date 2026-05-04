@@ -330,6 +330,7 @@ const PracticeInterview = ({
                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                        ul: ({ children }) => <ul className="list-disc list-inside mb-1">{children}</ul>,
                        ol: ({ children }) => <ol className="list-decimal list-inside mb-1">{children}</ol>,
+                       hr: () => <hr className="my-2 border-gray-300 dark:border-gray-600" />,
                      }}
                    >
                      {streamingMessage || currentQuestion}

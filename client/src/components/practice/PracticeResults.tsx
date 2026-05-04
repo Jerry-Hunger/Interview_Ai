@@ -177,7 +177,7 @@ const PracticeResults = ({
     const nextRound = currentRound + 1;
     const setupDataWithInterview = {
       ...setupData,
-      role: setupData?.role || interview.role || "",
+      role: setupData?.role || interview.role || interview.roleSummary || "",
       roundType: setupData?.roundType || interview.roundType || "",
       difficulty: setupData?.difficulty || interview.difficulty || "",
       rounds: setupData?.rounds || totalRounds || interview.rounds || 1,
@@ -196,6 +196,8 @@ const PracticeResults = ({
   };
 
   const showContinueButton = canContinue();
+  // 企业面试的继续下一轮按钮不应该显示，是否能进行下一轮由企业端决定
+  const showEnterpriseContinueButton = interview.type === "company" ? false : showContinueButton;
   const showFailMessage = !isLastRound && interview.result === "failure" && !state?.isCompletedSession;
 
   return (
@@ -284,7 +286,7 @@ const PracticeResults = ({
 
               {/* 操作按钮 */}
               <div className="flex flex-wrap gap-3 pt-2">
-                {showContinueButton && (
+                {showEnterpriseContinueButton && (
                   <Button
                     onClick={handleContinue}
                     className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl transition-all"
@@ -423,7 +425,11 @@ const PracticeResults = ({
                   </div>
                   <span className="text-xs text-gray-400 dark:text-gray-500">{entry.timestamp}</span>
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{entry.content}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {entry.content}
+                  </ReactMarkdown>
+                </p>
               </div>
             ))}
           </CardContent>
