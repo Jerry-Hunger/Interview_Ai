@@ -237,7 +237,7 @@ export const useResumes = (userId: string | undefined) =>
     queryKey: ["resumes", userId],
     queryFn: async () => {
       const res = await axiosInstance.get(`/resume/user/${userId}`, authHeader());
-      return res.data as any[];
+      return res.data as { _id: string; fileName: string; fileType: string; fileUrl: string; createdAt: string }[];
     },
     enabled: !!userId,
     staleTime: 2 * 60 * 1000,
@@ -268,7 +268,7 @@ export const useUpdateResume = () => {
 export const useDeleteResume = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, studentId }: { id: string; studentId: string }) =>
+    mutationFn: ({ id }: { id: string; studentId: string }) =>
       axiosInstance.delete(`/resume/${id}`, authHeader()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resumes"] });

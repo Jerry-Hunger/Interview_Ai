@@ -18,7 +18,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Target, Play, CheckCircle, Loader2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import ResumeUploader from "./ResumeUploader";
 
 type SetupData = {

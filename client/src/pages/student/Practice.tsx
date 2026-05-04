@@ -107,7 +107,7 @@ const Practice = () => {
     } | undefined;
 
     // 计算每轮的问题数量（每轮固定为配置的问题数目）
-    const getQuestionsForRound = (_round: number): number => {
+    const getQuestionsForRound = (): number => {
       return setupData.questionsPerRound || 5;
     };
     

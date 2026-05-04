@@ -51,7 +51,7 @@ const difficultyConfig = {
   senior: { label: "高级", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-100 dark:bg-rose-900/30" },
 };
 
-const StatCard = ({ title, value, icon: Icon, gradient }: { title: string; value: number; icon: any; gradient: string; }) => (
+const StatCard = ({ title, value, icon: Icon, gradient }: { title: string; value: number; icon: React.ElementType; gradient: string; }) => (
   <Card className="relative rounded-2xl overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 group">
     <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.08] group-hover:opacity-[0.12] transition-opacity`} />
     <CardContent className="relative p-6 flex items-center justify-between">

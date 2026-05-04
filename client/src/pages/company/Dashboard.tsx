@@ -27,31 +27,6 @@ const STAGES = [
   { key: "rejected", label: "已拒绝", color: "#EF4444", bg: "bg-red-500" },
 ] as const;
 
-type Stats = {
-  applied?: number;
-  inProgress?: number;
-  selected?: number;
-  finalSelected?: number;
-  rejected?: number;
-  totalJobs?: number;
-  totalApplications?: number;
-};
-
-type Job = {
-  _id: string;
-  title: string;
-  description: string;
-  createdAt?: string;
-};
-
-type Application = {
-  _id: string;
-  jobId: { _id: string; title: string } | null;
-  candidateId: { _id: string; fullName: string; email?: string } | null;
-  status: string;
-  createdAt?: string;
-};
-
 const StatCard = ({
   icon: Icon,
   label,

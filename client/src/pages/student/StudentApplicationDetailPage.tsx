@@ -6,7 +6,7 @@ import PracticeInterview from "@/components/practice/PracticeInterview";
 import PracticeResults from "@/components/practice/PracticeResults";
 import { useToast } from "@/hooks/use-toast";
 import { useApplicationDetail } from "@/hooks/api";
-import { Loader2, Hourglass, XCircle, CheckCircle, Trophy, Clock, Check, X } from "lucide-react";
+import { Loader2, Hourglass, XCircle, Trophy, Clock, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -590,7 +590,7 @@ const ApplicationDetail = () => {
             <div className="mt-5 flex flex-wrap gap-3">
               {job.rounds && job.rounds.length > 0 && (
                 <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                  难度：{job.rounds.map((r, i) => difficultyMap[r.difficulty || job.difficulty] || r.difficulty || job.difficulty).join(" → ")}
+                  难度：{job.rounds.map((r) => difficultyMap[r.difficulty || job.difficulty] || r.difficulty || job.difficulty).join(" → ")}
                 </span>
               )}
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
