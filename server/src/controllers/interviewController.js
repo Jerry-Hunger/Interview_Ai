@@ -1,5 +1,7 @@
 import { generateDeepSeekResponse, streamDeepSeekResponse } from "../utils/deepseek.js";
 import fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import Interview from "../models/Interview.js";
 import {
   startInterviewFirstRound,
@@ -9,6 +11,10 @@ import {
   concludeChunk,
   concludeFinal,
 } from "../prompts/interview.js";
+
+// ESM 模块获取当前文件目录
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const formatBlock = (block) => {
   let result = "";
@@ -251,8 +257,7 @@ export const concludeInterviewStream = async (req, res) => {
   console.error(">>> req.method:", req.method);
 
   // Write to server console AND to a debug file at function entry
-  const serverDir = 'D:/Development/Workspace/vscodepro/Interview_Ai/server';
-  const debugPath = serverDir + '/debug_log.txt';
+  const debugPath = join(__dirname, '..', '..', 'debug_log.txt');
   fs.appendFileSync(debugPath, '\n===== FUNCTION START =====\n');
   fs.appendFileSync(debugPath, 'req.url: ' + req.url + '\n');
   fs.appendFileSync(debugPath, 'req.method: ' + req.method + '\n');

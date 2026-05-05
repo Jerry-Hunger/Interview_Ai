@@ -15,6 +15,9 @@ import { apiLimiter } from "./middlewares/rateLimiter.js";
 
 const app = express();
 
+// 信任代理（当使用 Nginx 反向代理时必须）
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL
@@ -49,11 +52,10 @@ const server = app.listen(PORT, () => console.log(`✅ server running on ${PORT}
 
 const shutdown = () => {
   console.log("Shutting down gracefully...");
-  server.close(() => {
-    mongoose.connection.close(false, () => {
-      console.log("Database connection closed.");
-      process.exit(0);
-    });
+  server.close(async () => {
+    await mongoose.connection.close();
+    console.log("MongoDB connection closed.");
+    process.exit(0);
   });
   setTimeout(() => process.exit(1), 10000);
 };
