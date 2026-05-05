@@ -20,7 +20,7 @@ const InterviewSchema = new Schema(
     roleSummary: String,
     roundType: {
       type: String,
-      enum: ["behavioral", "technical", "system-design", "coding", "mixed"],
+      enum: ["behavioral", "technical", "hr"],
     },
     customTopic: String,
     rounds: { type: Number, default: 1 },

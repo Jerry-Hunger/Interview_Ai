@@ -7,6 +7,7 @@ export const validateCreateApplication = [
 export const validateUpdateStatus = [
   param("applicationId").isMongoId().withMessage("无效的申请 ID"),
   body("status").isIn(["applied", "in-progress", "selected", "final-selected", "rejected"]).withMessage("无效的申请状态"),
+  body("approvedThrough").optional().isInt({ min: 0 }).withMessage("批准的轮次必须是正整数"),
 ];
 
 export const validateAddRoundResult = [

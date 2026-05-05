@@ -3,6 +3,8 @@ import { body } from "express-validator";
 export const validateStartInterview = [
   body("role").notEmpty().withMessage("职位角色不能为空"),
   body("resume").notEmpty().withMessage("简历内容不能为空"),
+  body("difficulty").isIn(["beginner", "intermediate", "senior"]).withMessage("难度必须是 beginner、intermediate 或 senior"),
+  body("type").isIn(["practice", "company"]).withMessage("类型必须是 practice 或 company"),
 ];
 
 export const validateRespondInterview = [
@@ -12,8 +14,9 @@ export const validateRespondInterview = [
 
 export const validateConcludeInterview = [
   body("history").isArray().withMessage("对话历史必须是数组"),
-  body("typeOfInterview").notEmpty().withMessage("面试类型不能为空"),
-  body("difficulty").notEmpty().withMessage("难度不能为空"),
+  body("typeOfInterview").isIn(["behavioral", "technical", "hr"]).withMessage("面试类型必须是 behavioral、technical 或 hr"),
+  body("difficulty").isIn(["beginner", "intermediate", "senior"]).withMessage("难度必须是 beginner、intermediate 或 senior"),
+  body("result").optional().isIn(["success", "failure", "quit"]).withMessage("结果必须是 success、failure 或 quit"),
 ];
 
 export const validateSummarizeRole = [

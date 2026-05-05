@@ -11,3 +11,8 @@ export const validateResumeId = [
 export const validateUserId = [
   param("userId").isMongoId().withMessage("无效的用户 ID"),
 ];
+
+// 简历文件类型校验（上传时使用）
+export const validateResumeFileType = [
+  body("fileType").optional().isIn(["pdf", "doc", "docx"]).withMessage("文件类型必须是 pdf、doc 或 docx"),
+];

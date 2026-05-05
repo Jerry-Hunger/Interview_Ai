@@ -33,7 +33,7 @@ type Interview = {
   role: string;
   difficulty: string;
   roundType: string;
-  result: "success" | "failure" | "quit" | "Quit";
+  result: "success" | "failure" | "quit";
   feedback: string;
   transcript: { role: string; content: string }[];
   createdAt: string;

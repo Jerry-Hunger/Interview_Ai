@@ -211,6 +211,33 @@ const ApplicationDetailPage: React.FC = () => {
               </>
             )}
 
+            {normalizedStatus === "selected" && (
+              <>
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg mb-3">
+                  <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm text-green-700 dark:text-green-300">
+                    学生已通过所有面试轮次，请进行最终审核
+                  </span>
+                </div>
+                <Button
+                  onClick={() => handleStatusUpdate("final-selected")}
+                  disabled={updateStatus.isPending}
+                  className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  最终批准
+                </Button>
+                <Button
+                  onClick={() => handleStatusUpdate("rejected")}
+                  disabled={updateStatus.isPending}
+                  className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  拒绝
+                </Button>
+              </>
+            )}
+
             {normalizedStatus === "in-progress" && (
               <>
                 {app.jobId.rounds && app.jobId.rounds.length > 1 && (app.approvedThrough || 0) < app.jobId.rounds.length ? (

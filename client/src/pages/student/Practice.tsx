@@ -48,7 +48,7 @@ type Interview = {
   roundType: string;
   rounds: number;
   currentRound?: number;
-  result: "success" | "failure" | "Quit";
+  result: "success" | "failure" | "quit";
   feedback: string;
   transcript: { role: string; content: string }[];
   createdAt: string;
