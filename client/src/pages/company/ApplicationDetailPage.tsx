@@ -213,31 +213,50 @@ const ApplicationDetailPage: React.FC = () => {
             {normalizedStatus === "in-progress" && app.history && app.history.length > 0 && (
               <>
                 {app.jobId.rounds && app.jobId.rounds.length > 1 && app.currentRound < app.jobId.rounds.length ? (
-                  // 多轮面试：还有下一轮面试，等待企业开启下一轮
-                  <Button
-                    onClick={() => handleStatusUpdate("in-progress")}
-                    disabled={updateStatus.isPending}
-                    className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    开启下一轮
-                  </Button>
+                  // 多轮面试：还有下一轮面试
+                  app.history.length >= app.currentRound ? (
+                    // 学生已完成当前轮面试，等待企业操作
+                    <>
+                      <Button
+                        onClick={() => handleStatusUpdate("in-progress")}
+                        disabled={updateStatus.isPending}
+                        className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        开启下一轮
+                      </Button>
+                      <Button
+                        onClick={() => handleStatusUpdate("rejected")}
+                        disabled={updateStatus.isPending}
+                        className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        拒绝
+                      </Button>
+                    </>
+                  ) : (
+                    // 学生正在面试中或企业已开启下一轮，等待学生完成
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      等待学生进行第 {app.currentRound} 轮面试
+                    </span>
+                  )
                 ) : (
-                  // 单轮面试 或 多轮面试已完成所有轮次，显示最终批准
-                  <Button
-                    onClick={() => handleStatusUpdate("final-selected")}
-                    disabled={updateStatus.isPending}
-                    className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    最终批准
-                  </Button>
+                  // 单轮面试 或 多轮面试已完成所有轮次，显示最终批准和拒绝
+                  <>
+                    <Button
+                      onClick={() => handleStatusUpdate("final-selected")}
+                      disabled={updateStatus.isPending}
+                      className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      最终批准
+                    </Button>
+                    <Button
+                      onClick={() => handleStatusUpdate("rejected")}
+                      disabled={updateStatus.isPending}
+                      className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      拒绝
+                    </Button>
+                  </>
                 )}
-                <Button
-                  onClick={() => handleStatusUpdate("rejected")}
-                  disabled={updateStatus.isPending}
-                  className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  拒绝
-                </Button>
               </>
             )}
 
