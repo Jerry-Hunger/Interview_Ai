@@ -148,11 +148,15 @@ export const updateApplicationStatus = async (req, res) => {
 
     const previousStatus = application.status;  // 记录旧状态
 
-    // 当企业将状态从 in-progress 设为 selected 时，
-    // 意味着企业认可当前轮次，允许进入下一轮（对于多轮面试）
-    // 此时更新 currentRound，以便学生端能看到下一轮信息
+    // 当企业点击"开启下一轮"时（in-progress -> in-progress），
+    // 增加 approvedThrough 表示企业已批准至该轮
+    // approvedThrough 字段用于追踪企业已批准的轮次
+    if (previousStatus === "in-progress" && status === "in-progress") {
+      application.approvedThrough = (application.approvedThrough || 0) + 1;
+    }
+    // 当企业将状态从 in-progress 设为 selected 时（最终批准），也需要增加 approvedThrough
     if (previousStatus === "in-progress" && status === "selected") {
-      application.currentRound = application.currentRound + 1;
+      application.approvedThrough = (application.approvedThrough || 0) + 1;
     }
 
     application.status = status;

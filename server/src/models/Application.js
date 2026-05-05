@@ -24,6 +24,7 @@ const applicationSchema = new mongoose.Schema(
       ref: "Resume",
     },
     currentRound: { type: Number, default: 0 },
+    approvedThrough: { type: Number, default: 0 },  // 企业已批准的轮次（企业点击"开启下一轮"时增加）
     status: {
       type: String,
       enum: [

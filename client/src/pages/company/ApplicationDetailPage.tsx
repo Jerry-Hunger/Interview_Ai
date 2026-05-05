@@ -29,6 +29,7 @@ type Application = {
     fileType: string;
   };
   currentRound: number;
+  approvedThrough?: number;
   status:
     | "applied"
     | "in-progress"
@@ -212,10 +213,10 @@ const ApplicationDetailPage: React.FC = () => {
 
             {normalizedStatus === "in-progress" && app.history && app.history.length > 0 && (
               <>
-                {app.jobId.rounds && app.jobId.rounds.length > 1 && app.currentRound < app.jobId.rounds.length ? (
+                {app.jobId.rounds && app.jobId.rounds.length > 1 && (app.approvedThrough || 0) < app.jobId.rounds.length ? (
                   // 多轮面试：还有下一轮面试
-                  app.history.length >= app.currentRound ? (
-                    // 学生已完成当前轮面试，等待企业操作
+                  app.history.length >= (app.approvedThrough || 0) ? (
+                    // 学生已完成当前已批准轮次的面试，等待企业操作
                     <>
                       <Button
                         onClick={() => handleStatusUpdate("in-progress")}
@@ -233,9 +234,9 @@ const ApplicationDetailPage: React.FC = () => {
                       </Button>
                     </>
                   ) : (
-                    // 学生正在面试中或企业已开启下一轮，等待学生完成
+                    // 学生正在面试中，等待学生完成第 {approvedThrough} 轮
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      等待学生进行第 {app.currentRound} 轮面试
+                      等待学生进行第 {app.approvedThrough || 0} 轮面试
                     </span>
                   )
                 ) : (
