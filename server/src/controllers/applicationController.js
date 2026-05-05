@@ -154,6 +154,10 @@ export const updateApplicationStatus = async (req, res) => {
     if (previousStatus === "in-progress" && status === "in-progress") {
       application.approvedThrough = (application.approvedThrough || 0) + 1;
     }
+    // 当企业从 applied 变为 in-progress 时，初始化 approvedThrough 为 1（前瞻第一轮）
+    if (previousStatus === "applied" && status === "in-progress") {
+      application.approvedThrough = 1;
+    }
     // 当企业将状态从 in-progress 设为 selected 时（最终批准），也需要增加 approvedThrough
     if (previousStatus === "in-progress" && status === "selected") {
       application.approvedThrough = (application.approvedThrough || 0) + 1;

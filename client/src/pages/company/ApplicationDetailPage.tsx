@@ -211,7 +211,7 @@ const ApplicationDetailPage: React.FC = () => {
               </>
             )}
 
-            {normalizedStatus === "in-progress" && app.history && app.history.length > 0 && (
+            {normalizedStatus === "in-progress" && (
               <>
                 {app.jobId.rounds && app.jobId.rounds.length > 1 && (app.approvedThrough || 0) < app.jobId.rounds.length ? (
                   // 多轮面试：还有下一轮面试
@@ -245,23 +245,37 @@ const ApplicationDetailPage: React.FC = () => {
                     </div>
                   )
                 ) : (
-                  // 单轮面试 或 多轮面试已完成所有轮次，显示最终批准和拒绝
-                  <>
-                    <Button
-                      onClick={() => handleStatusUpdate("final-selected")}
-                      disabled={updateStatus.isPending}
-                      className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      最终批准
-                    </Button>
-                    <Button
-                      onClick={() => handleStatusUpdate("rejected")}
-                      disabled={updateStatus.isPending}
-                      className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      拒绝
-                    </Button>
-                  </>
+                  // 单轮面试 或 多轮面试已完成所有轮次（approvedThrough >= totalRounds）
+                  // 此时需要检查学生是否已完成该轮面试
+                  app.history.length >= (app.approvedThrough || 0) ? (
+                    // 学生已完成当前轮面试，显示最终批准
+                    <>
+                      <Button
+                        onClick={() => handleStatusUpdate("final-selected")}
+                        disabled={updateStatus.isPending}
+                        className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        最终批准
+                      </Button>
+                      <Button
+                        onClick={() => handleStatusUpdate("rejected")}
+                        disabled={updateStatus.isPending}
+                        className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        拒绝
+                      </Button>
+                    </>
+                  ) : (
+                    // 学生正在面试中，等待学生完成第 {approvedThrough} 轮
+                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg">
+                      <svg className="h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-amber-700 dark:text-amber-300">
+                        等待学生进行第 {app.approvedThrough || 0} 轮面试
+                      </span>
+                    </div>
+                  )
                 )}
               </>
             )}
