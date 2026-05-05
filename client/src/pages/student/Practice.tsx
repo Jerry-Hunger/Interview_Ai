@@ -555,7 +555,7 @@ const Practice = () => {
         roundType: effectiveSetupData.roundType,
         rounds: effectiveRounds || 1,
         currentRound: effectiveRounds > 1 ? currentRound : undefined,
-        result: result as "success" | "failure" | "Quit",
+        result: result as "success" | "failure" | "quit",
         feedback: "",
         transcript: [],
         createdAt: new Date().toISOString(),

@@ -116,7 +116,7 @@ const PracticeResults = ({
   const totalRounds = state?.totalRounds || interview.rounds || 1;
   const isLastRound = currentRound >= totalRounds;
   const isSuccess = interview.result === "success";
-  const isQuit = interview.result === "quit" || interview.result === "Quit";
+  const isQuit = interview.result === "quit";
   const diff = difficultyConfig[interview.difficulty as keyof typeof difficultyConfig] || difficultyConfig.medium;
 
   const [pendingNextRound, setPendingNextRound] = useState<PendingNextRound | null>(null);

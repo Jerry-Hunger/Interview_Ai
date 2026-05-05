@@ -64,7 +64,7 @@ type Interview = {
   roundType: string;
   rounds: number;
   currentRound?: number;
-  result: "success" | "failure" | "Quit";
+  result: "success" | "failure" | "quit";
   feedback: string;
   transcript: { role: string; content: string }[];
   createdAt: string;
@@ -345,7 +345,7 @@ const ApplicationDetail = () => {
           customTopic: job?.rounds[application!.currentRound]?.description || "",
           difficulty: job?.difficulty || "intermediate",
           typeOfInterview: "company",
-          result: "Quit",
+          result: "quit",
         },
         {
           headers: {
@@ -502,7 +502,7 @@ const ApplicationDetail = () => {
         roundType: job?.rounds[application!.currentRound]?.type || "",
         rounds: job?.rounds?.length || 1,
         currentRound: application!.currentRound + 1,
-        result: result as "success" | "failure" | "Quit",
+        result: result as "success" | "failure" | "quit",
         feedback: "",
         transcript: [],
         createdAt: new Date().toISOString(),
