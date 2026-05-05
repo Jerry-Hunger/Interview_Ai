@@ -142,9 +142,10 @@ const ApplicationDetail = () => {
       const res = await axiosInstance.post("/interview/start", {
         role: job?.title,
         resume: resumeToUse,
-        roundType: job?.rounds[application!.currentRound]?.type || "综合面试",
+        roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
         topic: job?.rounds[application!.currentRound]?.description || "",
-        difficulty: job?.difficulty,
+        difficulty: job?.rounds[application!.currentRound]?.difficulty || "beginner",
+        type: "company",
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -341,9 +342,9 @@ const ApplicationDetail = () => {
           history: interviewState.chatHistory,
           resumeText: resumeText,
           roleSummary: job?.title,
-          roundType: job?.rounds[application!.currentRound]?.type || "技术面试",
+          roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
           customTopic: job?.rounds[application!.currentRound]?.description || "",
-          difficulty: job?.difficulty || "intermediate",
+          difficulty: job?.rounds[application!.currentRound]?.difficulty || "intermediate",
           typeOfInterview: "company",
           result: "quit",
         },
@@ -411,10 +412,11 @@ const ApplicationDetail = () => {
           history: interviewState.chatHistory,
           resumeText: resumeText,
           roleSummary: job?.title,
-          roundType: job?.rounds[application!.currentRound]?.type || "技术面试",
+          roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
           customTopic: job?.rounds[application!.currentRound]?.description || "",
-          difficulty: job?.difficulty || "intermediate",
+          difficulty: job?.rounds[application!.currentRound]?.difficulty || "intermediate",
           typeOfInterview: "company",
+          result: "success",
         }),
       });
 

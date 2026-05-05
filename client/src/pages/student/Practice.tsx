@@ -131,6 +131,7 @@ const Practice = () => {
         roundType: effectiveSetupData.roundType,
         topic: effectiveSetupData.topic,
         difficulty: effectiveSetupData.difficulty,
+        type: "practice",
         isContinuation: true,
         currentRound: nextRound,
         totalRounds: effectiveSetupData.rounds,
@@ -218,6 +219,7 @@ const Practice = () => {
         roundType: setupData.roundType,
         topic: setupData.topic,
         difficulty: setupData.difficulty,
+        type: "practice",
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -617,7 +619,7 @@ const Practice = () => {
           customTopic: setupData.topic,
           difficulty: setupData.difficulty,
           typeOfInterview: "practice",
-          result: "Quit",
+          result: "quit",
         },
         {
           headers: {
