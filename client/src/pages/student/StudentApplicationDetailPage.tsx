@@ -677,28 +677,54 @@ const ApplicationDetail = () => {
                     </div>
                   </div>
                 )}
-                {/* 面试进度可视化 */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  {job.rounds?.map((_: unknown, idx: number) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                        idx < application.currentRound
-                          ? "bg-emerald-500 text-white"
-                          : idx === application.currentRound
-                          ? "bg-indigo-500 text-white ring-4 ring-indigo-200 dark:ring-indigo-800"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                      }`}>
-                        {idx < application.currentRound ? <Check className="w-4 h-4" /> : idx + 1}
+                {/* 面试进度可视化 - 优化版 */}
+                <div className="flex items-start justify-start gap-0 py-4">
+                  {job.rounds?.map((_: unknown, idx: number) => {
+                    const isCompleted = idx < application.currentRound;
+                    const isActive = idx === application.currentRound;
+
+                    return (
+                      <div key={idx} className="flex items-center">
+                        {/* 步骤节点 */}
+                        <div className="relative flex flex-col items-center">
+                          {/* 光晕效果 - 仅当前步骤显示 */}
+                          {isActive && (
+                            <div className="absolute inset-0 bg-indigo-400 rounded-full blur-md opacity-40" />
+                          )}
+                          {/* 主节点 */}
+                          <div className={`relative flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold transition-all duration-300 ${
+                            isCompleted
+                              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                              : isActive
+                              ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                              : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
+                          }`}>
+                            {isCompleted ? (
+                              <Check className="w-5 h-5" />
+                            ) : (
+                              idx + 1
+                            )}
+                          </div>
+                          {/* 步骤标签 */}
+                          <span className={`absolute -bottom-6 text-xs whitespace-nowrap ${
+                            isActive
+                              ? "text-indigo-600 dark:text-indigo-400 font-medium"
+                              : "text-slate-400 dark:text-slate-500"
+                          }`}>
+                            第{idx + 1}轮
+                          </span>
+                        </div>
+                        {/* 连接线 */}
+                        {idx < (job.rounds?.length || 0) - 1 && (
+                          <div className={`w-12 h-1.5 mx-1 rounded-full transition-all duration-300 ${
+                            isCompleted
+                              ? "bg-emerald-500"
+                              : "bg-slate-200 dark:bg-slate-700"
+                          }`} />
+                        )}
                       </div>
-                      {idx < (job.rounds?.length || 0) - 1 && (
-                        <div className={`w-8 h-1 rounded ${
-                          idx < application.currentRound
-                            ? "bg-emerald-500"
-                            : "bg-slate-200 dark:bg-slate-700"
-                        }`} />
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {/* 如果有失败历史则不显示开始面试按钮 */}
                 {!application.history?.some((h: RoundHistory) => h.result === "failure") && (
