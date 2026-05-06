@@ -155,6 +155,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
     const Tesseract = await import("tesseract.js");
     let fullText = "";
     const totalImages = images.length;
+    // 重置 totalOperationsRef 为当前 OCR 阶段的总任务数，避免预估时间错乱
+    totalOperationsRef.current = totalImages;
+    completedOperationsRef.current = 0;
 
     const originalWarn = console.warn;
     console.warn = (...args: unknown[]) => {
