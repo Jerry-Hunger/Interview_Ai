@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/utils/axiosInstance";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import PracticeInterview from "@/components/practice/PracticeInterview";
@@ -27,6 +28,7 @@ type ApplicationType = {
   resumeId?: { _id: string; fileUrl: string; fileName: string; fileType: string };
   status: string;
   currentRound: number;
+  approvedThrough?: number;
   history?: RoundHistory[];
 };
 
@@ -93,6 +95,7 @@ const ApplicationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: application, isPending } = useApplicationDetail(id!);
   const job = (application as ApplicationType)?.jobId as JobType | null;
 
@@ -139,6 +142,13 @@ const ApplicationDetail = () => {
 
       setIsStartingInterview(true);
 
+      // 判断是否为续轮面试（第二轮及以后）
+      const isContinuation = application!.currentRound > 0;
+      // 获取上一轮的反馈内容
+      const previousFeedback = isContinuation && application!.history && application!.history.length > 0
+        ? application!.history[application!.history.length - 1].feedback
+        : "";
+
       const res = await axiosInstance.post("/interview/start", {
         role: job?.title,
         resume: resumeToUse,
@@ -146,6 +156,10 @@ const ApplicationDetail = () => {
         topic: job?.rounds[application!.currentRound]?.description || "",
         difficulty: job?.rounds[application!.currentRound]?.difficulty || "beginner",
         type: "company",
+        isContinuation,
+        currentRound: application!.currentRound + 1,
+        totalRounds: job?.rounds?.length || 1,
+        previousFeedback,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -530,6 +544,9 @@ const ApplicationDetail = () => {
         }
       );
 
+      // 刷新申请数据，确保 currentRound 和 approvedThrough 更新
+      queryClient.invalidateQueries({ queryKey: ["applications", id] });
+
       setInterviewResults(interview);
       setCurrentStep("results");
     } catch (error: unknown) {
@@ -726,8 +743,8 @@ const ApplicationDetail = () => {
                     );
                   })}
                 </div>
-                {/* 如果有失败历史则不显示开始面试按钮 */}
-                {!application.history?.some((h: RoundHistory) => h.result === "failure") && (
+                {/* 如果有失败历史或企业尚未开启下一轮则不显示开始面试按钮 */}
+                {!application.history?.some((h: RoundHistory) => h.result === "failure") && application.currentRound < (application.approvedThrough || 0) && (
                   <button
                     onClick={handleStartInterview}
                     disabled={isStartingInterview}
@@ -742,6 +759,15 @@ const ApplicationDetail = () => {
                       <>开始第 {application.currentRound + 1} 轮面试</>
                     )}
                   </button>
+                )}
+                {/* 企业尚未开启下一轮时显示提示 */}
+                {!application.history?.some((h: RoundHistory) => h.result === "failure") && application.currentRound >= (application.approvedThrough || 0) && (
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 mt-2">
+                    <Clock className="w-5 h-5 text-amber-500" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">
+                      等待企业开启第 {application.currentRound + 1} 轮面试
+                    </span>
+                  </div>
                 )}
               </div>
             )}
