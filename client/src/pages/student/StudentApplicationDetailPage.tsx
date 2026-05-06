@@ -371,6 +371,9 @@ const ApplicationDetail = () => {
       const { interview } = res.data;
 
       setInterviewResults(interview);
+      // 失效申请列表缓存，确保"我的申请"页面能获取最新数据
+      queryClient.invalidateQueries({ queryKey: ["applications", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["applications", id] });
       setCurrentStep("results");
     } catch (error: unknown) {
       console.error("Error quitting interview:", error);
@@ -529,7 +532,7 @@ const ApplicationDetail = () => {
 
       setIsLoading(false);
 
-      await axiosInstance.post(
+      const res = await axiosInstance.post(
         `/applications/${application!._id}/round`,
         {
           roundNumber: application!.currentRound + 1,
@@ -544,8 +547,10 @@ const ApplicationDetail = () => {
         }
       );
 
-      // 刷新申请数据，确保 currentRound 和 approvedThrough 更新
-      queryClient.invalidateQueries({ queryKey: ["applications", id] });
+      // 使用服务器返回的更新后数据更新缓存
+      queryClient.setQueryData(["applications", id], res.data.application);
+      // 失效申请列表缓存，确保"我的申请"页面能获取最新数据
+      queryClient.invalidateQueries({ queryKey: ["applications", "mine"] });
 
       setInterviewResults(interview);
       setCurrentStep("results");

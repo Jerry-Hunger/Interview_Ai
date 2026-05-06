@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Phone, MapPin, DollarSign, GraduationCap, Code, User } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
@@ -26,6 +27,7 @@ type UserType = {
 };
 
 const ProfilePage = () => {
+  const queryClient = useQueryClient();
   const { data: user, isPending } = useStudentProfile();
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -52,6 +54,8 @@ const ProfilePage = () => {
 
   const handleAvatarUploadSuccess = (url: string) => {
     setCurrentUser((prev: UserType | null) => (prev ? { ...prev, avatarUrl: url } : null));
+    // 失效学生资料缓存，确保其他页面能获取最新头像
+    queryClient.invalidateQueries({ queryKey: ["student", "profile"] });
   };
 
   const handleResumeUploadSuccess = (data: { resumeId: string; fileUrl: string; fileName: string }) => {
@@ -59,6 +63,8 @@ const ProfilePage = () => {
     if (data.resumeId) {
       setCurrentUser((prev) => (prev ? { ...prev, resumeId: data.resumeId } : null));
       setResumeFileName(data.fileName || "");
+      // 失效学生资料缓存，确保其他页面能获取最新简历信息
+      queryClient.invalidateQueries({ queryKey: ["student", "profile"] });
     }
   };
 
@@ -128,6 +134,8 @@ const ProfilePage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setCurrentUser(res.data.user);
+      // 失效学生资料缓存，确保其他页面能获取最新资料
+      queryClient.invalidateQueries({ queryKey: ["student", "profile"] });
       setIsEditing(false);
       toast({ title: "保存成功" });
     } catch (err) {

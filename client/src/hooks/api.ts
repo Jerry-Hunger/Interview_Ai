@@ -168,15 +168,23 @@ export const useCreateJob = () => {
   });
 };
 
+type UpdateApplicationStatusParams = { id: string; status: string; jobId?: string };
+
 export const useUpdateApplicationStatus = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
+    mutationFn: ({ id, status }: UpdateApplicationStatusParams) =>
       axiosInstance.patch(`/applications/${id}`, { status }, authHeader()),
-    onSuccess: (_, { id }) => {
+    onSuccess: (_data, variables) => {
+      const { id, jobId } = variables;
       qc.invalidateQueries({ queryKey: ["applications", id] });
       qc.invalidateQueries({ queryKey: ["applications"] });
       qc.invalidateQueries({ queryKey: ["company", "dashboard"] });
+      // 同步清理学生端和企业端特定职位列表的缓存
+      qc.invalidateQueries({ queryKey: ["applications", "mine"] });
+      if (jobId) {
+        qc.invalidateQueries({ queryKey: ["applications", "job", jobId] });
+      }
     },
   });
 };

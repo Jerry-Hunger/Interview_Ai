@@ -90,7 +90,7 @@ const ApplicationDetailPage: React.FC = () => {
   const handleStatusUpdate = (newStatus: Application["status"]) => {
     if (!application) return;
     updateStatus.mutate(
-      { id: (application as Application)._id, status: newStatus },
+      { id: (application as Application)._id, status: newStatus, jobId: (application as Application).jobId._id },
       {
         onError: () => {
           alert("更新状态失败");

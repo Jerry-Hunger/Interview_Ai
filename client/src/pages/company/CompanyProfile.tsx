@@ -221,6 +221,8 @@ const CompanyProfilePage = () => {
                     uploadEndpoint="/upload/logo"
                     onUploadSuccess={(url) => {
                       setCompany((prev) => prev ? { ...prev, companyLogoUrl: url } : null);
+                      // 持久化 Logo URL 到数据库并失效缓存
+                      updateProfile.mutate({ companyLogoUrl: url });
                       toast({ title: "Logo 上传成功" });
                     }}
                   />

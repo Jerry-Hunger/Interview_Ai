@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,6 +28,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const token = searchParams.get("token");
@@ -46,6 +48,7 @@ const Login = () => {
       setGithubLoading(false);
       localStorage.setItem("token", token);
       localStorage.setItem("role", userRole || "student");
+      queryClient.clear(); // 清除旧用户缓存
       navigate(userRole === "company" ? "/company/dashboard" : "/student/dashboard");
     }
   }, [searchParams, navigate, toast]);
@@ -91,6 +94,7 @@ const Login = () => {
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.role);
+      queryClient.clear(); // 清除旧用户缓存
 
       navigate(
         res.data.role === "student"
