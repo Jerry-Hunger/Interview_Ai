@@ -1,7 +1,6 @@
 import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Navigation from "@/components/Navigation";
@@ -25,21 +24,9 @@ const StudentApplicationsPage = React.lazy(() => import("./pages/student/Student
 const StudentApplicationDetailPage = React.lazy(() => import("./pages/student/StudentApplicationDetailPage"));
 const CompanyProfilePage = React.lazy(() => import("./pages/company/CompanyProfile"));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
-
 const App = () => (
   <div className="min-h-screen dark:bg-[#0f172a] dark:text-gray-100">
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="interviewpro-ui-theme">
+    <ThemeProvider defaultTheme="light" storageKey="interviewpro-ui-theme">
         <TooltipProvider>
           <Toaster />
           <BrowserRouter>
@@ -84,7 +71,6 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
-    </QueryClientProvider>
   </div>
 );
 

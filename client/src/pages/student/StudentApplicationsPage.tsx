@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMyApplications, type Application } from "@/hooks/api";
+import { fetchMyApplications, type Application } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -15,18 +16,16 @@ const statusLabels: Record<Application["status"], string> = {
 };
 
 const statusColors: Record<Application["status"], string> = {
-  applied: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "in-progress":
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  selected: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "final-selected":
-    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  applied: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  "in-progress": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  selected: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  "final-selected": "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };
 
 const StudentApplicationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { data: applications = [], isPending: loading } = useMyApplications();
+  const { data: applications, loading, refetch } = useFetch(() => fetchMyApplications());
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
   );
@@ -38,7 +37,7 @@ const StudentApplicationsPage: React.FC = () => {
     "final-selected": [],
     rejected: [],
   };
-  applications.forEach((app) => {
+  (applications ?? []).forEach((app) => {
     if (groupedApps[app.status]) {
       groupedApps[app.status].push(app);
     }

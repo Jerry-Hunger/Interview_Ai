@@ -1,7 +1,11 @@
 import Application from "../models/Application.js";
+import Student from "../models/Student.js";
+import Resume from "../models/Resume.js";
+import Company from "../models/Company.js";
 import { createApplicationForStudent } from "../services/applicationService.js";
 import { success, error } from "../utils/apiResponse.js";
 import { sendInterviewApprovalEmail } from "../utils/emailService.js";
+import logger from "../utils/logger.js";
 
 export const createApplication = async (req, res) => {
   try {
@@ -11,19 +15,7 @@ export const createApplication = async (req, res) => {
     success(res, { application }, 201);
   } catch (err) {
     if (err.status) return error(res, err.message, err.status);
-    console.error("Error creating application:", err);
-    error(res, "服务器错误");
-  }
-};
-
-export const getAllApplications = async (req, res) => {
-  try {
-    const applications = await Application.find()
-      .populate("jobId")
-      .populate("candidateId");
-    success(res, { applications });
-  } catch (err) {
-    console.error("Error fetching applications:", err);
+    logger.error({ err }, "创建申请失败");
     error(res, "服务器错误");
   }
 };
@@ -39,23 +31,22 @@ export const getMyApplications = async (req, res) => {
       .populate("resumeId")
       .sort({ createdAt: -1 });
 
-    // 如果申请的 resumeId 为空，尝试获取学生当前的简历
-    const Student = (await import("../models/Student.js")).default;
-    const Resume = (await import("../models/Resume.js")).default;
+    // 补充缺失的 resumeId：循环外查一次，避免 N+1
     const student = await Student.findById(candidateId);
-
-    for (const app of applications) {
-      if (!app.resumeId && student?.resumeId) {
-        const resume = await Resume.findById(student.resumeId);
-        if (resume) {
-          app.resumeId = resume;
+    if (student?.resumeId) {
+      const resume = await Resume.findById(student.resumeId);
+      if (resume) {
+        for (const app of applications) {
+          if (!app.resumeId) {
+            app.resumeId = resume;
+          }
         }
       }
     }
 
     return success(res, { applications });
   } catch (err) {
-    console.error("getMyApplications error:", err);
+    logger.error({ err }, "获取我的申请失败");
     return error(res, "服务器错误");
   }
 };
@@ -67,25 +58,19 @@ export const getJobApplications = async (req, res) => {
       .populate("candidateId")
       .populate("resumeId");
 
-    // 如果申请的 resumeId 为空，尝试获取学生当前的简历
-    const Student = (await import("../models/Student.js")).default;
-    const Resume = (await import("../models/Resume.js")).default;
-
+    // candidateId 已 populate，直接从中取 resumeId，无需再查 Student
     for (const app of applications) {
-      if (!app.resumeId && app.candidateId?._id) {
-        const student = await Student.findById(app.candidateId._id);
-        if (student?.resumeId) {
-          const resume = await Resume.findById(student.resumeId);
-          if (resume) {
-            app.resumeId = resume;
-          }
+      if (!app.resumeId && app.candidateId?.resumeId) {
+        const resume = await Resume.findById(app.candidateId.resumeId);
+        if (resume) {
+          app.resumeId = resume;
         }
       }
     }
 
     success(res, { applications });
   } catch (err) {
-    console.error("Error fetching job applications:", err);
+    logger.error({ err }, "获取职位申请列表失败");
     error(res, "服务器错误");
   }
 };
@@ -103,22 +88,17 @@ export const getApplicationById = async (req, res) => {
       return error(res, "申请记录不存在", 404);
     }
 
-    // 如果申请的 resumeId 为空或不存在，尝试获取学生当前的简历
-    if (!application.resumeId && application.candidateId?._id) {
-      const Student = (await import("../models/Student.js")).default;
-      const student = await Student.findById(application.candidateId._id);
-      if (student?.resumeId) {
-        const Resume = (await import("../models/Resume.js")).default;
-        const resume = await Resume.findById(student.resumeId);
-        if (resume) {
-          application.resumeId = resume;
-        }
+    // candidateId 已 populate，直接取 resumeId
+    if (!application.resumeId && application.candidateId?.resumeId) {
+      const resume = await Resume.findById(application.candidateId.resumeId);
+      if (resume) {
+        application.resumeId = resume;
       }
     }
 
     success(res, { application });
   } catch (err) {
-    console.error("Error fetching application:", err);
+    logger.error({ err }, "获取申请详情失败");
     error(res, "服务器错误");
   }
 };
@@ -146,20 +126,14 @@ export const updateApplicationStatus = async (req, res) => {
       return error(res, "申请记录不存在", 404);
     }
 
-    const previousStatus = application.status;  // 记录旧状态
+    const previousStatus = application.status;
 
-    // 当企业点击"开启下一轮"时（in-progress -> in-progress），
-    // 增加 approvedThrough 表示企业已批准至该轮
-    // approvedThrough 字段用于追踪企业已批准的轮次
+    // approvedThrough 追踪企业已批准的轮次
     if (previousStatus === "in-progress" && status === "in-progress") {
       application.approvedThrough = (application.approvedThrough || 0) + 1;
-    }
-    // 当企业从 applied 变为 in-progress 时，初始化 approvedThrough 为 1（前瞻第一轮）
-    if (previousStatus === "applied" && status === "in-progress") {
+    } else if (previousStatus === "applied" && status === "in-progress") {
       application.approvedThrough = 1;
-    }
-    // 当企业将状态从 in-progress 设为 selected 时（最终批准），也需要增加 approvedThrough
-    if (previousStatus === "in-progress" && status === "selected") {
+    } else if (previousStatus === "in-progress" && status === "selected") {
       application.approvedThrough = (application.approvedThrough || 0) + 1;
     }
 
@@ -172,7 +146,6 @@ export const updateApplicationStatus = async (req, res) => {
       const job = application.jobId;
 
       if (candidate?.email) {
-        const Company = (await import("../models/Company.js")).default;
         const company = await Company.findById(job?.companyId).select("companyName");
 
         sendInterviewApprovalEmail(
@@ -181,19 +154,16 @@ export const updateApplicationStatus = async (req, res) => {
           company?.companyName || "本公司",
           job?.title || "该职位"
         ).catch(err => {
-          console.error("Async email send error:", err);
+          logger.error({ err }, "异步发送邮件失败");
         });
       }
     }
 
-    const updated = await Application.findById(applicationId)
-      .populate("jobId")
-      .populate("candidateId")
-      .populate("resumeId");
-
-    success(res, { message: "状态更新成功", application: updated });
+    // save 后补充 populate resumeId，避免重复查询
+    await application.populate("resumeId");
+    success(res, { message: "状态更新成功", application });
   } catch (err) {
-    console.error("Error updating status:", err);
+    logger.error({ err }, "更新申请状态失败");
     error(res, "服务器错误");
   }
 };
@@ -207,9 +177,9 @@ export const addRoundResult = async (req, res) => {
       return error(res, "结果值无效，请使用 'success' 或 'failure'", 400);
     }
 
-    const application = await Application.findById(applicationId).populate(
-      "jobId"
-    );
+    const application = await Application.findById(applicationId)
+      .populate("jobId")
+      .populate("candidateId");
     if (!application) {
       return error(res, "申请记录不存在", 404);
     }
@@ -244,21 +214,17 @@ export const addRoundResult = async (req, res) => {
 
     await application.save();
 
-    const updated = await Application.findById(applicationId)
-      .populate("jobId")
-      .populate("candidateId")
-      .populate("resumeId");
-
-    return success(res, { message: "轮次结果保存成功", application: updated });
+    // save 后补充 populate resumeId，避免重复查询
+    await application.populate("resumeId");
+    return success(res, { message: "轮次结果保存成功", application });
   } catch (err) {
-    console.error("addRoundResult error:", err.message);
+    logger.error({ err: err.message }, "添加轮次结果失败");
     return error(res, "服务器错误");
   }
 };
 
 export default {
   createApplication,
-  getAllApplications,
   getMyApplications,
   getJobApplications,
   updateApplicationStatus,

@@ -5,10 +5,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import axios from "axios";
+import logger from "../utils/logger.js";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL;
 const HTTP_PROXY = process.env.HTTP_PROXY;
 const GITHUB_TIMEOUT = parseInt(process.env.GITHUB_TIMEOUT || "30000");
 const MAX_RETRIES = parseInt(process.env.GITHUB_MAX_RETRIES || "3");
@@ -31,7 +31,7 @@ const fetchWithRetry = async (fn, retries = MAX_RETRIES) => {
       return await fn();
     } catch (err) {
       lastError = err;
-      console.warn(`请求失败，剩余重试次数 ${retries - i - 1}:`, err.message);
+      logger.warn({ retries: retries - i - 1, err: err.message }, "Request failed, retries left");
       if (i < retries - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
       }
@@ -157,7 +157,7 @@ export const githubCallback = async (req, res) => {
 
     res.redirect(`${process.env.FRONTEND_URL.split(',')[0]}/login?token=${token}&role=${user.role}`);
   } catch (err) {
-    console.error("GitHub OAuth error:", err.message);
+    logger.error({ err }, "GitHub OAuth error");
     res.status(500).json({ error: "GitHub 登录失败，请重试" });
   }
 };

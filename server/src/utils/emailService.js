@@ -1,26 +1,19 @@
 import nodemailer from "nodemailer";
 import { SocksClient } from "socks";
 import tls from "tls";
+import logger from "./logger.js";
+
+// SMTP 连接配置（模块级常量，避免重复读取环境变量）
+const SMTP_CONFIG = {
+  proxyHost: process.env.QQ_SMTP_PROXY_HOST || "127.0.0.1",
+  proxyPort: parseInt(process.env.QQ_SMTP_PROXY_PORT || "7897", 10),
+  smtpHost: process.env.QQ_SMTP_HOST || "smtp.qq.com",
+  smtpPort: parseInt(process.env.QQ_SMTP_PORT || "587", 10),
+};
 
 // 创建 QQ 邮箱 SMTP 传输器（通过 SOCKS5 代理）
 const createTransporter = async () => {
-  const cleanEnv = (key) => {
-    const val = process.env[key];
-    delete process.env[key];
-    return val;
-  };
-
-  cleanEnv("HTTP_PROXY");
-  cleanEnv("HTTPS_PROXY");
-  cleanEnv("http_proxy");
-  cleanEnv("https_proxy");
-  cleanEnv("ALL_PROXY");
-  cleanEnv("all_proxy");
-
-  const proxyHost = process.env.QQ_SMTP_PROXY_HOST || "127.0.0.1";
-  const proxyPort = parseInt(process.env.QQ_SMTP_PROXY_PORT || "7897", 10);
-  const smtpHost = process.env.QQ_SMTP_HOST || "smtp.qq.com";
-  const smtpPort = parseInt(process.env.QQ_SMTP_PORT || "587", 10);
+  const { proxyHost, proxyPort, smtpHost, smtpPort } = SMTP_CONFIG;
   const isSSL = smtpPort === 465;
 
   // 通过 SOCKS5 代理建立到 SMTP 服务器的连接
@@ -73,9 +66,7 @@ export const sendInterviewApprovalEmail = async (
   try {
     const transporter = await createTransporter();
 
-    console.log(`[Email] 尝试发送邮件到 ${candidateEmail}`);
-    console.log(`[Email] SMTP 配置: host=${process.env.QQ_SMTP_HOST}, port=${process.env.QQ_SMTP_PORT}, secure=${parseInt(process.env.QQ_SMTP_PORT || "587") === 465}`);
-    console.log(`[Email] 代理配置: SOCKS5 ${process.env.QQ_SMTP_PROXY_HOST || "127.0.0.1"}:${process.env.QQ_SMTP_PROXY_PORT || "7897"}`);
+    logger.info({ to: candidateEmail, ...SMTP_CONFIG }, "Attempting to send email");
 
     const mailOptions = {
       from: process.env.QQ_SMTP_USER,
@@ -85,14 +76,10 @@ export const sendInterviewApprovalEmail = async (
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[Email] 邮件发送成功 to ${candidateEmail}: ${info.messageId}`);
+    logger.info({ to: candidateEmail, messageId: info.messageId }, "Email sent successfully");
     return { success: true, messageId: info.messageId };
   } catch (err) {
-    console.error(`[Email] 邮件发送失败 to ${candidateEmail}:`, err.message);
+    logger.error({ to: candidateEmail, err: err.message }, "Email send failed");
     return { success: false, error: err.message };
   }
-};
-
-export default {
-  sendInterviewApprovalEmail,
 };

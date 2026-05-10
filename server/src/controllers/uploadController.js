@@ -2,6 +2,7 @@ import Student from "../models/Student.js";
 import Company from "../models/Company.js";
 import Resume from "../models/Resume.js";
 import User from "../models/User.js";
+import logger from "../utils/logger.js";
 import {
   uploadFile,
   generateAvatarPath,
@@ -47,7 +48,7 @@ export const uploadAvatar = async (req, res) => {
 
     res.json({ success: true, url });
   } catch (err) {
-    console.error("上传头像失败:", err);
+    logger.error({ err }, "上传头像失败");
     res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
   }
 };
@@ -110,7 +111,7 @@ export const uploadResume = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("上传简历失败:", err);
+    logger.error({ err }, "上传简历失败");
     res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
   }
 };
@@ -149,7 +150,7 @@ export const uploadLogo = async (req, res) => {
 
     res.json({ success: true, url });
   } catch (err) {
-    console.error("上传 Logo 失败:", err);
+    logger.error({ err }, "上传 Logo 失败");
     res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
   }
 };
@@ -198,7 +199,7 @@ export const uploadPhotos = async (req, res) => {
 
     res.json({ success: true, urls });
   } catch (err) {
-    console.error("上传照片失败:", err);
+    logger.error({ err }, "上传照片失败");
     res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
   }
 };

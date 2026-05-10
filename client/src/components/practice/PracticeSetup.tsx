@@ -19,16 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Target, Play, CheckCircle, Loader2 } from "lucide-react";
 import ResumeUploader from "./ResumeUploader";
-
-type SetupData = {
-  resume: string;
-  role: string;
-  difficulty: string;
-  roundType: string;
-  topic: string;
-  rounds: number;
-  questionsPerRound: number;
-};
+import type { SetupData } from "@/types";
 
 type PracticeSetupProps = {
   setupData: SetupData;
@@ -62,7 +53,7 @@ const PracticeSetup = ({
       </p>
     </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Setup Form */}
+      {/* 配置表单 */}
       <Card className="shadow-lg bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400">
@@ -74,61 +65,7 @@ const PracticeSetup = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Resume Upload */}
-          {/* Resume Upload */}
-          {/* <div className="space-y-3">
-            <Label className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <Upload size={16} />
-              Resume <span className="text-red-500">*</span>
-            </Label>
-
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
-              {setupData.resume ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-900 dark:text-white truncate w-60">
-                    ✅ Resume uploaded
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setSetupData((prev) => ({ ...prev, resume: "" }))
-                    }
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  <Upload
-                    className="mx-auto text-indigo-500 dark:text-indigo-400 mb-2"
-                    size={32}
-                  />
-                  <p className="text-gray-500 dark:text-gray-400 mb-2">
-                    Upload your resume (PDF, DOC, DOCX)
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700"
-                    onClick={async () => {
-                      try {
-                        const { file, text } = await pickResumeFile();
-                        setSetupData((prev) => ({
-                          ...prev,
-                          resume: { file, text },
-                        }));
-                      } catch (error: unknown) {
-                        const err = error as { message?: string };
-                        alert(err.message || "Error");
-                      }
-                    }}
-                  >
-                    Choose File
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div> */}
+          {/* 简历上传 */}
           <div className="space-y-2">
             <Label className="flex items-center gap-1 text-gray-900 dark:text-white">
               简历 <span className="text-red-500">*</span>
@@ -140,7 +77,7 @@ const PracticeSetup = ({
               initialResumeText={setupData.resume}
             />
           </div>
-          {/* Role Selection */}
+          {/* 目标职位 */}
           <div className="space-y-2">
             <Label htmlFor="role" className="text-gray-900 dark:text-white">
               目标职位 *
@@ -155,7 +92,7 @@ const PracticeSetup = ({
               className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
             />
           </div>
-          {/* Difficulty */}
+          {/* 难度等级 */}
           <div className="space-y-2">
             <Label
               htmlFor="difficulty"
@@ -180,7 +117,7 @@ const PracticeSetup = ({
               </SelectContent>
             </Select>
           </div>
-          {/* Round Type */}
+          {/* 面试类型 */}
           <div className="space-y-2">
             <Label
               htmlFor="roundType"
@@ -203,7 +140,7 @@ const PracticeSetup = ({
               </SelectContent>
             </Select>
           </div>
-          {/* Rounds */}
+          {/* 面试轮次 */}
           <div className="space-y-2">
             <Label
               htmlFor="rounds"
@@ -229,7 +166,7 @@ const PracticeSetup = ({
               </SelectContent>
             </Select>
           </div>
-          {/* Questions Per Round */}
+          {/* 每轮问题数 */}
           <div className="space-y-2">
             <Label
               htmlFor="questionsPerRound"
@@ -255,7 +192,7 @@ const PracticeSetup = ({
               </SelectContent>
             </Select>
           </div>
-          {/* Topic Focus */}
+          {/* 重点领域 */}
           <div className="space-y-2">
             <Label htmlFor="topic" className="text-gray-900 dark:text-white">
               重点领域（可选）
@@ -294,7 +231,7 @@ const PracticeSetup = ({
           </Button>
         </CardContent>
       </Card>
-      {/* Preview/Tips */}
+      {/* 预览/提示 */}
       <Card className="shadow-lg bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl">
         <CardHeader>
           <CardTitle className="text-indigo-500 dark:text-indigo-400">
@@ -306,7 +243,7 @@ const PracticeSetup = ({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            {/* Tips */}
+            {/* 面试提示 */}
             {[
               {
                 title: "环境准备",

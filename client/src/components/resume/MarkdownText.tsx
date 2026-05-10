@@ -1,5 +1,6 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface MarkdownTextProps {
   content: string;
@@ -7,6 +8,7 @@ interface MarkdownTextProps {
 
 const MarkdownText: React.FC<MarkdownTextProps> = ({ content }) => (
   <ReactMarkdown
+    remarkPlugins={[remarkGfm]}
     components={{
       h1: ({ children }) => (
         <h1 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mt-6 mb-4 border-b pb-1 border-gray-300 dark:border-gray-600">

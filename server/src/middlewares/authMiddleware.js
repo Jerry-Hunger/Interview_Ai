@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import logger from "../utils/logger.js";
 
 const authMiddleware = (roles = []) => {
   return (req, res, next) => {
@@ -17,7 +18,7 @@ const authMiddleware = (roles = []) => {
 
       next();
     } catch (err) {
-      console.log(err);
+      logger.warn({ err }, "JWT 验证失败");
       res.status(401).json({ msg: "令牌无效" });
     }
   };

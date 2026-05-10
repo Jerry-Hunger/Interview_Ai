@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Phone, MapPin, DollarSign, GraduationCap, Code, User } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
@@ -10,7 +9,8 @@ import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useStudentProfile, useResumeDetail } from "@/hooks/api";
+import { fetchStudentProfile, fetchResumeDetail } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
 
 type UserType = {
   avatarUrl?: string;
@@ -27,8 +27,7 @@ type UserType = {
 };
 
 const ProfilePage = () => {
-  const queryClient = useQueryClient();
-  const { data: user, isPending } = useStudentProfile();
+  const { data: user, loading: isPending } = useFetch(() => fetchStudentProfile());
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [resumeFileName, setResumeFileName] = useState<string>("");
@@ -37,9 +36,9 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const { data: resumeDetail } = useResumeDetail((user as UserType)?.resumeId);
+  const resumeId = (user as UserType)?.resumeId;
+  const { data: resumeDetail } = useFetch(() => fetchResumeDetail(resumeId!), [resumeId], { enabled: !!resumeId });
 
-  // 同步 React Query 数据到本地 state（用于 mutation 后更新）
   useEffect(() => {
     if (user) {
       setCurrentUser(user as UserType);
@@ -54,8 +53,6 @@ const ProfilePage = () => {
 
   const handleAvatarUploadSuccess = (url: string) => {
     setCurrentUser((prev: UserType | null) => (prev ? { ...prev, avatarUrl: url } : null));
-    // 失效学生资料缓存，确保其他页面能获取最新头像
-    queryClient.invalidateQueries({ queryKey: ["student", "profile"] });
   };
 
   const handleResumeUploadSuccess = (data: { resumeId: string; fileUrl: string; fileName: string }) => {
@@ -63,8 +60,6 @@ const ProfilePage = () => {
     if (data.resumeId) {
       setCurrentUser((prev) => (prev ? { ...prev, resumeId: data.resumeId } : null));
       setResumeFileName(data.fileName || "");
-      // 失效学生资料缓存，确保其他页面能获取最新简历信息
-      queryClient.invalidateQueries({ queryKey: ["student", "profile"] });
     }
   };
 
@@ -134,8 +129,6 @@ const ProfilePage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setCurrentUser(res.data.user);
-      // 失效学生资料缓存，确保其他页面能获取最新资料
-      queryClient.invalidateQueries({ queryKey: ["student", "profile"] });
       setIsEditing(false);
       toast({ title: "保存成功" });
     } catch (err) {

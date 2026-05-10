@@ -1,20 +1,21 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/utils/axiosInstance";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import PracticeInterview from "@/components/practice/PracticeInterview";
 import PracticeResults from "@/components/practice/PracticeResults";
 import { useToast } from "@/hooks/use-toast";
-import { useApplicationDetail } from "@/hooks/api";
+import { useFetch } from "@/hooks/useFetch";
+import { fetchApplicationDetail } from "@/services/api";
+import { difficultyConfig } from "@/constants/difficulty";
+import type { InterviewState, Interview, InterviewPhase } from "@/types";
+import { roundTypeConfig } from "@/constants/roundType";
+import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
 import { Loader2, Hourglass, XCircle, Trophy, Clock, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 type Step = "waiting" | "interview" | "results";
-
-type InterviewPhase = "answering" | "ended";
 
 type RoundHistory = {
   roundNumber: number;
@@ -40,63 +41,23 @@ type JobType = {
   company?: { name: string };
 };
 
-type ChatMessage = {
-  type: "question" | "answer";
-  content: string;
-  timestamp: string;
+/** 获取难度标签文本 */
+const getDifficultyLabel = (key: string): string => {
+  const config = difficultyConfig[key as keyof typeof difficultyConfig];
+  return config ? config.label : key;
 };
 
-type InterviewState = {
-  currentQuestion: number;
-  totalQuestions: number;
-  timeRemaining: number;
-  isRecording: boolean;
-  isCameraOn: boolean;
-  isMicOn: boolean;
-  answer: string;
-  question: string;
-  chatHistory: ChatMessage[];
-};
-
-type Interview = {
-  _id: string;
-  type: "practice" | "company";
-  role: string;
-  difficulty: string;
-  roundType: string;
-  rounds: number;
-  currentRound?: number;
-  result: "success" | "failure" | "quit";
-  feedback: string;
-  transcript: { role: string; content: string }[];
-  createdAt: string;
-  finalFeedback?: string;
-  chatHistory?: { type: string; content: string; timestamp: string }[];
-  feedbacks?: string[];
-  roleSummary?: string;
-};
-
-const difficultyMap: Record<string, string> = {
-  beginner: "初级（0-2年）",
-  intermediate: "中级（2-5年）",
-  senior: "高级（5年以上）",
-};
-
-const roundTypeMap: Record<string, string> = {
-  behavioral: "行为面",
-  technical: "技术面",
-  hr: "HR面",
-  coding: "编程面",
-  "system-design": "系统设计",
-  mixed: "综合面试",
-};
 
 const ApplicationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { data: application, isPending } = useApplicationDetail(id!);
+  const { data: application, loading: isPending, refetch: refetchApplication } = useFetch(
+    () => fetchApplicationDetail(id!),
+    [id],
+    { enabled: !!id }
+  );
+
   const job = (application as ApplicationType)?.jobId as JobType | null;
 
   const [resumeText, setResumeText] = useState<string>("");
@@ -160,6 +121,7 @@ const ApplicationDetail = () => {
         currentRound: application!.currentRound + 1,
         totalRounds: job?.rounds?.length || 1,
         previousFeedback,
+        questionsPerRound: 5,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -198,15 +160,6 @@ const ApplicationDetail = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const isPerfunctoryReprompt = (text: string): boolean => {
-    return /\[REPROMPT\]/i.test(text);
-  };
-
-  // 移除 [REPROMPT] 标签，用于显示
-  const stripRepromptTag = (text: string): string => {
-    return text.replace(/\[REPROMPT\]/gi, "").trim();
   };
 
   const handleAnswerSubmit = async () => {
@@ -371,9 +324,8 @@ const ApplicationDetail = () => {
       const { interview } = res.data;
 
       setInterviewResults(interview);
-      // 失效申请列表缓存，确保"我的申请"页面能获取最新数据
-      queryClient.invalidateQueries({ queryKey: ["applications", "mine"] });
-      queryClient.invalidateQueries({ queryKey: ["applications", id] });
+      // 重新获取最新申请数据
+      await refetchApplication();
       setCurrentStep("results");
     } catch (error: unknown) {
       console.error("Error quitting interview:", error);
@@ -532,7 +484,7 @@ const ApplicationDetail = () => {
 
       setIsLoading(false);
 
-      const res = await axiosInstance.post(
+      await axiosInstance.post(
         `/applications/${application!._id}/round`,
         {
           roundNumber: application!.currentRound + 1,
@@ -547,10 +499,8 @@ const ApplicationDetail = () => {
         }
       );
 
-      // 使用服务器返回的更新后数据更新缓存
-      queryClient.setQueryData(["applications", id], res.data.application);
-      // 失效申请列表缓存，确保"我的申请"页面能获取最新数据
-      queryClient.invalidateQueries({ queryKey: ["applications", "mine"] });
+      // 重新从服务器获取最新申请数据，确保缓存一致性
+      await refetchApplication();
 
       setInterviewResults(interview);
       setCurrentStep("results");
@@ -624,7 +574,7 @@ const ApplicationDetail = () => {
             <div className="mt-5 flex flex-wrap gap-3">
               {job.rounds && job.rounds.length > 0 && (
                 <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                  难度：{job.rounds.map((r) => difficultyMap[r.difficulty || job.difficulty] || r.difficulty || job.difficulty).join(" → ")}
+                  难度：{job.rounds.map((r) => getDifficultyLabel(r.difficulty || job.difficulty)).join(" → ")}
                 </span>
               )}
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -694,7 +644,7 @@ const ApplicationDetail = () => {
                         当前进度：第 {application.currentRound + 1} 轮 / 共 {job.rounds?.length || 0} 轮
                       </p>
                       <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                        下一轮：{roundTypeMap[job.rounds[application.currentRound]?.type || ''] || job.rounds[application.currentRound]?.type || "综合面试"}
+                        下一轮：{roundTypeConfig[job.rounds[application.currentRound]?.type || '']?.label || job.rounds[application.currentRound]?.type || "综合面试"}
                       </p>
                     </div>
                   </div>
@@ -793,7 +743,7 @@ const ApplicationDetail = () => {
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-gray-800 dark:text-gray-200">
-                        第 {round.roundNumber} 轮：{roundTypeMap[job.rounds[round.roundNumber - 1]?.type || ''] || job.rounds[round.roundNumber - 1]?.type || "未知"}
+                        第 {round.roundNumber} 轮：{roundTypeConfig[job.rounds[round.roundNumber - 1]?.type || '']?.label || job.rounds[round.roundNumber - 1]?.type || "未知"}
                       </p>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5 ${
                         round.result === "success"
@@ -807,9 +757,7 @@ const ApplicationDetail = () => {
                       <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                         <span className="font-medium">反馈：</span>
                         <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {round.feedback}
-                          </ReactMarkdown>
+                          <MarkdownRenderer content={round.feedback || ""} />
                         </div>
                       </div>
                     )}
@@ -831,7 +779,7 @@ const ApplicationDetail = () => {
                 </h2>
                 <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100/50 dark:border-amber-800/20">
                   <p className="font-medium text-amber-800 dark:text-amber-300">
-                    第 {application.currentRound + 1} 轮：{roundTypeMap[job.rounds[application.currentRound]?.type || ''] || job.rounds[application.currentRound]?.type}
+                    第 {application.currentRound + 1} 轮：{roundTypeConfig[job.rounds[application.currentRound]?.type || '']?.label || job.rounds[application.currentRound]?.type}
                   </p>
                   {job.rounds[application.currentRound]?.description && (
                     <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">

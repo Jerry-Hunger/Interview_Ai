@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
-import { useCompanyProfile, useUpdateCompanyProfile, useUploadPhotos, useDeleteCompanyPhoto } from "@/hooks/api";
+import { useFetch } from "@/hooks/useFetch";
+import { fetchCompanyProfile, updateCompanyProfile as updateCompanyProfileApi, uploadPhotos as uploadPhotosApi, deleteCompanyPhoto as deleteCompanyPhotoApi } from "@/services/api";
 import { INDUSTRIES, COMPANY_SIZES } from "@/constants/industries";
 import MarkdownText from "@/components/resume/MarkdownText";
 
@@ -27,10 +28,10 @@ type CompanyUser = {
 };
 
 const CompanyProfilePage = () => {
-  const { data: profileData, isPending } = useCompanyProfile();
-  const updateProfile = useUpdateCompanyProfile();
-  const uploadPhotos = useUploadPhotos();
-  const deletePhoto = useDeleteCompanyPhoto();
+  const { data: profileData, loading: isPending, refetch: refetchProfile } = useFetch(() => fetchCompanyProfile());
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
   const [company, setCompany] = useState<CompanyUser | null>(profileData ? (profileData as CompanyUser) : null);
   const [originalCompany, setOriginalCompany] = useState<CompanyUser | null>(profileData ? (profileData as CompanyUser) : null);
   const [isEditing, setIsEditing] = useState(false);
@@ -47,31 +48,36 @@ const CompanyProfilePage = () => {
     }
   }, [profileData]);
 
-  const handlePhotosUpload = (files: FileList) => {
-    uploadPhotos.mutate(files, {
-      onSuccess: (data) => {
-        if (data?.success) {
-          const newPhotos = [...(company?.companyPhotos || []), ...data.urls].slice(0, 10);
-          setCompany((prev) => prev ? { ...prev, companyPhotos: newPhotos } : null);
-          toast({ title: "照片上传成功" });
-        }
-      },
-      onError: () => {
-        toast({ title: "上传失败", variant: "destructive" });
-      },
-    });
+  const handlePhotosUpload = async (files: FileList) => {
+    setUploadingPhotos(true);
+    try {
+      const data = await uploadPhotosApi(files);
+      if (data?.success) {
+        const newPhotos = [...(company?.companyPhotos || []), ...data.urls].slice(0, 10);
+        setCompany((prev) => prev ? { ...prev, companyPhotos: newPhotos } : null);
+        toast({ title: "照片上传成功" });
+      }
+    } catch {
+      toast({ title: "上传失败", variant: "destructive" });
+    } finally {
+      setUploadingPhotos(false);
+    }
   };
 
-  const handleDeletePhoto = (url: string) => {
-    deletePhoto.mutate(url, {
-      onSuccess: () => {
-        setCompany((prev) => prev ? {
-          ...prev,
-          companyPhotos: (prev.companyPhotos || []).filter(p => p !== url)
-        } : null);
-        toast({ title: "照片已删除" });
-      },
-    });
+  const handleDeletePhoto = async (url: string) => {
+    setDeletingPhoto(true);
+    try {
+      await deleteCompanyPhotoApi(url);
+      setCompany((prev) => prev ? {
+        ...prev,
+        companyPhotos: (prev.companyPhotos || []).filter(p => p !== url)
+      } : null);
+      toast({ title: "照片已删除" });
+    } catch {
+      toast({ title: "删除失败", variant: "destructive" });
+    } finally {
+      setDeletingPhoto(false);
+    }
   };
 
   const startEdit = () => {
@@ -93,7 +99,7 @@ const CompanyProfilePage = () => {
     return (cardValues[field] ?? (company as CompanyUser)?.[field]) as string | string[] | undefined;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updates: Partial<CompanyUser> = {};
     const c = company as CompanyUser;
     const orig = originalCompany as CompanyUser;
@@ -123,16 +129,18 @@ const CompanyProfilePage = () => {
       updates.email = c.email;
     }
 
-    updateProfile.mutate(updates, {
-      onSuccess: () => {
-        toast({ title: "保存成功" });
-        setIsEditing(false);
-        setCardValues({});
-      },
-      onError: () => {
-        toast({ title: "保存失败", variant: "destructive" });
-      },
-    });
+    setSaving(true);
+    try {
+      await updateCompanyProfileApi(updates);
+      await refetchProfile();
+      toast({ title: "保存成功" });
+      setIsEditing(false);
+      setCardValues({});
+    } catch {
+      toast({ title: "保存失败", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateField = (field: keyof CompanyUser, value: string | string[]) => {
@@ -192,16 +200,16 @@ const CompanyProfilePage = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleSave}
-                    disabled={updateProfile.isPending}
+                    disabled={saving}
                     className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-950"
                   >
-                    {updateProfile.isPending ? "保存中..." : "确认"}
+                    {saving ? "保存中..." : "确认"}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={cancelEdit}
-                    disabled={updateProfile.isPending}
+                    disabled={saving}
                     className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"
                   >
                     取消
@@ -221,8 +229,8 @@ const CompanyProfilePage = () => {
                     uploadEndpoint="/upload/logo"
                     onUploadSuccess={(url) => {
                       setCompany((prev) => prev ? { ...prev, companyLogoUrl: url } : null);
-                      // 持久化 Logo URL 到数据库并失效缓存
-                      updateProfile.mutate({ companyLogoUrl: url });
+                      // 持久化 Logo URL 到数据库
+                      updateCompanyProfileApi({ companyLogoUrl: url });
                       toast({ title: "Logo 上传成功" });
                     }}
                   />
@@ -432,8 +440,9 @@ const CompanyProfilePage = () => {
                         variant="destructive"
                         size="sm"
                         aria-label="删除照片"
-                        className="bg-red-500/90 hover:bg-red-600 dark:bg-red-600/90 dark:hover:bg-red-600 cursor-pointer"
+                        className="bg-red-500/90 hover:bg-red-600 dark:bg-red-600/90 dark:hover:bg-red-600 cursor-pointer disabled:opacity-50"
                         onClick={() => handleDeletePhoto(photo)}
+                        disabled={deletingPhoto}
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -447,14 +456,14 @@ const CompanyProfilePage = () => {
                       accept="image/jpeg,image/png,image/webp"
                       multiple
                       onChange={(e) => e.target.files && handlePhotosUpload(e.target.files)}
-                      disabled={uploadPhotos.isPending}
+                      disabled={uploadingPhotos}
                       className="hidden"
                       id="photos-upload"
                     />
                     <Label htmlFor="photos-upload" className="cursor-pointer flex flex-col items-center">
                       <Upload size={24} className="text-gray-400 mb-1 dark:text-gray-500" />
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {uploadPhotos.isPending ? "上传中..." : "上传照片"}
+                        {uploadingPhotos ? "上传中..." : "上传照片"}
                       </span>
                     </Label>
                   </div>

@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ext": "js",
+  "signal": "SIGTERM",
+  "killDelay": 2000
+}

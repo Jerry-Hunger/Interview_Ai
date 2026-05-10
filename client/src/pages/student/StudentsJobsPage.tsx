@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useJobs, useMyApplications, useApplyJob } from "@/hooks/api";
+import { fetchJobs, fetchMyApplications, applyJob as applyJobApi } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
+import { difficultyConfig } from "@/constants/difficulty";
+import type { Job } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -17,26 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Job = {
-  _id: string;
-  title: string;
-  description?: string;
-  skills?: string[];
-  rounds?: { type?: string; difficulty?: string; duration?: number }[];
-  difficulty?: string;
-  createdAt?: string;
-  status?: "open" | "closed";
-  companyName?: string;
-  companyLogoUrl?: string;
-  companyLocation?: string;
-};
-
-const difficultyConfig = {
-  beginner: { label: "初级", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  intermediate: { label: "中级", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  senior: { label: "高级", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
-};
-
 const StudentJobsPage: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,9 +33,8 @@ const StudentJobsPage: React.FC = () => {
     status: searchParams.get("status") || "open",
   });
 
-  const { data: jobs = [], isPending: jobsLoading } = useJobs(filters);
-  const { data: applications = [], isPending: appsLoading } = useMyApplications();
-  const applyMutation = useApplyJob();
+  const { data: jobs, loading: jobsLoading } = useFetch(() => fetchJobs(filters), [filters]);
+  const { data: applications, loading: appsLoading } = useFetch(() => fetchMyApplications());
   const loading = jobsLoading || appsLoading;
 
   const handleFilterChange = (key: string, value: string) => {
@@ -78,17 +60,18 @@ const StudentJobsPage: React.FC = () => {
   };
 
   const appliedJobIds = new Set(
-    applications.map((a: { jobId: { _id: string } | string }) => {
+    (applications ?? []).map((a: { jobId: { _id: string } | string }) => {
       const jobId = a.jobId;
       const id = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
       return String(id ?? "");
     })
   );
 
+  /** 投递职位 */
   const applyJob = async (jobId: string) => {
     setApplyingId(jobId);
     try {
-      await applyMutation.mutateAsync(jobId);
+      await applyJobApi(jobId);
       toast({ title: "申请成功", description: "请等待HR审核" });
     } catch (err: unknown) {
       console.error("Apply failed", err);
@@ -213,7 +196,7 @@ const StudentJobsPage: React.FC = () => {
                         {r.type === "technical" ? "技术面" : r.type === "behavioral" ? "行为面" : r.type || "面试"}
                       </span>
                       {roundDiff && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${roundDiff.color}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${roundDiff.badge}`}>
                           {roundDiff.label}
                         </span>
                       )}
@@ -353,7 +336,7 @@ const StudentJobsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {jobs.length === 0 ? (
+            {(jobs ?? []).length === 0 ? (
               <div className="text-center py-16 bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <Briefcase className="w-10 h-10 text-slate-400 dark:text-slate-500" />
@@ -362,7 +345,7 @@ const StudentJobsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {jobs.map((job) => renderJobCard(job, job.status === "open" ? "open" : "closed"))}
+                {(jobs ?? []).map((job) => renderJobCard(job, job.status === "open" ? "open" : "closed"))}
               </div>
             )}
           </>

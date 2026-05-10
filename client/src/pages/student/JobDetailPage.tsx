@@ -5,41 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Calendar, Layers, Building2, MapPin, Globe, Sparkles, Clock, CheckCircle2, ArrowRight, Briefcase } from "lucide-react";
-import { useJobDetail, useMyApplications, useApplyJob } from "@/hooks/api";
+import { fetchJobDetail, fetchMyApplications, applyJob as applyJobApi } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
 import { useToast } from "@/hooks/use-toast";
 import MarkdownText from "@/components/resume/MarkdownText";
-
-type Round = {
-  roundNumber?: number;
-  type?: string;
-  difficulty?: string;
-  topic?: string;
-  duration?: number;
-  notes?: string;
-};
-
-const difficultyConfig = {
-  beginner: { label: "初级（0-2年）", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-400" },
-  intermediate: { label: "中级（2-5年）", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-400" },
-  senior: { label: "高级（5年以上）", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", dot: "bg-rose-400" },
-};
-
-const roundTypeConfig: Record<string, { label: string; icon: string }> = {
-  behavioral: { label: "行为面", icon: "💬" },
-  technical: { label: "技术面", icon: "💻" },
-  hr: { label: "HR面", icon: "👤" },
-};
+import type { JobRound } from "@/types";
+import { difficultyConfig } from "@/constants/difficulty";
+import { roundTypeConfig } from "@/constants/roundType";
 
 const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: job, isPending: loading } = useJobDetail(id!);
-  const { data: applications = [] } = useMyApplications();
-  const applyMutation = useApplyJob();
+  const { data: job, loading } = useFetch(() => fetchJobDetail(id!), [id], { enabled: !!id });
+  const { data: applications } = useFetch(() => fetchMyApplications());
   const [applying, setApplying] = useState(false);
   const { toast } = useToast();
 
-  const hasApplied = applications.some((a: { jobId: string | { _id: string } }) => {
+  const hasApplied = (applications ?? []).some((a: { jobId: string | { _id: string } }) => {
     const jobId = a.jobId;
     const jid = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
     return jid?.toString() === id?.toString();
@@ -52,7 +34,7 @@ const JobDetailPage: React.FC = () => {
     }
     setApplying(true);
     try {
-      await applyMutation.mutateAsync(id!);
+      await applyJobApi(id!);
       toast({ title: "申请成功", description: "请等待HR审核" });
     } catch (err: unknown) {
       console.error("Apply failed", err);
@@ -235,7 +217,7 @@ const JobDetailPage: React.FC = () => {
                   <span className="text-sm text-gray-500 dark:text-gray-400">共 {job.rounds.length} 轮</span>
                 </div>
                 <div className="pl-10 space-y-4">
-                  {(job.rounds as Round[]).map((r: Round, idx: number) => {
+                  {(job.rounds as JobRound[]).map((r: JobRound, idx: number) => {
                     const diff = difficultyConfig[r.difficulty as keyof typeof difficultyConfig] || difficultyConfig.beginner;
                     return (
                       <div key={idx} className="relative p-5 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-800/50 dark:to-gray-800 border border-slate-200 dark:border-gray-700 hover:shadow-md transition-shadow">

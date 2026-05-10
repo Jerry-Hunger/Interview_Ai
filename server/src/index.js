@@ -12,6 +12,7 @@ import companyRoutes from "./routes/companyRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import { apiLimiter } from "./middlewares/rateLimiter.js";
+import logger, { httpLogger } from "./utils/logger.js";
 
 const app = express();
 
@@ -29,7 +30,8 @@ app.use(
 );
 
 app.use(express.json());
-app.use(apiLimiter);
+app.use(httpLogger);
+// app.use(apiLimiter);
 
 connectDB();
 
@@ -48,17 +50,28 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => console.log(`✅ server running on ${PORT}`));
+const server = app.listen(PORT, () => logger.info("Server running at PORT: " + PORT));
 
-const shutdown = () => {
-  console.log("Shutting down gracefully...");
+/** 优雅关闭标记，防止重复触发 */
+let isShuttingDown = false;
+
+const shutdown = (signal) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`收到 ${signal}，正在关闭...`);
   server.close(async () => {
     await mongoose.connection.close();
-    console.log("MongoDB connection closed.");
+    logger.info("服务已停止");
     process.exit(0);
   });
-  setTimeout(() => process.exit(1), 10000);
+  // 3 秒后强制退出，避免卡死
+  setTimeout(() => {
+    logger.warn("强制退出");
+    process.exit(1);
+  }, 3000);
 };
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+// Windows 下 nodemon 重启时发送此事件
+process.on("SIGHUP", () => shutdown("SIGHUP"));

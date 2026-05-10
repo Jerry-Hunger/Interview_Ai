@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 import {
   FileText,
   Play,
@@ -20,36 +19,8 @@ import {
   Loader2,
 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
-
-type SetupData = {
-  resume: string;
-  role: string;
-  difficulty: string;
-  roundType: string;
-  topic: string;
-  rounds: number;
-  questionsPerRound: number;
-  currentRound?: number;
-};
-
-type ChatMessage = {
-  type: "question" | "answer";
-  content: string;
-  timestamp: string;
-};
-
-type InterviewState = {
-  currentQuestion: number;
-  totalQuestions: number;
-  timeRemaining: number;
-  isRecording: boolean;
-  isCameraOn: boolean;
-  isMicOn: boolean;
-  answer: string;
-  question: string;
-  chatHistory: ChatMessage[];
-  isReprompt?: boolean; // 标记当前是否为重新回答状态
-};
+import type { SetupData, InterviewState } from "@/types";
+import { stripRepromptTag } from "@/utils/interview";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -116,7 +87,7 @@ const PracticeInterview = ({
   });
   const cameraStreamRef = useRef<MediaStream | null>(null);
 
-  // Cleanup camera stream on unmount
+  // 组件卸载时清理摄像头流
   useEffect(() => {
     return () => {
       if (cameraStreamRef.current) {
@@ -126,7 +97,7 @@ const PracticeInterview = ({
     };
   }, []);
 
-  // Web Speech API - useRef to avoid recreating on every render
+  // Web Speech API - 使用 useRef 避免每次渲染都重新创建
   const SpeechRecognitionConstructor = (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
@@ -136,7 +107,7 @@ const PracticeInterview = ({
     const instance = new SpeechRecognitionConstructor();
     instance.continuous = true;
     instance.interimResults = true;
-    instance.lang = "en-US";
+    instance.lang = "zh-CN";
     recognitionRef.current = instance;
   }
 
@@ -214,23 +185,23 @@ const PracticeInterview = ({
   }, [interviewState.isMicOn, fullTranscript, setInterviewState, handleAnswerSubmit, toast]);
   useEffect(() => {
     if (interviewState.question) {
-      // Cancel previous speech
+      // 取消之前的语音播报
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(interviewState.question);
-      utterance.lang = "en-US";
+      utterance.lang = "zh-CN";
       utterance.rate = 1;
-      utterance.pitch = 1.2; // slightly higher pitch (more natural female)
+      utterance.pitch = 1.2; // 稍高的音调，更自然的女性声音
       utterance.volume = 1;
 
-      // Pick a female voice if available
+      // 优先选择女声
       const voices = window.speechSynthesis.getVoices();
       const femaleVoice = voices.find((v) =>
         v.name.toLowerCase().includes("female")
       );
       if (femaleVoice) utterance.voice = femaleVoice;
 
-      // Glow effect when speaking
+      // 播报时显示发光效果
       utterance.onstart = () => setSpeaking((prev) => ({ ...prev, ai: true }));
       utterance.onend = () => setSpeaking((prev) => ({ ...prev, ai: false }));
 
@@ -322,18 +293,7 @@ const PracticeInterview = ({
                    当前问题
                  </Label>
                  <div className="p-3 bg-indigo-50 dark:bg-[#23263A] rounded-lg text-sm text-gray-900 dark:text-white">
-                   <ReactMarkdown
-                     remarkPlugins={[remarkGfm]}
-                     components={{
-                       p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-                       strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                       ul: ({ children }) => <ul className="list-disc list-inside mb-1">{children}</ul>,
-                       ol: ({ children }) => <ol className="list-decimal list-inside mb-1">{children}</ol>,
-                       hr: () => <hr className="my-2 border-gray-300 dark:border-gray-600" />,
-                     }}
-                   >
-                     {streamingMessage || currentQuestion}
-                   </ReactMarkdown>
+                   <MarkdownRenderer content={stripRepromptTag(streamingMessage || currentQuestion)} variant="compact" />
                   </div>
                 </div>
               </CardContent>
@@ -563,7 +523,8 @@ const PracticeInterview = ({
                           <Button
                             variant="outline"
                             onClick={handleQuit}
-                            className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
+                            disabled={isLoading}
+                            className="border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             退出面试
                           </Button>

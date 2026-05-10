@@ -19,11 +19,3 @@ export const validateConcludeInterview = [
   body("difficulty").optional().isIn(["beginner", "intermediate", "senior"]).withMessage("难度必须是 beginner、intermediate 或 senior"),
   body("result").optional().isIn(["success", "failure", "quit"]).withMessage("结果必须是 success、failure 或 quit"),
 ];
-
-export const validateSummarizeRole = [
-  body("prompt").notEmpty().withMessage("提示词不能为空"),
-];
-
-export const validateFormatResume = [
-  body("resumeText").notEmpty().withMessage("简历文本不能为空"),
-];

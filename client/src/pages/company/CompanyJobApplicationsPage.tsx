@@ -5,27 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Users, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
-import { useJobDetail, useJobApplications } from "@/hooks/api";
+import { fetchJobDetail, fetchJobApplications } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
 import { statusColors, statusLabels } from "./shared/constants";
-
-type Application = {
-  _id: string;
-  candidateId: { _id: string; fullName: string; email: string; skills?: string[] };
-  status:
-    | "applied"
-    | "in-progress"
-    | "selected"
-    | "final-selected"
-    | "rejected";
-  createdAt: string;
-};
+import type { Application } from "@/types";
 
 const CompanyJobApplicationsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: job, isPending: jobLoading, error: jobError } = useJobDetail(id!);
-  const { data: applications = [], isPending: appsLoading, error: appsError } = useJobApplications(id!);
+  const { data: job, loading: jobLoading, error: jobError } = useFetch(() => fetchJobDetail(id!), [id], { enabled: !!id });
+  const { data: applications, loading: appsLoading, error: appsError } = useFetch(() => fetchJobApplications(id!), [id], { enabled: !!id });
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
   );
@@ -53,7 +43,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
     rejected: [],
   };
 
-  applications.forEach((app: Application) => {
+  (applications ?? []).forEach((app: Application) => {
     const normalized = normalizeStatus(app.status);
     if (groupedApps[normalized]) {
       groupedApps[normalized].push(app);
@@ -163,7 +153,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
                             {app.candidateId?.email}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            申请时间：{new Date(app.createdAt).toLocaleDateString()}
+                            申请时间：{new Date(app.createdAt || "").toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-2 ml-3">

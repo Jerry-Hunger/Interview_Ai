@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { PlusCircle, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateJob } from "@/hooks/api";
+import { createJob as createJobApi } from "@/services/api";
 
 type Round = {
   roundNumber: number;
@@ -27,7 +27,7 @@ type Round = {
 const CompanyJobForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const createJob = useCreateJob();
+  const [submitting, setSubmitting] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -60,7 +60,7 @@ const CompanyJobForm = () => {
     setRounds(rounds.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       toast({ title: "请填写职位名称", variant: "destructive" });
       return;
@@ -70,18 +70,16 @@ const CompanyJobForm = () => {
       return;
     }
 
-    createJob.mutate(
-      { title, description, skills, rounds },
-      {
-        onSuccess: () => {
-          toast({ title: "职位发布成功" });
-          navigate("/company/jobs");
-        },
-        onError: () => {
-          toast({ title: "创建职位失败，请重试", variant: "destructive" });
-        },
-      }
-    );
+    setSubmitting(true);
+    try {
+      await createJobApi({ title, description, skills, rounds });
+      toast({ title: "职位发布成功" });
+      navigate("/company/jobs");
+    } catch {
+      toast({ title: "创建职位失败，请重试", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -241,10 +239,10 @@ const CompanyJobForm = () => {
 
             <Button
               onClick={handleSubmit}
-              disabled={createJob.isPending}
+              disabled={submitting}
               className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createJob.isPending ? "发布中..." : "发布职位"}
+              {submitting ? "发布中..." : "发布职位"}
             </Button>
           </CardContent>
         </Card>

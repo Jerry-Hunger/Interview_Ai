@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { useMyInterviews } from "@/hooks/api";
+import { fetchMyInterviews } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
+import { difficultyConfig } from "@/constants/difficulty";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,12 +45,6 @@ const statusMeta = (raw: string) => {
     gradient: "from-amber-500 to-orange-500",
     Icon: AlertCircle,
   };
-};
-
-const difficultyConfig = {
-  beginner: { label: "初级", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
-  intermediate: { label: "中级", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
-  senior: { label: "高级", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-100 dark:bg-rose-900/30" },
 };
 
 const StatCard = ({ title, value, icon: Icon, gradient }: { title: string; value: number; icon: React.ElementType; gradient: string; }) => (
@@ -99,18 +95,20 @@ const Carousel = ({ children }: { children: React.ReactNode }) => {
 };
 
 const StudentDashboard = () => {
-  const { data: interviews = [], isPending } = useMyInterviews();
+  const { data: interviews, loading: isPending } = useFetch(() => fetchMyInterviews());
   const navigate = useNavigate();
 
-  const total = interviews.length;
-  const passed = interviews.filter((i: { result: string }) => i.result === "success").length;
-  const failed = interviews.filter((i: { result: string }) => i.result === "failure").length;
-  const quit = interviews.filter((i: { result: string }) => i.result === "quit").length;
+  // interviews 可能为 null（useFetch 初始值），使用 ?? [] 保证安全
+  const list = interviews ?? [];
+  const total = list.length;
+  const passed = list.filter((i: { result: string }) => i.result === "success").length;
+  const failed = list.filter((i: { result: string }) => i.result === "failure").length;
+  const quit = list.filter((i: { result: string }) => i.result === "quit").length;
 
   const groups = {
-    通过: interviews.filter((i: { result: string }) => i.result === "success"),
-    未通过: interviews.filter((i: { result: string }) => i.result === "failure"),
-    已退出: interviews.filter((i: { result: string }) => i.result === "quit"),
+    通过: list.filter((i: { result: string }) => i.result === "success"),
+    未通过: list.filter((i: { result: string }) => i.result === "failure"),
+    已退出: list.filter((i: { result: string }) => i.result === "quit"),
   };
 
   if (isPending) {

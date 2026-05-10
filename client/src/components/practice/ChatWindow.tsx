@@ -1,14 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, User } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
-type ChatMessage = {
-  type: "question" | "answer";
-  content: string;
-  timestamp: string;
-};
+import type { ChatMessage } from "@/types";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 type ChatWindowProps = {
   chatHistory: ChatMessage[];
@@ -27,28 +21,7 @@ const ChatWindow = ({ chatHistory, streamingMessage, rounds, currentRound }: Cha
   }, [chatHistory, streamingMessage]);
 
   const renderContent = (content: string) => (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        p: ({ children }) => (
-          <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-200 mb-2 last:mb-0">{children}</p>
-        ),
-        strong: ({ children }) => (
-          <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>
-        ),
-        ul: ({ children }) => (
-          <ul className="list-disc list-inside text-sm text-gray-900 dark:text-gray-200">{children}</ul>
-        ),
-        ol: ({ children }) => (
-          <ol className="list-decimal list-inside text-sm text-gray-900 dark:text-gray-200">{children}</ol>
-        ),
-        li: ({ children }) => (
-          <li className="text-gray-900 dark:text-gray-200">{children}</li>
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <MarkdownRenderer content={content} variant="chat" />
   );
 
   return (
@@ -87,7 +60,7 @@ const ChatWindow = ({ chatHistory, streamingMessage, rounds, currentRound }: Cha
                   />
                 )}
                 <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                  {chat.type === "question" ? "AI Interviewer" : "You"}
+                  {chat.type === "question" ? "AI 面试官" : "你"}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
                   {chat.timestamp}
@@ -104,7 +77,7 @@ const ChatWindow = ({ chatHistory, streamingMessage, rounds, currentRound }: Cha
                   className="text-indigo-500 dark:text-indigo-400"
                 />
                 <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                  AI Interviewer
+                  AI 面试官
                 </span>
               </div>
               {renderContent(streamingMessage)}

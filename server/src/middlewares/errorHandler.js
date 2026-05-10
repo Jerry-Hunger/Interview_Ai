@@ -1,3 +1,5 @@
+import logger from "../utils/logger.js";
+
 const errorHandler = (err, req, res, _next) => {
   if (res.headersSent) {
     res.end();
@@ -28,7 +30,7 @@ const errorHandler = (err, req, res, _next) => {
   }
 
   if (status === 500) {
-    console.error("[Error]", err.stack || err.message);
+    logger.error({ err: err.stack || err.message }, "未处理错误");
   }
 
   res.status(status).json({ success: false, error: message });

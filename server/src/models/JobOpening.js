@@ -13,7 +13,6 @@ const roundSchema = new mongoose.Schema({
     required: true,
   },
   topic: { type: String },
-  duration: { type: Number },
   notes: { type: String },
 });
 

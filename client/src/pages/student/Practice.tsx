@@ -3,62 +3,17 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import axiosInstance from "@/utils/axiosInstance";
-import { useStudentProfile, useResumeText } from "@/hooks/api";
+import { fetchStudentProfile, fetchResumeText } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
+import type { SetupData, InterviewState, Interview, InterviewPhase, PracticeStep } from "@/types";
+import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
 
 const PracticeSetup = lazy(() => import("@/components/practice/PracticeSetup"));
 const PracticeInterview = lazy(() => import("@/components/practice/PracticeInterview"));
 const PracticeResults = lazy(() => import("@/components/practice/PracticeResults"));
 
-type Step = "setup" | "interview" | "results";
-type InterviewPhase = "answering" | "ended";
-
-type SetupData = {
-  resume: string;
-  role: string;
-  difficulty: string;
-  roundType: string;
-  topic: string;
-  rounds: number;
-  questionsPerRound: number;
-};
-
-type ChatMessage = {
-  type: "question" | "answer";
-  content: string;
-  timestamp: string;
-};
-
-type InterviewState = {
-  currentQuestion: number;
-  totalQuestions: number;
-  timeRemaining: number;
-  isRecording: boolean;
-  isCameraOn: boolean;
-  isMicOn: boolean;
-  answer: string;
-  question: string;
-  chatHistory: ChatMessage[];
-};
-
-type Interview = {
-  _id: string;
-  type: "practice" | "company";
-  role: string;
-  difficulty: string;
-  roundType: string;
-  rounds: number;
-  currentRound?: number;
-  result: "success" | "failure" | "quit";
-  feedback: string;
-  transcript: { role: string; content: string }[];
-  createdAt: string;
-  finalFeedback?: string;
-  chatHistory?: { type: string; content: string; timestamp: string }[];
-  feedbacks?: string[];
-};
-
 const Practice = () => {
-  const [currentStep, setCurrentStep] = useState<Step>("setup");
+  const [currentStep, setCurrentStep] = useState<PracticeStep>("setup");
   const [isStarting, setIsStarting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [interviewPhase, setInterviewPhase] = useState<InterviewPhase>("answering");
@@ -75,8 +30,9 @@ const Practice = () => {
   const [streamingMessage, setStreamingMessage] = useState("");
   const [currentRound, setCurrentRound] = useState(1);
   const [roundInterviewIds, setRoundInterviewIds] = useState<string[]>([]);
-  const isMountedRef = useRef(true);
   const hasTriggeredAutoEndRef = useRef(false);
+  /** 退出面试防重复提交标记 */
+  const isQuittingRef = useRef(false);
 
   const [interviewState, setInterviewState] = useState<InterviewState>({
     currentQuestion: 1,
@@ -94,8 +50,12 @@ const Practice = () => {
   const location = useLocation();
   const { toast } = useToast();
 
-  const { data: userProfile } = useStudentProfile();
-  const { data: resumeText } = useResumeText(userProfile?.resumeId);
+  const { data: userProfile } = useFetch(() => fetchStudentProfile());
+  const { data: resumeText } = useFetch(
+    () => fetchResumeText((userProfile as { resumeId?: string })?.resumeId ?? ""),
+    [(userProfile as { resumeId?: string })?.resumeId],
+    { enabled: !!(userProfile as { resumeId?: string })?.resumeId }
+  );
 
   useEffect(() => {
     const state = location.state as {
@@ -136,6 +96,7 @@ const Practice = () => {
         currentRound: nextRound,
         totalRounds: effectiveSetupData.rounds,
         previousFeedback: state.previousFeedback,
+        questionsPerRound: effectiveSetupData.questionsPerRound,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).then((res) => {
@@ -174,13 +135,6 @@ const Practice = () => {
       setSetupData((prev) => ({ ...prev, resume: resumeText }));
     }
   }, [resumeText, setupData.resume]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     localStorage.removeItem("pendingNextRound");
@@ -260,16 +214,6 @@ const Practice = () => {
     }
   };
 
-  const isPerfunctoryReprompt = (text: string): boolean => {
-    // 只检测明确的 [REPROMPT] 标签，不做模糊匹配
-    return /\[REPROMPT\]/i.test(text);
-  };
-
-  // 移除 [REPROMPT] 标签，用于显示
-  const stripRepromptTag = (text: string): string => {
-    return text.replace(/\[REPROMPT\]/gi, "").trim();
-  };
-
   const handleAnswerSubmit = async () => {
     if (!interviewState.answer.trim()) {
       toast({
@@ -296,7 +240,7 @@ const Practice = () => {
 
       const effectiveRounds = setupData?.rounds || 1;
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/respond-stream`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/respond-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -342,32 +286,24 @@ const Practice = () => {
         const finalResponse = fullResponse.join("").trim();
         const isReprompt = isPerfunctoryReprompt(finalResponse);
 
-        updatedChatHistory.push({
-          type: "question",
-          content: finalResponse,
-          timestamp: new Date().toLocaleTimeString(),
-        });
-
-        // 如果是 reprompt，永远不触发结束（AI 可能先说"请详细说明"再继续问）
+        // 如果是 reprompt，清理标签后单独处理，避免重复推送
         if (isReprompt) {
+          const cleanedResponse = stripRepromptTag(finalResponse);
           toast({
             title: "请完善您的回答",
             description: "您的回答需要更详细，请重新回答上一个问题",
             variant: "default",
           });
-          // 移除 [REPROMPT] 标签后保存到 chatHistory
-          const cleanedResponse = stripRepromptTag(finalResponse);
-          const repromptChatHistory = [
-            ...updatedChatHistory,
-            {
-              type: "question" as const,
-              content: cleanedResponse,
-              timestamp: new Date().toLocaleTimeString(),
-            },
-          ];
           setInterviewState((prev) => ({
             ...prev,
-            chatHistory: repromptChatHistory,
+            chatHistory: [
+              ...updatedChatHistory,
+              {
+                type: "question" as const,
+                content: cleanedResponse,
+                timestamp: new Date().toLocaleTimeString(),
+              },
+            ],
             answer: "",
             question: cleanedResponse,
             isReprompt: true,
@@ -376,12 +312,34 @@ const Practice = () => {
           return;
         }
 
-        // 检查 AI 是否发送了结束面试的消息
-        const endKeywords = /本轮.*结束|面试到此结束|感谢.*参与|所有问题.*回答完毕/i;
+        // 正常回复：推入原始 AI 回复
+        updatedChatHistory.push({
+          type: "question",
+          content: finalResponse,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+
+        // 最后一题已回答且非 reprompt → 面试结束
+        // 服务端对最后一题使用 respondLastQuestion 提示词，AI 只会做总结或要求重答
+        // 所以非 reprompt 就意味着面试应当结束
+        if (isLastQuestion && !hasTriggeredAutoEndRef.current) {
+          hasTriggeredAutoEndRef.current = true;
+          setInterviewPhase("ended");
+          setInterviewState((prev) => ({
+            ...prev,
+            chatHistory: updatedChatHistory,
+            answer: "",
+            question: finalResponse,
+            isReprompt: false,
+          }));
+          return;
+        }
+
+        // 非最后一题：检查 AI 是否提前结束（如说了"面试结束"之类的结束语）
+        const endKeywords = /面试.*结束|到此结束|感谢.*参与|所有问题.*回答|面试.*告一段落/i;
         if (endKeywords.test(finalResponse) && !hasTriggeredAutoEndRef.current) {
           hasTriggeredAutoEndRef.current = true;
           setInterviewPhase("ended");
-          // 先更新 chatHistory 确保结束消息被记录
           setInterviewState((prev) => ({
             ...prev,
             chatHistory: updatedChatHistory,
@@ -389,19 +347,18 @@ const Practice = () => {
             question: finalResponse,
             isReprompt: false,
           }));
-          // 不再自动触发面试结束流程，由用户手动点击按钮
           return;
-        } else {
-          // 正常继续下一题
-          setInterviewState((prev) => ({
-            ...prev,
-            chatHistory: updatedChatHistory,
-            answer: "",
-            question: finalResponse,
-            isReprompt: false,
-            currentQuestion: isLastQuestion ? prev.currentQuestion : prev.currentQuestion + 1,
-          }));
         }
+
+        // 正常继续下一题
+        setInterviewState((prev) => ({
+          ...prev,
+          chatHistory: updatedChatHistory,
+          answer: "",
+          question: finalResponse,
+          isReprompt: false,
+          currentQuestion: isLastQuestion ? prev.currentQuestion : prev.currentQuestion + 1,
+        }));
       }
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
@@ -588,6 +545,7 @@ const Practice = () => {
             currentRound,
             totalRounds: effectiveRounds,
             rounds: effectiveRounds,
+            setupData: effectiveSetupData,
           },
           replace: true
         });
@@ -607,7 +565,11 @@ const Practice = () => {
   };
 
   const handleQuit = async () => {
+    // 防重复点击
+    if (isQuittingRef.current || isLoading) return;
+    isQuittingRef.current = true;
     setIsLoading(true);
+
     try {
       const res = await axiosInstance.post(
         "/interview/conclude",
@@ -632,6 +594,8 @@ const Practice = () => {
       setInterviewResults(interview);
       navigate("/student/practice-result", { state: { interview }, replace: true });
     } catch (error: unknown) {
+      // 失败时重置，允许重试
+      isQuittingRef.current = false;
       console.error("Error quitting interview:", error);
       // 检查是否是429错误（请求过于频繁）
       if (error && typeof error === 'object' && 'response' in error) {

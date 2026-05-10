@@ -1,6 +1,7 @@
 import JobOpening from "../models/JobOpening.js";
 import Application from "../models/Application.js";
 import Company from "../models/Company.js";
+import logger from "../utils/logger.js";
 
 export const getCompanyDashboard = async (req, res) => {
   try {
@@ -38,7 +39,7 @@ export const getCompanyDashboard = async (req, res) => {
       recentApplications,
     });
   } catch (err) {
-    console.error("Dashboard fetch error:", err);
+    logger.error({ err }, "获取仪表盘数据失败");
     res
       .status(500)
       .json({ message: "获取仪表盘数据失败", error: err.message });
@@ -53,7 +54,7 @@ export const getCompanyProfile = async (req, res) => {
     }
     res.json(company);
   } catch (err) {
-    console.error("获取企业信息失败:", err);
+    logger.error({ err }, "获取企业信息失败");
     res.status(500).json({ error: "服务器错误" });
   }
 };
@@ -89,7 +90,7 @@ export const updateCompanyProfile = async (req, res) => {
 
     res.json(company);
   } catch (err) {
-    console.error("更新企业信息失败:", err);
+    logger.error({ err }, "更新企业信息失败");
     res.status(500).json({ error: "服务器错误" });
   }
 };
@@ -108,7 +109,7 @@ export const deleteCompanyPhoto = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error("删除照片失败:", err);
+    logger.error({ err }, "删除照片失败");
     res.status(500).json({ error: "服务器错误" });
   }
 };

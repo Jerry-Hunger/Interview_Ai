@@ -2,6 +2,14 @@ import { useState, useRef } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Camera } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
+import { useToast } from "@/hooks/use-toast";
+
+/** 头像/Logo 上传大小限制：2MB（与后端 MAX_AVATAR_SIZE 对齐） */
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_FILE_SIZE_LABEL = "2MB";
+
+const VALID_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const VALID_TYPES_LABEL = "JPG、PNG 或 WebP";
 
 type SimpleAvatarUploaderProps = {
   avatarUrl?: string;
@@ -27,19 +35,19 @@ const SimpleAvatarUploader: React.FC<SimpleAvatarUploaderProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      alert("请选择 JPG、PNG 或 WebP 格式的图片");
+    if (!VALID_TYPES.includes(file.type)) {
+      toast({ title: "格式不支持", description: `请选择 ${VALID_TYPES_LABEL} 格式的图片`, variant: "destructive" });
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("图片大小不能超过 5MB");
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "文件过大", description: `图片大小不能超过 ${MAX_FILE_SIZE_LABEL}，当前文件 ${(file.size / 1024 / 1024).toFixed(1)}MB`, variant: "destructive" });
       return;
     }
 
@@ -56,9 +64,11 @@ const SimpleAvatarUploader: React.FC<SimpleAvatarUploaderProps> = ({
       if (response.data.success && onUploadSuccess) {
         onUploadSuccess(response.data.url);
       }
-    } catch (err) {
-      console.error("上传失败:", err);
-      alert("上传失败，请稍后重试");
+    } catch (err: unknown) {
+      // 优先显示后端返回的错误信息
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      const msg = axiosErr.response?.data?.error || "上传失败，请稍后重试";
+      toast({ title: "上传失败", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
       if (fileInputRef.current) {

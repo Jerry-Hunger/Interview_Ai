@@ -16,7 +16,8 @@ import {
   Clock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useCompanyDashboard } from "@/hooks/api";
+import { fetchCompanyDashboard } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
 import { statusColors, statusLabels } from "./shared/constants";
 
 const STAGES = [
@@ -61,7 +62,7 @@ const StatCard = ({
 
 const CompanyDashboard = () => {
   const navigate = useNavigate();
-  const { data, isPending, error } = useCompanyDashboard();
+  const { data, loading: isPending, error } = useFetch(() => fetchCompanyDashboard());
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const [animated, setAnimated] = useState(false);
   const stats = data?.stats ?? null;
@@ -113,7 +114,7 @@ const CompanyDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#101322] dark:via-[#1a1f36] dark:to-[#101322]">
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
+        {/* 页头 */}
         <div>
           <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
             企业仪表盘
@@ -123,7 +124,7 @@ const CompanyDashboard = () => {
           </p>
         </div>
 
-        {/* Stat Cards */}
+        {/* 统计卡片 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard icon={Briefcase} label="职位总数" value={stats?.totalJobs || 0} color="#6366F1" bgColor="bg-indigo-500" />
           <StatCard icon={Users} label="申请总数" value={stats?.totalApplications || 0} color="#8B5CF6" bgColor="bg-violet-500" />
@@ -131,7 +132,7 @@ const CompanyDashboard = () => {
           <StatCard icon={XCircle} label="已拒绝" value={stats?.rejected || 0} color="#EF4444" bgColor="bg-red-500" />
         </div>
 
-        {/* Quick Actions */}
+        {/* 快捷操作 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={() => navigate("/company/job/new")}
@@ -161,7 +162,7 @@ const CompanyDashboard = () => {
           </button>
         </div>
 
-        {/* Application Pipeline */}
+        {/* 申请流程 */}
         <div className="bg-white dark:bg-[#181c2f] shadow-sm rounded-2xl p-6">
           <div className="mb-6">
             <div className="flex items-center gap-2">
@@ -177,7 +178,7 @@ const CompanyDashboard = () => {
 
           {hasData ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              {/* Donut Chart */}
+              {/* 环形图 */}
               <div className="flex justify-center">
                 <div className="relative w-[240px] h-[240px]">
                   <svg
@@ -221,12 +222,12 @@ const CompanyDashboard = () => {
                       });
                     })()}
                   </svg>
-                  {/* Center label */}
+                  {/* 中心标签 */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">{total}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">总申请</span>
                   </div>
-                  {/* Hover Tooltip */}
+                  {/* 悬停提示 */}
                   {hoveredSegment !== null && chartData[hoveredSegment] && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[calc(50%+50px)] pointer-events-none z-10">
                       <div className="bg-white dark:bg-[#23263A] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
@@ -246,7 +247,7 @@ const CompanyDashboard = () => {
                 </div>
               </div>
 
-              {/* Funnel Progress Bars */}
+              {/* 漏斗进度条 */}
               <div className="space-y-4">
                 {STAGES.map((stage, idx) => {
                   const count = stats?.[stage.key] || 0;
@@ -293,7 +294,7 @@ const CompanyDashboard = () => {
                     </div>
                   );
                 })}
-                {/* Pass Rate */}
+                {/* 通过率 */}
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2 text-sm">
                     <TrendingUp size={16} className="text-emerald-500 dark:text-emerald-400" />
@@ -320,7 +321,7 @@ const CompanyDashboard = () => {
           )}
         </div>
 
-        {/* Active Jobs */}
+        {/* 活跃职位 */}
         <div className="bg-white dark:bg-[#181c2f] shadow-sm rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -384,7 +385,7 @@ const CompanyDashboard = () => {
           </div>
         </div>
 
-        {/* Recent Applications */}
+        {/* 最近申请 */}
         <div className="bg-white dark:bg-[#181c2f] shadow-sm rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
@@ -25,7 +24,6 @@ const Navigation = () => {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
 
   const [role, setRole] = useState<string | null>(() => localStorage.getItem("role"));
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
@@ -43,7 +41,6 @@ const Navigation = () => {
     setShowLogoutConfirm(false);
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    queryClient.clear(); // 清除所有 React Query 缓存
     setRole(null);
     setToken(null);
     navigate("/login");

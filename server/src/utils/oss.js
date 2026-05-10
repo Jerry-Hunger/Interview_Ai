@@ -1,9 +1,9 @@
-// server/src/utils/oss.js
 import OSS from 'ali-oss';
 
 let client = null;
 
-export const getOSSClient = () => {
+// 内部获取 OSS 客户端单例（不导出，外部使用 uploadFile / getSignedUrl）
+const getOSSClient = () => {
   if (!client) {
     client = new OSS({
       region: process.env.ALIYUN_OSS_REGION,
@@ -16,8 +16,8 @@ export const getOSSClient = () => {
 };
 
 export const uploadFile = async (file, path) => {
-  const client = getOSSClient();
-  const result = await client.put(path, file.buffer);
+  const ossClient = getOSSClient();
+  const result = await ossClient.put(path, file.buffer);
   return result.url;
 };
 
@@ -42,7 +42,8 @@ export const generatePhotoPath = (userId, ext, index) => {
 };
 
 export const getFileExtension = (filename) => {
-  return filename.split('.').pop().toLowerCase();
+  const idx = filename.lastIndexOf('.');
+  return idx > 0 ? filename.slice(idx + 1).toLowerCase() : '';
 };
 
 export const isValidImageType = (ext) => {
@@ -54,6 +55,6 @@ export const isValidResumeType = (ext) => {
 };
 
 export const getSignedUrl = (objectKey, expiresInSeconds = 3600) => {
-  const client = getOSSClient();
-  return client.signatureUrl(objectKey, { expires: expiresInSeconds });
+  const ossClient = getOSSClient();
+  return ossClient.signatureUrl(objectKey, { expires: expiresInSeconds });
 };

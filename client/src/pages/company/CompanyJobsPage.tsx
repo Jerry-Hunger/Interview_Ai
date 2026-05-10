@@ -4,36 +4,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, Calendar, Power, PowerOff } from "lucide-react";
-import { useCompanyJobs, useUpdateJobStatus, type Job } from "@/hooks/api";
+import { fetchCompanyJobs, updateJobStatus as updateJobStatusApi, type Job } from "@/services/api";
+import { useFetch } from "@/hooks/useFetch";
 import { useToast } from "@/hooks/use-toast";
 
 const CompanyJobsPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: jobs = [], isPending, error } = useCompanyJobs();
-  const updateJobStatus = useUpdateJobStatus();
+  const { data: jobs, loading: isPending, error, refetch } = useFetch(() => fetchCompanyJobs());
 
-  const handleToggleStatus = (e: React.MouseEvent, job: Job) => {
+  const handleToggleStatus = async (e: React.MouseEvent, job: Job) => {
     e.stopPropagation();
     const newStatus = job.status === "open" ? "closed" : "open";
-    updateJobStatus.mutate(
-      { jobId: job._id, status: newStatus },
-      {
-        onSuccess: () => {
-          toast({
-            title: "更新成功",
-            description: `职位已${newStatus === "open" ? "开启" : "关闭"}`,
-          });
-        },
-        onError: () => {
-          toast({
-            title: "更新失败",
-            description: "职位状态更新失败，请重试",
-            variant: "destructive",
-          });
-        },
-      }
-    );
+    try {
+      await updateJobStatusApi({ jobId: job._id, status: newStatus });
+      toast({
+        title: "更新成功",
+        description: `职位已${newStatus === "open" ? "开启" : "关闭"}`,
+      });
+      refetch();
+    } catch {
+      toast({
+        title: "更新失败",
+        description: "职位状态更新失败，请重试",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isPending) return (
@@ -50,13 +46,13 @@ const CompanyJobsPage: React.FC = () => {
           我的发布职位
         </h1>
 
-        {jobs.length === 0 ? (
+        {(jobs ?? []).length === 0 ? (
           <div className="text-gray-600 dark:text-gray-400">
             您还没有发布任何职位
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {jobs.map((job) => (
+            {(jobs ?? []).map((job) => (
               <Card
                 key={job._id}
                 className="rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition cursor-pointer"

@@ -22,38 +22,11 @@ import {
   TrendingUp,
   BookOpen
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
+import { difficultyConfig } from "@/constants/difficulty";
 import { useLocation } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance";
-
-type Interview = {
-  _id: string;
-  type: "practice" | "company";
-  role: string;
-  difficulty: string;
-  roundType: string;
-  result: "success" | "failure" | "quit";
-  feedback: string;
-  transcript: { role: string; content: string }[];
-  createdAt: string;
-  finalFeedback?: string;
-  chatHistory?: { type: string; content: string; timestamp: string }[];
-  feedbacks?: string[];
-  roleSummary?: string;
-  rounds?: number;
-  currentRound?: number;
-};
-
-type SetupData = {
-  resume: string;
-  role: string;
-  difficulty: string;
-  roundType: string;
-  topic: string;
-  rounds: number;
-  questionsPerRound: number;
-};
+import type { Interview, SetupData } from "@/types";
 
 type PendingNextRound = {
   interviewId: string;
@@ -66,35 +39,6 @@ type PracticeResultsProps = {
   setupData?: SetupData;
   rounds?: number;
   previousInterviewIds?: string[];
-};
-
-const difficultyConfig = {
-  easy: { label: "简单", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30", border: "border-emerald-200 dark:border-emerald-800", gradient: "from-emerald-500 to-teal-500" },
-  medium: { label: "中等", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30", border: "border-amber-200 dark:border-amber-800", gradient: "from-amber-500 to-orange-500" },
-  hard: { label: "困难", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-100 dark:bg-rose-900/30", border: "border-rose-200 dark:border-rose-800", gradient: "from-rose-500 to-pink-500" },
-  beginner: { label: "初级", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30", border: "border-emerald-200 dark:border-emerald-800", gradient: "from-emerald-500 to-teal-500" },
-  intermediate: { label: "中级", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30", border: "border-amber-200 dark:border-amber-800", gradient: "from-amber-500 to-orange-500" },
-};
-
-const markdownComponents = {
-  code({ className, children, ...props }: React.ComponentProps<"code">) {
-    const match = /language-(\w+)/.exec(className || "");
-    const isInline = !match && !className;
-    return isInline ? (
-      <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-sm font-mono" {...props}>{children}</code>
-    ) : (
-      <code className={`block p-4 rounded-lg bg-gray-900 dark:bg-gray-800 text-gray-100 text-sm font-mono overflow-x-auto ${className || ""}`} {...props}>{children}</code>
-    );
-  },
-  h1: ({ children }: React.ComponentProps<"h1">) => <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">{children}</h1>,
-  h2: ({ children }: React.ComponentProps<"h2">) => <h2 className="text-xl font-bold mb-3 mt-6 text-gray-900 dark:text-white">{children}</h2>,
-  h3: ({ children }: React.ComponentProps<"h3">) => <h3 className="text-lg font-semibold mb-2 mt-4 text-gray-900 dark:text-white">{children}</h3>,
-  p: ({ children }: React.ComponentProps<"p">) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300">{children}</p>,
-  ul: ({ children }: React.ComponentProps<"ul">) => <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>,
-  ol: ({ children }: React.ComponentProps<"ol">) => <ol className="list-decimal list-inside mb-4 space-y-1">{children}</ol>,
-  li: ({ children }: React.ComponentProps<"li">) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-  strong: ({ children }: React.ComponentProps<"strong">) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
-  em: ({ children }: React.ComponentProps<"em">) => <em className="italic">{children}</em>,
 };
 
 const PracticeResults = ({
@@ -161,6 +105,8 @@ const PracticeResults = ({
   }, [previousInterviewIds]);
 
   const canContinue = () => {
+    // 已完成的会话（从 Dashboard 查看历史记录），不允许继续
+    if (state?.isCompletedSession) return false;
     if (currentRound >= totalRounds) return false;
     if (interview.result !== "success") return false;
     if (pendingNextRound && pendingNextRound.interviewId === interview._id) return false;
@@ -182,7 +128,7 @@ const PracticeResults = ({
       difficulty: setupData?.difficulty || interview.difficulty || "",
       rounds: setupData?.rounds || totalRounds || interview.rounds || 1,
       questionsPerRound: setupData?.questionsPerRound || 5,
-      resume: setupData?.resume || "",
+      resume: setupData?.resume || interview.resumeText || "",
     };
     navigate("/student/practice", {
       state: {
@@ -354,9 +300,7 @@ const PracticeResults = ({
                   <AccordionContent className="px-6 pb-6">
                     <div className="p-4 rounded-xl bg-slate-50 dark:bg-gray-800/50 border border-slate-100 dark:border-gray-700">
                       <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                          {fb}
-                        </ReactMarkdown>
+                        <MarkdownRenderer content={fb} />
                       </div>
                     </div>
                   </AccordionContent>
@@ -382,9 +326,7 @@ const PracticeResults = ({
           <CardContent className="p-6">
             <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/50">
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {interview.finalFeedback}
-                </ReactMarkdown>
+                <MarkdownRenderer content={interview.finalFeedback || ""} />
               </div>
             </div>
           </CardContent>
@@ -426,9 +368,7 @@ const PracticeResults = ({
                   <span className="text-xs text-gray-400 dark:text-gray-500">{entry.timestamp}</span>
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                    {entry.content}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={entry.content} variant="compact" />
                 </p>
               </div>
             ))}

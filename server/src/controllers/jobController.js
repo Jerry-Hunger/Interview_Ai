@@ -1,7 +1,6 @@
 import JobOpening from "../models/JobOpening.js";
-import Application from "../models/Application.js";
 import Company from "../models/Company.js";
-import { createApplicationForStudent } from "../services/applicationService.js";
+import logger from "../utils/logger.js";
 import { success, error } from "../utils/apiResponse.js";
 
 export const createJob = async (req, res) => {
@@ -17,7 +16,6 @@ export const createJob = async (req, res) => {
     }
 
     const companyId = req.user.id;
-    const company = await Company.findById(companyId);
 
     const job = new JobOpening({
       companyId,
@@ -32,7 +30,7 @@ export const createJob = async (req, res) => {
 
     success(res, { msg: "职位创建成功", job }, 201);
   } catch (err) {
-    console.error("Error creating job:", err);
+    logger.error({ err }, "创建职位失败");
     error(res, "创建职位时发生错误");
   }
 };
@@ -60,21 +58,16 @@ export const listJobs = async (req, res) => {
       filter.status = status;
     }
 
-    let jobs;
     if (company) {
       const companies = await Company.find({
         companyName: new RegExp(company, 'i')
       }).select('_id');
-      const companyIds = companies.map(c => c._id);
-      filter.companyId = { $in: companyIds };
-      jobs = await JobOpening.find(filter)
-        .populate("companyId", "companyName companyLogoUrl companyLocation")
-        .sort({ createdAt: -1 });
-    } else {
-      jobs = await JobOpening.find(filter)
-        .populate("companyId", "companyName companyLogoUrl companyLocation")
-        .sort({ createdAt: -1 });
+      filter.companyId = { $in: companies.map(c => c._id) };
     }
+
+    const jobs = await JobOpening.find(filter)
+      .populate("companyId", "companyName companyLogoUrl companyLocation")
+      .sort({ createdAt: -1 });
 
     const formattedJobs = jobs.map(job => ({
       ...job.toObject(),
@@ -85,51 +78,8 @@ export const listJobs = async (req, res) => {
 
     success(res, { jobs: formattedJobs });
   } catch (err) {
-    console.error("Error listing jobs:", err);
+    logger.error({ err }, "获取职位列表失败");
     error(res, "获取职位列表失败");
-  }
-};
-
-export const applyJob = async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const candidateId = req.user.id;
-    const application = await createApplicationForStudent(candidateId, jobId);
-    success(res, { application });
-  } catch (err) {
-    if (err.status) return error(res, err.message, err.status);
-    console.error("Error applying job:", err);
-    error(res, "申请职位时发生错误");
-  }
-};
-
-export const getApplications = async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const apps = await Application.find({ jobId })
-      .populate("candidateId")
-      .populate("resumeId");
-    success(res, { applications: apps });
-  } catch (err) {
-    console.error("Error getting applications:", err);
-    error(res, "获取申请列表失败");
-  }
-};
-
-export const updateApplicationStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const app = await Application.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
-    success(res, { application: app });
-  } catch (err) {
-    console.error("Error updating application status:", err);
-    error(res, "更新申请状态失败");
   }
 };
 
@@ -152,7 +102,7 @@ export const getJobDetail = async (req, res) => {
 
     success(res, { job: formattedJob });
   } catch (err) {
-    console.error("Error getting job detail:", err);
+    logger.error({ err }, "获取职位详情失败");
     error(res, "获取职位详情失败");
   }
 };
@@ -162,7 +112,7 @@ export const companyJobs = async (req, res) => {
     const jobs = await JobOpening.find({ companyId: req.user.id });
     success(res, { jobs });
   } catch (err) {
-    console.error("Error getting company jobs:", err);
+    logger.error({ err }, "获取企业职位列表失败");
     error(res, "获取职位列表失败");
   }
 };
@@ -186,7 +136,7 @@ export const updateJobStatus = async (req, res) => {
 
     success(res, { msg: `职位已${status === "open" ? "开启" : "关闭"}`, job });
   } catch (err) {
-    console.error("Error updating job status:", err);
+    logger.error({ err }, "更新职位状态失败");
     error(res, "更新职位状态失败");
   }
 };
