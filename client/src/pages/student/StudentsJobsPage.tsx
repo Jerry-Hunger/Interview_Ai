@@ -35,6 +35,8 @@ const StudentJobsPage: React.FC = () => {
 
   const { data: jobs, loading: jobsLoading } = useFetch(() => fetchJobs(filters), [filters]);
   const { data: applications, loading: appsLoading } = useFetch(() => fetchMyApplications());
+  /** 本地记录刚申请成功的职位ID，避免refetch刷新界面 */
+  const [localAppliedIds, setLocalAppliedIds] = useState<Set<string>>(new Set());
   const loading = jobsLoading || appsLoading;
 
   const handleFilterChange = (key: string, value: string) => {
@@ -59,13 +61,15 @@ const StudentJobsPage: React.FC = () => {
     setSearchParams(new URLSearchParams());
   };
 
-  const appliedJobIds = new Set(
-    (applications ?? []).map((a: { jobId: { _id: string } | string }) => {
+  // 合并服务端已申请ID和本地刚申请成功的ID
+  const appliedJobIds = new Set([
+    ...(applications ?? []).map((a: { jobId: { _id: string } | string }) => {
       const jobId = a.jobId;
       const id = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
       return String(id ?? "");
-    })
-  );
+    }),
+    ...localAppliedIds,
+  ]);
 
   /** 投递职位 */
   const applyJob = async (jobId: string) => {
@@ -73,6 +77,7 @@ const StudentJobsPage: React.FC = () => {
     try {
       await applyJobApi(jobId);
       toast({ title: "申请成功", description: "请等待HR审核" });
+      setLocalAppliedIds((prev) => new Set(prev).add(jobId));
     } catch (err: unknown) {
       console.error("Apply failed", err);
       const axiosError = err as { response?: { data?: { msg?: string } } };

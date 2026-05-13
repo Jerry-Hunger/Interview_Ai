@@ -19,9 +19,11 @@ const JobDetailPage: React.FC = () => {
   const { data: job, loading } = useFetch(() => fetchJobDetail(id!), [id], { enabled: !!id });
   const { data: applications } = useFetch(() => fetchMyApplications());
   const [applying, setApplying] = useState(false);
+  /** 本地标记是否刚申请成功，避免refetch刷新界面 */
+  const [localApplied, setLocalApplied] = useState(false);
   const { toast } = useToast();
 
-  const hasApplied = (applications ?? []).some((a: { jobId: string | { _id: string } }) => {
+  const hasApplied = localApplied || (applications ?? []).some((a: { jobId: string | { _id: string } }) => {
     const jobId = a.jobId;
     const jid = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
     return jid?.toString() === id?.toString();
@@ -36,6 +38,7 @@ const JobDetailPage: React.FC = () => {
     try {
       await applyJobApi(id!);
       toast({ title: "申请成功", description: "请等待HR审核" });
+      setLocalApplied(true);
     } catch (err: unknown) {
       console.error("Apply failed", err);
       const axiosError = err as { response?: { data?: { msg?: string } } };

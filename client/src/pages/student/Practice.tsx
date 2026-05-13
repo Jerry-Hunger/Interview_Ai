@@ -410,7 +410,7 @@ const Practice = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/conclude-stream`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/conclude-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

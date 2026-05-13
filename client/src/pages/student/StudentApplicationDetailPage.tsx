@@ -186,7 +186,7 @@ const ApplicationDetail = () => {
       setStreamingMessage("");
       const fullResponse: string[] = [];
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/respond-stream`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/respond-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -199,7 +199,7 @@ const ApplicationDetail = () => {
           role: job?.title,
           roundType: job?.rounds[application!.currentRound]?.type,
           topic: job?.rounds[application!.currentRound]?.description,
-          difficulty: job?.difficulty,
+          difficulty: job?.rounds[application!.currentRound]?.difficulty || job?.difficulty,
           isLastQuestion,
         }),
       });
@@ -371,7 +371,7 @@ const ApplicationDetail = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://interview-ai-backend-jpck.onrender.com/api"}/interview/conclude-stream`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/conclude-stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -469,7 +469,7 @@ const ApplicationDetail = () => {
         _id: interviewId,
         type: "company" as const,
         role: job?.title || "",
-        difficulty: job?.difficulty || "",
+        difficulty: job?.rounds[application!.currentRound]?.difficulty || job?.difficulty || "",
         roundType: job?.rounds[application!.currentRound]?.type || "",
         rounds: job?.rounds?.length || 1,
         currentRound: application!.currentRound + 1,
@@ -803,7 +803,7 @@ const ApplicationDetail = () => {
             resume: resumeText,
             roundType: job?.rounds[application.currentRound]?.type || "",
             topic: job?.rounds[application.currentRound]?.description || "",
-            difficulty: job?.difficulty || "",
+            difficulty: job?.rounds[application.currentRound]?.difficulty || job?.difficulty || "",
             rounds: job?.rounds?.length || 1,
             questionsPerRound: 5,
           }}
@@ -816,6 +816,7 @@ const ApplicationDetail = () => {
           isLoading={isLoading}
           interviewPhase={interviewPhase}
           streamingMessage={streamingMessage}
+          currentRound={application.currentRound + 1}
         />
       </div>
     );
@@ -832,7 +833,7 @@ const ApplicationDetail = () => {
           setupData={{
             role: job?.title || "",
             resume: resumeText,
-            difficulty: job?.difficulty || "",
+            difficulty: job?.rounds[application.currentRound]?.difficulty || job?.difficulty || "",
             roundType: job?.rounds[application.currentRound]?.type || "",
             topic: job?.rounds[application.currentRound]?.description || "",
             rounds: job?.rounds?.length || 1,
