@@ -25,7 +25,7 @@ const statusColors: Record<Application["status"], string> = {
 
 const StudentApplicationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { data: applications, loading, refetch } = useFetch(() => fetchMyApplications());
+  const { data: applications, loading } = useFetch(() => fetchMyApplications());
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
   );
