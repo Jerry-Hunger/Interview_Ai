@@ -40,7 +40,7 @@ const testimonials = [
   {
     name: '张同学',
     role: '软件工程师 @ 科技公司',
-    content: '使用 InterviewPro 后我成功拿到了梦想的 offer！AI 的反馈非常准确，帮助我改进了技术表达。',
+    content: '使用 IntelliHire 后我成功拿到了梦想的 offer！AI 的反馈非常准确，帮助我改进了技术表达。',
     rating: 5,
   },
   {
@@ -52,7 +52,7 @@ const testimonials = [
   {
     name: '王经理',
     role: 'HR总监 @ 云端科技',
-    content: '作为企业方，InterviewPro 简化了我们的招聘流程，帮助我们更快找到优秀人才。',
+    content: '作为企业方，IntelliHire 简化了我们的招聘流程，帮助我们更快找到优秀人才。',
     rating: 5,
   },
 ];
@@ -73,7 +73,7 @@ const Index = () => {
               <span className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-700 dark:to-purple-700 bg-clip-text text-transparent"> 面试</span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-              与 AI 一起练习，获取实时反馈，迈向您梦想的工作。加入成千上万通过 InterviewPro 提升面试技能的专业人士。
+              与 AI 一起练习，获取实时反馈，迈向您梦想的工作。加入成千上万通过 IntelliHire 提升面试技能的专业人士。
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link to="/register">
@@ -203,7 +203,7 @@ const Index = () => {
             准备好迎接下一次面试了吗？
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            加入成千上万通过 InterviewPro 提升面试技能、实现职业梦想的专业人士
+            加入成千上万通过 IntelliHire 提升面试技能、实现职业梦想的专业人士
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
@@ -248,6 +248,15 @@ const Index = () => {
             </div>
             <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
               © {new Date().getFullYear()} IntelliHire. 保留所有权利。
+              <br />
+              <a
+                href="https://beian.miit.gov.cn/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                皖ICP备2026013386号-1
+              </a>
             </div>
           </div>
         </div>

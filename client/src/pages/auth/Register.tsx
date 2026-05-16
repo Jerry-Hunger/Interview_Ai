@@ -104,7 +104,7 @@ const Register = () => {
 
       toast({
         title: "注册成功",
-        description: `欢迎加入 InterviewPro！正在为您设置${role === "student" ? "学生" : "企业"}账户...`,
+        description: `欢迎加入 IntelliHire！正在为您设置${role === "student" ? "学生" : "企业"}账户...`,
       });
 
       navigate(
@@ -133,7 +133,7 @@ const Register = () => {
             <span className="text-white font-bold text-2xl">IP</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            加入 InterviewPro
+            加入 IntelliHire
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
             创建您的账户，开始您的求职之旅
@@ -159,8 +159,8 @@ const Register = () => {
                   type="button"
                   variant={role === "student" ? "default" : "outline"}
                   className={`h-20 flex-col space-y-2 ${role === "student"
-                      ? "bg-indigo-500 dark:bg-indigo-700 text-white shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                    ? "bg-indigo-500 dark:bg-indigo-700 text-white shadow-lg"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                     }`}
                   onClick={() => { setRole("student"); setRoleError(false); }}
                 >
@@ -176,8 +176,8 @@ const Register = () => {
                   type="button"
                   variant={role === "company" ? "default" : "outline"}
                   className={`h-20 flex-col space-y-2 ${role === "company"
-                      ? "bg-purple-600 dark:bg-purple-700 text-white shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                    ? "bg-purple-600 dark:bg-purple-700 text-white shadow-lg"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                     }`}
                   onClick={() => { setRole("company"); setRoleError(false); }}
                 >
