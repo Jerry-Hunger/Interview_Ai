@@ -1,51 +1,51 @@
 import nodemailer from "nodemailer";
-import { SocksClient } from "socks";
-import tls from "tls";
+import dns from "dns/promises";
 import logger from "./logger.js";
 
-// SMTP 连接配置（模块级常量，避免重复读取环境变量）
+// SMTP 连接配置
 const SMTP_CONFIG = {
-  proxyHost: process.env.QQ_SMTP_PROXY_HOST || "127.0.0.1",
-  proxyPort: parseInt(process.env.QQ_SMTP_PROXY_PORT || "7897", 10),
-  smtpHost: process.env.QQ_SMTP_HOST || "smtp.qq.com",
-  smtpPort: parseInt(process.env.QQ_SMTP_PORT || "587", 10),
+  host: process.env.QQ_SMTP_HOST || "smtp.qq.com",
+  port: parseInt(process.env.QQ_SMTP_PORT || "465", 10),
+  user: process.env.QQ_SMTP_USER,
+  pass: process.env.QQ_SMTP_PASS,
 };
 
-// 创建 QQ 邮箱 SMTP 传输器（通过 SOCKS5 代理）
-const createTransporter = async () => {
-  const { proxyHost, proxyPort, smtpHost, smtpPort } = SMTP_CONFIG;
-  const isSSL = smtpPort === 465;
-
-  // 通过 SOCKS5 代理建立到 SMTP 服务器的连接
-  const { socket: socksSocket } = await SocksClient.createConnection({
-    proxy: { host: proxyHost, port: proxyPort, type: 5 },
-    destination: { host: smtpHost, port: smtpPort },
-    command: "connect",
-  });
-
-  let secureSocket;
-  if (isSSL) {
-    secureSocket = tls.connect({
-      socket: socksSocket,
-      host: smtpHost,
-      port: smtpPort,
-      rejectUnauthorized: true,
-    });
-    await new Promise((resolve, reject) => {
-      secureSocket.on("secure", resolve);
-      secureSocket.on("error", reject);
-      setTimeout(() => reject(new Error("TLS handshake timeout")), 15000);
-    });
-  } else {
-    // 587 STARTTLS：nodemailer 会自己处理 TLS 升级，不需要提前 TLS 握手
-    secureSocket = socksSocket;
+/**
+ * 手动解析 SMTP 主机的真实 IP，绕过本地代理 DNS 劫持
+ * @returns {Promise<string>} 解析到的 IPv4 地址
+ */
+async function resolveSmtpHost() {
+  try {
+    const { address } = await dns.lookup(SMTP_CONFIG.host, { family: 4 });
+    logger.info({ host: SMTP_CONFIG.host, resolvedIp: address }, "SMTP DNS resolved");
+    return address;
+  } catch {
+    logger.warn("SMTP DNS resolution failed, using original host");
+    return SMTP_CONFIG.host;
   }
+}
 
-  // 创建 nodemailer 传输器，绑定已建立的 socket
+/**
+ * 创建邮件传输器（DNS 直连，绕过代理劫持）
+ */
+const createTransporter = async () => {
+  const host = await resolveSmtpHost();
+
   return nodemailer.createTransport({
-    streamTransport: true,
-    socket: secureSocket,
-    connectionTimeout: 15000,
+    host,
+    port: SMTP_CONFIG.port,
+    secure: SMTP_CONFIG.port === 465,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
+    tls: {
+      servername: SMTP_CONFIG.host,
+      rejectUnauthorized: true,
+    },
+    auth: {
+      user: SMTP_CONFIG.user,
+      pass: SMTP_CONFIG.pass,
+    },
   });
 };
 
@@ -66,13 +66,23 @@ export const sendInterviewApprovalEmail = async (
   try {
     const transporter = await createTransporter();
 
-    logger.info({ to: candidateEmail, ...SMTP_CONFIG }, "Attempting to send email");
+    logger.info({ to: candidateEmail, host: SMTP_CONFIG.host }, "Attempting to send email");
 
     const mailOptions = {
-      from: process.env.QQ_SMTP_USER,
+      from: `"IntelliHire" <${SMTP_CONFIG.user}>`,
       to: candidateEmail,
       subject: `${companyName} 面试通知`,
       text: `您好 ${candidateName || ""}，${companyName} 邀请您参加 ${jobTitle} 职位面试，请登录平台查看详情。`,
+      html: `
+        <div style="padding: 24px; font-family: sans-serif; color: #333;">
+          <h2 style="color: #1a73e8;">${companyName} 面试通知</h2>
+          <p>您好 <strong>${candidateName || ""}</strong>，</p>
+          <p><strong>${companyName}</strong> 邀请您参加 <strong>${jobTitle}</strong> 职位的面试。</p>
+          <p>请登录 IntelliHire 平台查看详细信息并做好准备。</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />
+          <p style="color: #999; font-size: 12px;">此邮件由 IntelliHire 系统自动发送，请勿直接回复。</p>
+        </div>
+      `,
     };
 
     const info = await transporter.sendMail(mailOptions);
