@@ -13,12 +13,14 @@ IntelliHire 是 AI 驱动的面试练习与招聘平台。学生可通过 AI 模
 | 框架 | React 19 + TypeScript 5.8 (strict) | Express 5 (ESM) |
 | 构建 | Vite 7 | Node.js |
 | UI | Tailwind CSS 4 + shadcn/ui (Radix) | - |
-| 状态 | React Query + axios | - |
+| 状态 | React Query + useFetch hook | - |
 | 路由 | React Router 7 | - |
 | 数据 | - | Mongoose 8 + MongoDB |
 | AI | DeepSeek API (deepseek-chat) | DeepSeek API |
 | 存储 | - | 阿里云 OSS |
 | 认证 | JWT Bearer Token | JWT + GitHub OAuth |
+| 日志 | - | Winston 3 |
+| 邮件 | - | Nodemailer (QQ SMTP) |
 
 ## 架构总览
 
@@ -31,23 +33,22 @@ graph TD
     B --> B1["pages (Auth/Student/Company)"]
     B --> B2["components/practice (面试核心)"]
     B --> B3["components/ui (shadcn/ui)"]
-    B --> B4["hooks/api.ts (React Query)"]
+    B --> B4["services/api.ts (API调用)"]
+    B --> B5["types/index.ts (统一类型)"]
     C --> C1["controllers (认证/面试/职位/简历/企业)"]
     C --> C2["routes (REST API)"]
     C --> C3["models (MongoDB)"]
     C --> C4["prompts (AI提示词)"]
-    C --> C5["utils (DeepSeek/OSS)"]
+    C --> C5["utils (DeepSeek/OSS/Logger/Email)"]
 
-    click B1 "./client/CLAUDE.md" "查看 client 模块文档"
-    click B2 "./client/CLAUDE.md" "查看 practice 组件文档"
-    click C1 "./server/CLAUDE.md" "查看 controllers 文档"
-    click C4 "./server/CLAUDE.md" "查看 AI 提示词文档"
+    click B "./client/CLAUDE.md" "查看 client 模块文档"
+    click C "./server/CLAUDE.md" "查看 server 模块文档"
 ```
 
 ### 通信方式
 
-- **客户端 → 服务端**: axios 实例 baseURL = `VITE_API_URL`，JWT Bearer Token 存 localStorage
-- **SSE 流式传输**: 面试对话和评估反馈支持 Server-Sent Events
+- **客户端 -> 服务端**: axios 实例 baseURL = `VITE_API_URL`，JWT Bearer Token 存 localStorage
+- **SSE 流式传输**: 面试对话、评估反馈、简历格式化均支持 Server-Sent Events
 
 ### API 路由前缀
 
@@ -56,27 +57,27 @@ graph TD
 | `/api/auth` | 认证（注册/登录/GitHub OAuth） |
 | `/api/interview` | 面试（开始/回答/结束，支持 SSE 流式） |
 | `/api/jobs` | 职位 CRUD |
-| `/api/resume` | 简历上传/解析 |
-| `/api/applications` | 申请管理/状态流转 |
+| `/api/resume` | 简历上传/解析/流式格式化 |
+| `/api/applications` | 申请管理/状态流转/邮件通知 |
 | `/api/company` | 企业资料/仪表盘 |
 | `/api/upload` | 文件上传（头像/简历/Logo/照片） |
 
 ## 核心数据模型
 
-- **User** — email/password/role(student|company)/githubId，与 Student/Company 共享 `_id`（嵌入式 profile 设计）
-- **Student** — fullName/avatarUrl/skills/education/resumeId
-- **Company** — companyName/companyLogoUrl/industry/companySize
-- **Interview** — chatHistory[]/finalFeedback/result/type/difficulty/rounds/feedbacks[]
-- **JobOpening** — companyId/title/description/skills/rounds[]/status
-- **Application** — jobId/candidateId/resumeId/currentRound/status/history[]
-- **Resume** — studentId/fileUrl/fileName/fileType/text
+- **User** -- email/password/role(student|company)/githubId，与 Student/Company 共享 `_id`（嵌入式 profile 设计）
+- **Student** -- fullName/avatarUrl/skills/education/resumeId
+- **Company** -- companyName/companyLogoUrl/industry/companySize
+- **Interview** -- chatHistory[]/finalFeedback/result/type/difficulty/rounds/feedbacks[]
+- **JobOpening** -- companyId/title/description/skills/rounds[]/status
+- **Application** -- jobId/candidateId/resumeId/currentRound/status/history[]/approvedThrough
+- **Resume** -- studentId/fileUrl/fileName/fileType/text
 
 ## 面试核心流程
 
 1. 学生上传简历 + 配置参数（职位/难度/类型/轮次）
 2. DeepSeek AI 生成开场白和第一个问题
-3. 学生回答 → AI 追问（支持普通/流式 SSE）
-4. 问答按 5 个一组分块评估 → 汇总生成最终反馈和结论
+3. 学生回答 -> AI 追问（支持普通/流式 SSE）
+4. 问答按 5 个一组分块评估 -> 汇总生成最终反馈和结论
 5. Interview 记录存入 MongoDB
 
 ### AI 角色
@@ -119,6 +120,7 @@ cd server && npm run dev      # nodemon 热重载 (5000)
 - 服务端纯 JS (ESM)，使用 `import/export`
 - 暗色主题通过 `.dark` class 切换
 - shadcn/ui 组件库不手动修改，通过 shadcn/cli 管理
+- 服务端日志使用 Winston logger（Pino 风格 API），不使用 console.log
 
 ## AI 使用指引
 
@@ -126,23 +128,21 @@ cd server && npm run dev      # nodemon 热重载 (5000)
 - AI 提示词: `server/src/prompts/system.js`（角色定义）+ `server/src/prompts/interview.js`（面试各阶段提示词）
 - 面试评估: 每 5 对 QA 分块评估（`concludeChunk`），最后汇总（`concludeFinal`）
 - 多轮面试: 前一轮结束后客户端传入 `isContinuation=true` + `previousFeedback` 触发续轮
+- 敷衍检测: AI 回复含 `[REPROMPT]` 标签时要求学生重新回答
 
 ## 覆盖率报告
 
 | 维度 | 数据 |
 |------|------|
-| 估算总文件数 | ~133 (不含 node_modules) |
-| 已扫描文件数 | ~128 |
-| 覆盖百分比 | ~96.2% |
-| 已覆盖模块 | 全部服务端工具函数 (deepseek/oss/apiResponse)、全部路由 (auth/interview)、核心页面 (CompanyProfile)、核心组件 (Navigation) |
-| 剩余缺口 | 仅剩少量边缘配置文件 |
+| 估算总文件数 | ~140 (不含 node_modules) |
+| 已扫描文件数 | ~138 |
+| 覆盖百分比 | ~98.6% |
+| 已覆盖模块 | 全部控制器/路由/模型/中间件/工具函数/常量/类型/API服务/核心组件/页面 |
+| 剩余缺口 | 无显著缺口 |
 
 ## 变更记录 (Changelog)
 
 | 日期 | 描述 |
 |------|------|
-| 2026-04-24 23:57:40 | 初始化项目文档 |
-| 2026-04-25 00:11:47 | 第一次增量更新，覆盖率提升至 75% |
-| 2026-04-25 00:23:36 | 第二次增量更新，覆盖率提升至 82% |
-| 2026-04-25 00:27:55 | 第四次增量更新，深度补扫全部 8 个缺口控制器/组件，覆盖率提升至 91% |
-| 2026-04-25 00:37:34 | 第五次增量更新，补扫 server/utils (deepseek/oss/apiResponse)、server/routes (auth/interview)、client/pages/company/CompanyProfile、client/components/Navigation，覆盖率提升至 96.2% |
+| 2026-04-24 ~ 04-25 | 初始化并 5 次增量更新，覆盖率从 0 提升至 96.2% |
+| 2026-05-24 20:55:26 | 第六次增量更新：发现 13 个新增文件（types/index.ts, services/api.ts, utils/interview.ts, constants/*, MarkdownRenderer, ResumeViewer, SimpleAvatarUploader, useFetch, emailService, logger），更新架构图与文档至 98.6% 覆盖率，生成 .claude/rules/ 规则文件 |
