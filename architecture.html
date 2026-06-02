@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliHire 系统架构图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 1100px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 标题 */
+        .main-title {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            color: #fff;
+            text-align: center;
+            padding: 24px 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 4px;
+        }
+
+        .main-title .subtitle {
+            font-size: 14px;
+            font-weight: 400;
+            margin-top: 6px;
+            opacity: 0.85;
+            letter-spacing: 2px;
+        }
+
+        /* 每个层级 */
+        .layer {
+            display: flex;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .layer:last-child {
+            border-bottom: none;
+        }
+
+        .layer-label {
+            width: 130px;
+            min-width: 130px;
+            background: #d63031;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .layer-content {
+            flex: 1;
+            padding: 18px 22px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-start;
+            align-content: flex-start;
+        }
+
+        /* 普通白色模块 */
+        .module {
+            background: #fff;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 10px 18px;
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        /* 能力层浅蓝色模块 */
+        .module.blue {
+            background: #e8f4fd;
+            border-color: #b8daff;
+        }
+
+        /* 带标题的分组模块 */
+        .group {
+            background: #fff;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 10px 14px 12px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .group-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #d63031;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .group-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .group-item {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 3px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #444;
+            white-space: nowrap;
+        }
+
+        /* 用户层特殊样式 - 大模块 */
+        .module.user {
+            padding: 14px 28px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* 流程层 */
+        .flow-content {
+            flex: 1;
+            padding: 18px 22px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .flow-step {
+            background: #e8f4fd;
+            border: 1px solid #b8daff;
+            border-radius: 4px;
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #333;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .flow-arrow {
+            font-size: 18px;
+            color: #999;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 主标题 -->
+        <div class="main-title">
+            IntelliHire 系统架构图
+            <div class="subtitle">AI 驱动的面试练习与招聘平台</div>
+        </div>
+
+        <!-- 第一层：用户层 -->
+        <div class="layer">
+            <div class="layer-label">用户层</div>
+            <div class="layer-content">
+                <div class="module user">学生用户</div>
+                <div class="module user">企业用户（HR）</div>
+            </div>
+        </div>
+
+        <!-- 第二层：应用层 -->
+        <div class="layer">
+            <div class="layer-label">应用层</div>
+            <div class="layer-content">
+                <div class="module">AI 模拟面试</div>
+                <div class="module">职位发布与管理</div>
+                <div class="module">简历上传与解析</div>
+                <div class="module">申请与候选人管理</div>
+                <div class="module">企业仪表盘</div>
+                <div class="module">GitHub OAuth 登录</div>
+                <div class="module">面试历史记录</div>
+                <div class="module">多轮面试流程</div>
+            </div>
+        </div>
+
+        <!-- 第三层：能力层 -->
+        <div class="layer">
+            <div class="layer-label">能力层</div>
+            <div class="layer-content">
+                <div class="module blue">AI 面试对话（艾莎）</div>
+                <div class="module blue">SSE 流式传输</div>
+                <div class="module blue">简历解析</div>
+                <div class="module blue">分块评估与反馈</div>
+                <div class="module blue">敷衍回答检测</div>
+                <div class="module blue">邮件通知服务</div>
+                <div class="module blue">文件上传（OSS）</div>
+                <div class="module blue">JWT 身份认证</div>
+            </div>
+        </div>
+
+        <!-- 第四层：技术层 -->
+        <div class="layer">
+            <div class="layer-label">技术层</div>
+            <div class="layer-content">
+                <div class="group">
+                    <div class="group-title">前端（Client）</div>
+                    <div class="group-items">
+                        <div class="group-item">React 19</div>
+                        <div class="group-item">TypeScript 5.8</div>
+                        <div class="group-item">Vite 7</div>
+                        <div class="group-item">Tailwind CSS 4</div>
+                        <div class="group-item">shadcn/ui (Radix)</div>
+                        <div class="group-item">React Router 7</div>
+                    </div>
+                </div>
+                <div class="group">
+                    <div class="group-title">后端（Server）</div>
+                    <div class="group-items">
+                        <div class="group-item">Express 5 (ESM)</div>
+                        <div class="group-item">Mongoose 8</div>
+                        <div class="group-item">JWT 认证</div>
+                        <div class="group-item">Winston 3 日志</div>
+                        <div class="group-item">Nodemailer (QQ SMTP)</div>
+                        <div class="group-item">Multer 文件上传</div>
+                    </div>
+                </div>
+                <div class="group">
+                    <div class="group-title">AI 服务</div>
+                    <div class="group-items">
+                        <div class="group-item">DeepSeek API</div>
+                        <div class="group-item">系统角色提示词</div>
+                        <div class="group-item">面试阶段提示词</div>
+                        <div class="group-item">指数退避重试</div>
+                        <div class="group-item">流式响应</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第五层：基础设施层 -->
+        <div class="layer">
+            <div class="layer-label">基础设施层</div>
+            <div class="layer-content">
+                <div class="group">
+                    <div class="group-title">数据存储</div>
+                    <div class="group-items">
+                        <div class="group-item">MongoDB</div>
+                        <div class="group-item">阿里云 OSS</div>
+                        <div class="group-item">localStorage (JWT)</div>
+                    </div>
+                </div>
+                <div class="group">
+                    <div class="group-title">运行环境</div>
+                    <div class="group-items">
+                        <div class="group-item">Node.js</div>
+                        <div class="group-item">Vite Dev Server (5173)</div>
+                        <div class="group-item">Express Server (5000)</div>
+                    </div>
+                </div>
+                <div class="group">
+                    <div class="group-title">第三方服务</div>
+                    <div class="group-items">
+                        <div class="group-item">GitHub OAuth</div>
+                        <div class="group-item">QQ SMTP 邮件</div>
+                        <div class="group-item">DeepSeek AI</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第六层：核心流程 -->
+        <div class="layer">
+            <div class="layer-label">核心流程</div>
+            <div class="flow-content">
+                <div class="flow-step">上传简历<br>配置参数</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">AI 生成<br>开场白</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">学生回答<br>AI 追问</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">分块评估<br>(每块3对QA)</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">汇总反馈<br>生成结论</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">记录存档<br>多轮续面</div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
