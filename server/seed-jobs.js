@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGO_URI =
-  "mongodb+srv://jerry_hunger152:qrgUdw7IGzDwHFpq@cluster0.5pio0lu.mongodb.net/intellihire?appName=Cluster0";
+const MONGO_URI = process.env.MONGO_URI;
 const COMPANY_ID = "69ff4b8793b6e814b0c9f118";
 
 const jobs = [
