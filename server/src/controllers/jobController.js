@@ -2,6 +2,7 @@ import JobOpening from "../models/JobOpening.js";
 import Company from "../models/Company.js";
 import logger from "../utils/logger.js";
 import { success, error } from "../utils/apiResponse.js";
+import { getPagination, toPaginationMeta } from "../utils/pagination.js";
 
 export const createJob = async (req, res) => {
   try {
@@ -41,14 +42,19 @@ export const createJob = async (req, res) => {
 export const listJobs = async (req, res) => {
   try {
     const { company, rounds, type, status } = req.query;
+    const pagination = getPagination(req.query);
 
     const filter = {};
 
     if (rounds) {
       if (rounds === '4+') {
-        filter['rounds'] = { $size: { $gte: 4 } };
+        // $size 不支持比较运算符，使用 $expr 才能正确筛选四轮及以上职位。
+        filter.$expr = { $gte: [{ $size: "$rounds" }, 4] };
       } else {
-        filter['rounds'] = { $size: parseInt(rounds) };
+        const roundCount = Number.parseInt(rounds, 10);
+        if (Number.isInteger(roundCount) && roundCount > 0) {
+          filter.rounds = { $size: roundCount };
+        }
       }
     }
 
@@ -68,18 +74,24 @@ export const listJobs = async (req, res) => {
       filter.companyId = { $in: companies.map(c => c._id) };
     }
 
-    const jobs = await JobOpening.find(filter)
+    const [jobs, total] = await Promise.all([
+      JobOpening.find(filter)
       .populate("companyId", "companyName companyLogoUrl companyLocation")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.pageSize)
+      .lean(),
+      JobOpening.countDocuments(filter),
+    ]);
 
     const formattedJobs = jobs.map(job => ({
-      ...job.toObject(),
+      ...job,
       companyName: job.companyId?.companyName,
       companyLogoUrl: job.companyId?.companyLogoUrl,
       companyLocation: job.companyId?.companyLocation,
     }));
 
-    success(res, { jobs: formattedJobs });
+    success(res, { jobs: formattedJobs, pagination: toPaginationMeta(pagination, total) });
   } catch (err) {
     logger.error({ err }, "获取职位列表失败");
     error(res, "获取职位列表失败");
@@ -112,8 +124,17 @@ export const getJobDetail = async (req, res) => {
 
 export const companyJobs = async (req, res) => {
   try {
-    const jobs = await JobOpening.find({ companyId: req.user.id });
-    success(res, { jobs });
+    const pagination = getPagination(req.query);
+    const filter = { companyId: req.user.id };
+    const [jobs, total] = await Promise.all([
+      JobOpening.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.pageSize)
+        .lean(),
+      JobOpening.countDocuments(filter),
+    ]);
+    success(res, { jobs, pagination: toPaginationMeta(pagination, total) });
   } catch (err) {
     logger.error({ err }, "获取企业职位列表失败");
     error(res, "获取职位列表失败");

@@ -8,6 +8,8 @@ import { createApplicationForStudent } from "../services/applicationService.js";
 import { success, error } from "../utils/apiResponse.js";
 import { sendInterviewApprovalEmail } from "../utils/emailService.js";
 import logger from "../utils/logger.js";
+import { getPagination, toPaginationMeta } from "../utils/pagination.js";
+import { canTransitionApplicationStatus } from "../services/applicationState.js";
 
 export const createApplication = async (req, res) => {
   try {
@@ -27,15 +29,22 @@ export const getMyApplications = async (req, res) => {
   try {
     const candidateId = req.user.id;
     if (!candidateId) return error(res, "未授权", 401);
+    const pagination = getPagination(req.query);
 
-    const applications = await Application.find({ candidateId })
-      .populate("jobId")
-      .populate("candidateId")
-      .populate("resumeId")
-      .sort({ createdAt: -1 });
+    const filter = { candidateId };
+    const [applications, total, student] = await Promise.all([
+      Application.find(filter)
+        .populate("jobId")
+        .populate("candidateId")
+        .populate("resumeId")
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.pageSize),
+      Application.countDocuments(filter),
+      Student.findById(candidateId).select("defaultResumeId resumeId"),
+    ]);
 
     // 仅兼容旧申请记录：未冻结简历的历史数据回退到旧默认简历。
-    const student = await Student.findById(candidateId);
     const defaultResumeId = student?.defaultResumeId || student?.resumeId;
     if (defaultResumeId) {
       const resume = await Resume.findById(defaultResumeId);
@@ -48,7 +57,7 @@ export const getMyApplications = async (req, res) => {
       }
     }
 
-    return success(res, { applications });
+    return success(res, { applications, pagination: toPaginationMeta(pagination, total) });
   } catch (err) {
     logger.error({ err }, "获取我的申请失败");
     return error(res, "服务器错误");
@@ -60,22 +69,36 @@ export const getJobApplications = async (req, res) => {
     const { jobId } = req.params;
     const job = await JobOpening.findOne({ _id: jobId, companyId: req.user.id });
     if (!job) return error(res, "职位不存在或无权访问", 404);
-    const applications = await Application.find({ jobId })
-      .populate("candidateId")
-      .populate("resumeId")
-      .sort({ createdAt: -1 });
+    const pagination = getPagination(req.query);
+    const filter = { jobId };
+    const [applications, total] = await Promise.all([
+      Application.find(filter)
+        .populate("candidateId", "fullName email skills defaultResumeId resumeId")
+        .populate("resumeId")
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.pageSize),
+      Application.countDocuments(filter),
+    ]);
+
+    // 兼容旧申请时批量查询默认简历，避免每条申请触发一次数据库访问。
+    const fallbackResumeIds = applications
+      .filter((app) => !app.resumeId && app.candidateId)
+      .map((app) => app.candidateId.defaultResumeId || app.candidateId.resumeId)
+      .filter(Boolean);
+    const resumes = fallbackResumeIds.length
+      ? await Resume.find({ _id: { $in: fallbackResumeIds } })
+      : [];
+    const resumesById = new Map(resumes.map((resume) => [String(resume._id), resume]));
 
     for (const app of applications) {
       if (!app.resumeId && app.candidateId) {
         const defaultResumeId = app.candidateId.defaultResumeId || app.candidateId.resumeId;
-        const resume = defaultResumeId && await Resume.findById(defaultResumeId);
-        if (resume) {
-          app.resumeId = resume;
-        }
+        app.resumeId = resumesById.get(String(defaultResumeId)) || null;
       }
     }
 
-    success(res, { applications });
+    success(res, { applications, pagination: toPaginationMeta(pagination, total) });
   } catch (err) {
     logger.error({ err }, "获取职位申请列表失败");
     error(res, "服务器错误");
@@ -141,14 +164,7 @@ export const updateApplicationStatus = async (req, res) => {
     }
 
     const previousStatus = application.status;
-    const allowedTransitions = {
-      applied: ["in-progress", "rejected"],
-      "in-progress": ["in-progress", "selected", "rejected"],
-      selected: ["final-selected", "rejected"],
-      "final-selected": [],
-      rejected: [],
-    };
-    if (!allowedTransitions[previousStatus].includes(status)) {
+    if (!canTransitionApplicationStatus(previousStatus, status)) {
       return error(res, "当前申请状态不允许该操作", 409);
     }
 

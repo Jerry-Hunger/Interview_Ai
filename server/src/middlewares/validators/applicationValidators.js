@@ -17,3 +17,11 @@ export const validateAddRoundResult = [
   body("roundNumber").isInt({ min: 1 }).withMessage("轮次编号无效"),
   body("interviewId").isMongoId().withMessage("无效的面试 ID"),
 ];
+
+export const validateJobApplications = [
+  param("jobId").isMongoId().withMessage("无效的职位 ID"),
+];
+
+export const validateApplicationId = [
+  param("applicationId").isMongoId().withMessage("无效的申请 ID"),
+];

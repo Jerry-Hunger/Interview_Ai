@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFetch } from "@/hooks/useFetch";
 import { fetchApplicationDetail } from "@/services/api";
 import { difficultyConfig } from "@/constants/difficulty";
-import type { InterviewState, Interview, InterviewPhase } from "@/types";
+import type { ApplicationDetail, ApplicationHistoryEntry, InterviewState, Interview, InterviewPhase } from "@/types";
 import { roundTypeConfig } from "@/constants/roundType";
 import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
 import { Loader2, Hourglass, XCircle, Trophy, Clock, Check, X } from "lucide-react";
@@ -16,30 +16,6 @@ import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 type Step = "waiting" | "interview" | "results";
-
-type RoundHistory = {
-  roundNumber: number;
-  result: string;
-  feedback?: string;
-};
-
-type ApplicationType = {
-  _id: string;
-  jobId: { title: string; description: string; difficulty: string; rounds: { type?: string; description?: string; difficulty?: string }[] };
-  resumeId?: { _id: string; fileUrl: string; fileName: string; fileType: string };
-  status: string;
-  currentRound: number;
-  approvedThrough?: number;
-  history?: RoundHistory[];
-};
-
-type JobType = {
-  title: string;
-  description: string;
-  difficulty: string;
-  rounds: { type?: string; description?: string; difficulty?: string }[];
-  company?: { name: string };
-};
 
 /** 获取难度标签文本 */
 const getDifficultyLabel = (key: string): string => {
@@ -52,13 +28,13 @@ const ApplicationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: application, loading: isPending, refetch: refetchApplication } = useFetch(
+  const { data: application, loading: isPending, refetch: refetchApplication } = useFetch<ApplicationDetail>(
     () => fetchApplicationDetail(id!),
     [id],
     { enabled: !!id }
   );
 
-  const job = (application as ApplicationType)?.jobId as JobType | null;
+  const job = application?.jobId ?? null;
 
   const [resumeText, setResumeText] = useState<string>("");
 
@@ -116,7 +92,7 @@ const ApplicationDetail = () => {
         resumeId: application!.resumeId?._id,
         applicationId: application!._id,
         roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
-        topic: job?.rounds[application!.currentRound]?.description || "",
+        topic: job?.rounds[application!.currentRound]?.topic || "",
         difficulty: job?.rounds[application!.currentRound]?.difficulty || "beginner",
         type: "company",
         isContinuation,
@@ -200,7 +176,7 @@ const ApplicationDetail = () => {
           resume: resumeText,
           role: job?.title,
           roundType: job?.rounds[application!.currentRound]?.type,
-          topic: job?.rounds[application!.currentRound]?.description,
+          topic: job?.rounds[application!.currentRound]?.topic,
           difficulty: job?.rounds[application!.currentRound]?.difficulty || job?.difficulty,
           isLastQuestion,
         }),
@@ -314,7 +290,7 @@ const ApplicationDetail = () => {
           applicationId: application!._id,
           roleSummary: job?.title,
           roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
-          customTopic: job?.rounds[application!.currentRound]?.description || "",
+          customTopic: job?.rounds[application!.currentRound]?.topic || "",
           difficulty: job?.rounds[application!.currentRound]?.difficulty || "intermediate",
           typeOfInterview: "company",
           currentRound: application!.currentRound + 1,
@@ -390,7 +366,7 @@ const ApplicationDetail = () => {
           applicationId: application!._id,
           roleSummary: job?.title,
           roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
-          customTopic: job?.rounds[application!.currentRound]?.description || "",
+          customTopic: job?.rounds[application!.currentRound]?.topic || "",
           difficulty: job?.rounds[application!.currentRound]?.difficulty || "intermediate",
           typeOfInterview: "company",
           currentRound: application!.currentRound + 1,
@@ -584,7 +560,7 @@ const ApplicationDetail = () => {
             <div className="mt-5 flex flex-wrap gap-3">
               {job.rounds && job.rounds.length > 0 && (
                 <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                  难度：{job.rounds.map((r) => getDifficultyLabel(r.difficulty || job.difficulty)).join(" → ")}
+                  难度：{job.rounds.map((r) => getDifficultyLabel(r.difficulty || job.difficulty || "beginner")).join(" → ")}
                 </span>
               )}
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -638,7 +614,7 @@ const ApplicationDetail = () => {
             {application.status === "in-progress" && (
               <div className="space-y-4">
                 {/* 检查是否有面试失败的历史记录 */}
-                {application.history && application.history.some((h: RoundHistory) => h.result === "failure") ? (
+                {application.history && application.history.some((h: ApplicationHistoryEntry) => h.result === "failure") ? (
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30">
                     <XCircle className="w-6 h-6 text-red-500" />
                     <div>
@@ -709,7 +685,7 @@ const ApplicationDetail = () => {
                   })}
                 </div>
                 {/* 如果有失败历史或企业尚未开启下一轮则不显示开始面试按钮 */}
-                {!application.history?.some((h: RoundHistory) => h.result === "failure") && application.currentRound < (application.approvedThrough || 0) && (
+                {!application.history?.some((h: ApplicationHistoryEntry) => h.result === "failure") && application.currentRound < (application.approvedThrough || 0) && (
                   <button
                     onClick={handleStartInterview}
                     disabled={isStartingInterview}
@@ -726,7 +702,7 @@ const ApplicationDetail = () => {
                   </button>
                 )}
                 {/* 企业尚未开启下一轮时显示提示 */}
-                {!application.history?.some((h: RoundHistory) => h.result === "failure") && application.currentRound >= (application.approvedThrough || 0) && (
+                {!application.history?.some((h: ApplicationHistoryEntry) => h.result === "failure") && application.currentRound >= (application.approvedThrough || 0) && (
                   <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 mt-2">
                     <Clock className="w-5 h-5 text-amber-500" />
                     <span className="text-sm text-amber-700 dark:text-amber-300">
@@ -746,7 +722,7 @@ const ApplicationDetail = () => {
                 已完成的面试
               </h2>
               <ul className="space-y-4">
-                {application.history?.map((round: RoundHistory, idx: number) => (
+                {application.history?.map((round: ApplicationHistoryEntry, idx: number) => (
                   <li
                     key={idx}
                     className="p-4 rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-[#23263A] dark:to-[#1C1E2C]"
@@ -781,7 +757,7 @@ const ApplicationDetail = () => {
           {application.status === "in-progress" &&
             job.rounds &&
             application.currentRound < job.rounds.length &&
-            !application.history?.some((h: RoundHistory) => h.result === "failure") && (
+            !application.history?.some((h) => h.result === "failure") && (
               <div className="rounded-2xl bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-lg">
                 <h2 className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 mb-3 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
@@ -791,9 +767,9 @@ const ApplicationDetail = () => {
                   <p className="font-medium text-amber-800 dark:text-amber-300">
                     第 {application.currentRound + 1} 轮：{roundTypeConfig[job.rounds[application.currentRound]?.type || '']?.label || job.rounds[application.currentRound]?.type}
                   </p>
-                  {job.rounds[application.currentRound]?.description && (
+                  {job.rounds[application.currentRound]?.topic && (
                     <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
-                      {job.rounds[application.currentRound]?.description}
+                      {job.rounds[application.currentRound]?.topic}
                     </p>
                   )}
                 </div>
@@ -812,7 +788,7 @@ const ApplicationDetail = () => {
             role: job?.title || "",
             resume: resumeText,
             roundType: job?.rounds[application.currentRound]?.type || "",
-            topic: job?.rounds[application.currentRound]?.description || "",
+            topic: job?.rounds[application.currentRound]?.topic || "",
             difficulty: job?.rounds[application.currentRound]?.difficulty || job?.difficulty || "",
             rounds: job?.rounds?.length || 1,
             questionsPerRound: 5,
@@ -845,7 +821,7 @@ const ApplicationDetail = () => {
             resume: resumeText,
             difficulty: job?.rounds[application.currentRound]?.difficulty || job?.difficulty || "",
             roundType: job?.rounds[application.currentRound]?.type || "",
-            topic: job?.rounds[application.currentRound]?.description || "",
+            topic: job?.rounds[application.currentRound]?.topic || "",
             rounds: job?.rounds?.length || 1,
             questionsPerRound: 5,
           }}

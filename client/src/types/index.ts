@@ -18,10 +18,18 @@ export type Application = {
 };
 
 /** 申请详情的完整类型（详情接口返回） */
-export type ApplicationDetail = Application & {
-  jobId: { _id: string; title: string; rounds: JobRound[] };
+export type ApplicationDetail = Omit<Application, "jobId" | "candidateId" | "currentRound"> & {
+  jobId: {
+    _id: string;
+    title: string;
+    description?: string;
+    difficulty?: string;
+    company?: { name?: string };
+    rounds: JobRound[];
+  };
   candidateId: { _id: string; fullName: string; email: string; skills?: string[] };
   resumeId?: { _id: string; fileUrl: string; fileName: string; fileType: string };
+  currentRound: number;
   approvedThrough?: number;
   history: ApplicationHistoryEntry[];
 };
@@ -30,7 +38,7 @@ export type ApplicationHistoryEntry = {
   roundNumber: number;
   interviewId?: string;
   result: "success" | "failure";
-  feedback: string;
+  feedback?: string;
 };
 
 // ─── Job 职位相关 ───

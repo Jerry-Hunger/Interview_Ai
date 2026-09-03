@@ -247,6 +247,8 @@ Authorization: Bearer <token>
 
 使用 `success()` 的接口通常返回 `{ "success": true, ... }`；认证、面试、简历及企业资料等历史接口存在各自的响应字段，客户端应以当前调用方的读取方式为准。参数校验失败统一返回 HTTP `422`。
 
+支持分页的列表接口接受正整数 `page` 与 `pageSize`（默认每页 20，最大 100），并在响应中附带 `{ page, pageSize, total, totalPages }` 形式的 `pagination` 元数据。
+
 ### 认证与账户
 
 | 方法 | 路径 | 角色 | 说明 |
@@ -263,13 +265,13 @@ Authorization: Bearer <token>
 | 方法 | 路径 | 角色 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/api/jobs` | 企业 | 创建职位及至少一个面试轮次 |
-| GET | `/api/jobs` | 学生 | 查询职位；支持 `company`、`rounds`、`type`、`status` 筛选 |
-| GET | `/api/jobs/company` | 企业 | 获取当前企业发布的职位 |
+| GET | `/api/jobs` | 学生 | 查询职位；支持 `company`、`rounds`、`type`、`status`、`page`、`pageSize` 筛选与分页 |
+| GET | `/api/jobs/company` | 企业 | 获取当前企业发布的职位；支持 `page`、`pageSize` 分页 |
 | GET | `/api/jobs/:jobId` | 学生/企业 | 获取职位详情 |
 | PATCH | `/api/jobs/:jobId/status` | 企业 | 将职位切换为 `open` 或 `closed` |
 | POST | `/api/applications` | 学生 | 投递职位；同一学生与职位不能重复投递 |
-| GET | `/api/applications/mine` | 学生 | 获取我的投递记录 |
-| GET | `/api/applications/job/:jobId` | 企业 | 获取职位的候选人申请 |
+| GET | `/api/applications/mine` | 学生 | 获取我的投递记录；支持 `page`、`pageSize` 分页 |
+| GET | `/api/applications/job/:jobId` | 企业 | 获取职位的候选人申请；支持 `page`、`pageSize` 分页 |
 | GET | `/api/applications/:applicationId` | 学生/企业 | 获取申请详情 |
 | POST | `/api/applications/:applicationId/round` | 学生 | 写入某一轮面试结果 |
 | PATCH | `/api/applications/:applicationId` | 企业 | 更新申请状态并在进入面试时异步发送邮件 |
@@ -284,7 +286,7 @@ Authorization: Bearer <token>
 | POST | `/api/interview/respond-stream` | 已登录 | 流式生成下一题或收尾问题 |
 | POST | `/api/interview/conclude` | 已登录 | 非流式生成并保存面试评估 |
 | POST | `/api/interview/conclude-stream` | 已登录 | 流式生成并保存面试评估 |
-| GET | `/api/interview/mine` | 已登录 | 获取当前用户的面试记录 |
+| GET | `/api/interview/mine` | 已登录 | 获取当前用户的面试记录；支持 `page`、`pageSize` 分页 |
 | GET | `/api/interview/:id` | 已登录 | 获取某一面试记录 |
 | POST | `/api/resume/format-resume-stream` | 已登录 | 流式格式化简历文本 |
 | GET | `/api/resume/:id` | 已登录 | 获取简历元数据 |

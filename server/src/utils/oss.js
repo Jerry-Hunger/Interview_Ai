@@ -21,6 +21,12 @@ export const uploadFile = async (file, path) => {
   return result.url;
 };
 
+/** 上传批次回滚时删除已经写入但未被业务记录引用的 OSS 对象。 */
+export const deleteFile = async (path) => {
+  const ossClient = getOSSClient();
+  await ossClient.delete(path);
+};
+
 export const generateAvatarPath = (userId, ext) => {
   const timestamp = Date.now();
   return `avatars/${userId}/${timestamp}.${ext}`;

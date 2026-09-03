@@ -11,6 +11,7 @@ import {
   concludeChunk,
   concludeFinal,
 } from "../prompts/interview.js";
+import { getPagination, toPaginationMeta } from "../utils/pagination.js";
 
 // 统一的面试结果判定：匹配"评估结论"或"结果"关键词
 const RESULT_PATTERN = /(?:评估结论|结果)\s*[：:]\s*(不?通过)/;
@@ -424,9 +425,18 @@ export const concludeInterviewStream = async (req, res) => {
 export const getUserInterviews = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const pagination = getPagination(req.query);
     logger.info({ studentId }, "获取学生面试记录");
-    const interviews = await Interview.find({ student: studentId }).sort({ createdAt: -1 });
-    res.json(interviews);
+    const filter = { student: studentId };
+    const [interviews, total] = await Promise.all([
+      Interview.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.pageSize)
+        .lean(),
+      Interview.countDocuments(filter),
+    ]);
+    res.json({ interviews, pagination: toPaginationMeta(pagination, total) });
   } catch (err) {
     logger.error({ err }, "获取面试记录失败");
     res.status(500).json({ error: "获取面试记录失败" });

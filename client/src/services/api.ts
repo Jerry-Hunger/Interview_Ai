@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/axiosInstance";
-import type { Job, Application, CompanyDashboardData, ResumeSummary } from "@/types";
+import type { Job, Application, ApplicationDetail, CompanyDashboardData, Interview, ResumeSummary } from "@/types";
 
 // 重导出类型，方便其他模块从 services/api 引入
 export type { Job, Application, CompanyDashboardData } from "@/types";
@@ -7,9 +7,10 @@ export type { Job, Application, CompanyDashboardData } from "@/types";
 // ─── 面试 ───
 
 /** 获取我的面试记录列表 */
-export const fetchMyInterviews = async () => {
+export const fetchMyInterviews = async (): Promise<Interview[]> => {
   const res = await axiosInstance.get("/interview/mine");
   if (Array.isArray(res.data)) return res.data;
+  if (Array.isArray(res.data?.interviews)) return res.data.interviews as Interview[];
   if (Array.isArray(res.data?.data)) return res.data.data;
   return [];
 };
@@ -41,9 +42,9 @@ export const fetchMyApplications = async (): Promise<Application[]> => {
 };
 
 /** 获取申请详情 */
-export const fetchApplicationDetail = async (id: string) => {
+export const fetchApplicationDetail = async (id: string): Promise<ApplicationDetail> => {
   const res = await axiosInstance.get(`/applications/${id}`);
-  return res.data?.application;
+  return res.data?.application as ApplicationDetail;
 };
 
 /** 获取某职位的所有申请 */

@@ -20,7 +20,7 @@ app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(httpLogger);
-// app.use(apiLimiter);
+app.use("/api", apiLimiter);
 
 connectDB();
 
