@@ -115,12 +115,12 @@ Interview_Ai/
 | 模型 | 作用 | 关键关联 |
 | --- | --- | --- |
 | `User` | 登录凭据与角色 | 一对一关联学生或企业资料 |
-| `Student` | 学生个人资料、技能、简历引用 | `resumeId` → `Resume` |
+| `Student` | 学生个人资料、技能、默认简历引用 | `defaultResumeId` → `Resume` |
 | `Company` | 企业资料、Logo、相册与招聘信息 | 被 `JobOpening` 引用 |
-| `Resume` | 简历文件地址、文件类型和提取后的文本 | `studentId` → `Student` |
+| `Resume` | 简历库中的一个版本，含文件、文本、状态与归档信息 | `studentId` → `Student` |
 | `JobOpening` | 职位、技能、面试轮次和开关状态 | `companyId` → `Company` |
 | `Application` | 学生投递、当前轮次、审核进度和历史结果 | 关联职位、学生、简历和面试记录 |
-| `Interview` | 对话记录、分段反馈、最终反馈和面试结果 | `student` → `Student` |
+| `Interview` | 对话记录、分段反馈、最终反馈和面试结果 | `student`、`resumeId`；企业面试额外关联申请和职位 |
 
 ## 快速开始（Docker，推荐）
 
@@ -189,6 +189,14 @@ cp server/.env.example server/.env
 ```
 
 将 `server/.env` 中的 `MONGO_URI` 保持为本地地址，或改为 MongoDB Atlas 连接串；填写 `JWT_SECRET` 与 `DEEPSEEK_API_KEY`。使用上传功能还必须配置阿里云 OSS。
+
+### 已有数据库迁移：简历库
+
+升级到支持多简历的版本后，在后端目录执行一次以下命令。该命令会把旧的 `Student.resumeId` 复制为 `defaultResumeId`，并补齐已有简历的库管理字段；不会删除旧字段或文件。
+
+```bash
+pnpm migrate:resume-library
+```
 
 ### 2. 分别启动前后端
 

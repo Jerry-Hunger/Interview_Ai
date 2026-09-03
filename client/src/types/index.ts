@@ -93,12 +93,25 @@ export type Interview = {
   roleSummary?: string;
   /** 简历文本，多轮面试续接时使用 */
   resumeText?: string;
+  resumeId?: string;
+  applicationId?: string;
+};
+
+export type ResumeSummary = {
+  _id: string;
+  title: string;
+  fileName: string;
+  fileType: "pdf" | "doc" | "docx";
+  isArchived: boolean;
+  isDefault: boolean;
+  updatedAt: string;
 };
 
 // ─── Practice/Interview 流程相关 ───
 
 export type SetupData = {
   resume: string;
+  resumeId?: string;
   role: string;
   difficulty: string;
   roundType: string;

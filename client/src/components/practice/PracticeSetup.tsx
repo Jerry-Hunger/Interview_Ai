@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Target, Play, CheckCircle, Loader2 } from "lucide-react";
 import { lazy, Suspense } from "react";
-import type { SetupData } from "@/types";
+import type { ResumeSummary, SetupData } from "@/types";
 
 // 仅在进入练习配置页后加载简历上传与本地解析功能。
 const ResumeUploader = lazy(() => import("./ResumeUploader"));
@@ -30,6 +30,7 @@ type PracticeSetupProps = {
   handleSetupSubmit: () => void;
   navigate: (path: string) => void;
   isStarting: boolean;
+  resumes: ResumeSummary[];
 };
 
 const PracticeSetup = ({
@@ -38,6 +39,7 @@ const PracticeSetup = ({
   handleSetupSubmit,
   navigate,
   isStarting,
+  resumes,
 }: PracticeSetupProps) => (
   <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div className="mb-8">
@@ -68,15 +70,32 @@ const PracticeSetup = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* 简历上传 */}
+          {/* 简历选择与上传 */}
           <div className="space-y-2">
             <Label className="flex items-center gap-1 text-gray-900 dark:text-white">
               简历 <span className="text-red-500">*</span>
             </Label>
+            {resumes.length > 0 && (
+              <Select
+                value={setupData.resumeId}
+                onValueChange={(resumeId) => setSetupData((prev) => ({ ...prev, resumeId, resume: "" }))}
+              >
+                <SelectTrigger className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <SelectValue placeholder="选择用于本次面试的简历" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#23263A]">
+                  {resumes.map((resume) => (
+                    <SelectItem key={resume._id} value={resume._id}>
+                      {resume.title}{resume.isDefault ? "（默认）" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Suspense fallback={<p className="text-sm text-gray-500">正在加载简历上传功能...</p>}>
               <ResumeUploader
-                handleDataChanged={(data: { resumeText: string }) => {
-                  setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
+                handleDataChanged={(data: { resumeText: string; resumeId?: string }) => {
+                  setSetupData((prev) => ({ ...prev, resume: data.resumeText, resumeId: data.resumeId || prev.resumeId }));
                 }}
                 initialResumeText={setupData.resume}
               />

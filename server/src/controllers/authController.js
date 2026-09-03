@@ -43,9 +43,24 @@ const fetchWithRetry = async (fn, retries = MAX_RETRIES) => {
 const getProfileModel = (role) => (role === "student" ? Student : Company);
 const getProfileFields = (role) => {
   if (role === "student") {
-    return ["fullName", "avatarUrl", "phone", "location", "education", "skills", "expectedSalaryMin", "expectedSalaryMax", "resumeId"];
+    return ["fullName", "avatarUrl", "phone", "location", "education", "skills", "expectedSalaryMin", "expectedSalaryMax"];
   }
   return ["companyName", "companyLogoUrl", "companyPhotos", "companyDescription", "companyWebsite", "companySize", "industry", "roleOffered", "companyLocation", "companyLocationCoords"];
+};
+
+/**
+ * MongoDB 单机部署不支持事务时，使用补偿删除避免留下没有资料记录的账号。
+ */
+const createUserWithProfile = async (userData, profileData) => {
+  const user = await User.create(userData);
+  try {
+    const ProfileModel = getProfileModel(user.role);
+    await ProfileModel.create({ _id: user._id, email: user.email, ...profileData });
+    return user;
+  } catch (error) {
+    await User.findByIdAndDelete(user._id);
+    throw error;
+  }
 };
 
 export const githubLogin = (req, res) => {
@@ -108,17 +123,12 @@ export const githubCallback = async (req, res) => {
           user = existingUser;
         } else {
           const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
-          user = await User.create({
+          user = await createUserWithProfile({
             role: "student",
             email: primaryEmail,
             password: hashedPassword,
             githubId,
-          });
-
-          const StudentModel = getProfileModel("student");
-          await StudentModel.create({
-            _id: user._id,
-            email: primaryEmail,
+          }, {
             fullName: name || githubLogin,
             avatarUrl,
           });
@@ -131,17 +141,12 @@ export const githubCallback = async (req, res) => {
           user = existingUser;
         } else {
           const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
-          user = await User.create({
+          user = await createUserWithProfile({
             role: "student",
             email,
             password: hashedPassword,
             githubId,
-          });
-
-          const StudentModel = getProfileModel("student");
-          await StudentModel.create({
-            _id: user._id,
-            email,
+          }, {
             fullName: name || githubLogin,
             avatarUrl,
           });
@@ -177,17 +182,7 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-      role,
-      email,
-      password: hashedPassword,
-    });
-
-    const ProfileModel = getProfileModel(role);
-    const profileData = {
-      _id: user._id,
-      email,
-    };
+    const profileData = {};
 
     if (role === "student") {
       profileData.fullName = rest.name || "";
@@ -204,7 +199,13 @@ export const register = async (req, res) => {
         : [];
     }
 
-    await ProfileModel.create(profileData);
+    const user = await createUserWithProfile({
+      role,
+      email,
+      password: hashedPassword,
+    }, profileData);
+
+    const ProfileModel = getProfileModel(role);
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -216,7 +217,8 @@ export const register = async (req, res) => {
 
     res.status(201).json({ message: "注册成功", user: { ...profile.toObject(), email }, token });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error({ err }, "注册失败");
+    res.status(500).json({ error: "注册失败，请稍后重试" });
   }
 };
 
@@ -287,7 +289,7 @@ export const updateProfile = async (req, res) => {
     const profile = await ProfileModel.findByIdAndUpdate(
       userId,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     ).select("-password");
 
     res.json({ user: profile });

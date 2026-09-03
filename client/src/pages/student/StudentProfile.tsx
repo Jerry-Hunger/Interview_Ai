@@ -8,8 +8,9 @@ import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { fetchStudentProfile, fetchResumeDetail } from "@/services/api";
+import { archiveResume, fetchMyResumes, fetchStudentProfile, setDefaultResume, updateResumeTitle } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
+import type { ResumeSummary } from "@/types";
 
 // 个人资料页不预加载本地 PDF、DOCX 与 OCR 解析功能。
 const ResumeUploader = lazy(() => import("@/components/practice/ResumeUploader"));
@@ -19,6 +20,8 @@ type UserType = {
   fullName: string;
   email: string;
   role: string;
+  defaultResumeId?: string;
+  /** 兼容迁移前的资料字段。 */
   resumeId?: string;
   phone?: string;
   location?: string;
@@ -31,27 +34,19 @@ type UserType = {
 const ProfilePage = () => {
   const { data: user, loading: isPending } = useFetch(() => fetchStudentProfile());
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [resumeFileName, setResumeFileName] = useState<string>("");
+  const [previewResumeId, setPreviewResumeId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const resumeId = (user as UserType)?.resumeId;
-  const { data: resumeDetail } = useFetch(() => fetchResumeDetail(resumeId!), [resumeId], { enabled: !!resumeId });
+  const { data: resumes, refetch: refetchResumes } = useFetch(() => fetchMyResumes());
 
   useEffect(() => {
     if (user) {
       setCurrentUser(user as UserType);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (resumeDetail?.fileName) {
-      setResumeFileName(resumeDetail.fileName);
-    }
-  }, [resumeDetail?.fileName]);
 
   const handleAvatarUploadSuccess = (url: string) => {
     setCurrentUser((prev: UserType | null) => (prev ? { ...prev, avatarUrl: url } : null));
@@ -60,13 +55,14 @@ const ProfilePage = () => {
   const handleResumeUploadSuccess = (data: { resumeId: string; fileUrl: string; fileName: string }) => {
     console.log("简历上传成功:", data);
     if (data.resumeId) {
-      setCurrentUser((prev) => (prev ? { ...prev, resumeId: data.resumeId } : null));
-      setResumeFileName(data.fileName || "");
+      setCurrentUser((prev) => (prev && !prev.defaultResumeId && !prev.resumeId
+        ? { ...prev, defaultResumeId: data.resumeId }
+        : prev));
+      void refetchResumes();
     }
   };
 
   const handleResumeTextSave = async (data: { resumeText: string; resumeId?: string; fileUrl?: string; fileName?: string }) => {
-    setResumeFileName(data.fileName || "");
     if (data.resumeId && data.resumeText) {
       try {
         await axiosInstance.put(
@@ -77,6 +73,42 @@ const ProfilePage = () => {
       } catch (err) {
         console.error("保存简历文本失败:", err);
       }
+    }
+  };
+
+  const handleSetDefaultResume = async (resumeId: string) => {
+    try {
+      await setDefaultResume(resumeId);
+      setCurrentUser((prev) => (prev ? { ...prev, defaultResumeId: resumeId, resumeId: undefined } : prev));
+      await refetchResumes();
+      toast({ title: "已设为默认简历" });
+    } catch {
+      toast({ title: "设置默认简历失败", variant: "destructive" });
+    }
+  };
+
+  const handleArchiveResume = async (resumeId: string) => {
+    try {
+      await archiveResume(resumeId);
+      setCurrentUser((prev) => prev?.defaultResumeId === resumeId
+        ? { ...prev, defaultResumeId: undefined }
+        : prev);
+      await refetchResumes();
+      toast({ title: "简历已归档", description: "历史投递和面试记录不受影响" });
+    } catch {
+      toast({ title: "归档简历失败", variant: "destructive" });
+    }
+  };
+
+  const handleRenameResume = async (resume: ResumeSummary) => {
+    const title = window.prompt("输入简历名称", resume.title)?.trim();
+    if (!title || title === resume.title) return;
+    try {
+      await updateResumeTitle(resume._id, title);
+      await refetchResumes();
+      toast({ title: "简历名称已更新" });
+    } catch {
+      toast({ title: "更新简历名称失败", variant: "destructive" });
     }
   };
 
@@ -278,28 +310,27 @@ const ProfilePage = () => {
                 简历
               </h3>
 
-              {currentUser.resumeId ? (
-                <div className="bg-gray-50 dark:bg-[#23263A] p-3 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText size={18} className="text-indigo-500 dark:text-indigo-400" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">已保存的简历</span>
-                    {resumeFileName && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">({resumeFileName})</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowModal(true)}
-                    className="cursor-pointer mt-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
-                  >
-                    预览简历
-                  </button>
-
-                  {showModal && currentUser.resumeId && (
-                    <ResumeViewer
-                      resumeId={currentUser.resumeId}
-                      onClose={() => setShowModal(false)}
-                    />
-                  )}
+              {(resumes || []).length > 0 ? (
+                <div className="space-y-2">
+                  {((resumes || []) as ResumeSummary[]).map((resume) => (
+                    <div key={resume._id} className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 dark:bg-[#23263A] p-3 rounded-lg">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText size={18} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-700 dark:text-gray-300 truncate">{resume.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{resume.fileName} · {resume.fileType.toUpperCase()}</p>
+                        </div>
+                        {resume.isDefault && <span className="text-xs rounded-full bg-indigo-100 px-2 py-1 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">默认</span>}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setPreviewResumeId(resume._id)}>预览</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleRenameResume(resume)}>重命名</Button>
+                        {!resume.isDefault && <Button size="sm" variant="outline" onClick={() => handleSetDefaultResume(resume._id)}>设为默认</Button>}
+                        <Button size="sm" variant="outline" onClick={() => handleArchiveResume(resume._id)}>归档</Button>
+                      </div>
+                    </div>
+                  ))}
+                  {previewResumeId && <ResumeViewer resumeId={previewResumeId} onClose={() => setPreviewResumeId(null)} />}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">

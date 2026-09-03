@@ -3,9 +3,9 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import axiosInstance from "@/utils/axiosInstance";
-import { fetchStudentProfile, fetchResumeText } from "@/services/api";
+import { fetchMyResumes, fetchResumeText } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
-import type { SetupData, InterviewState, Interview, InterviewPhase, PracticeStep } from "@/types";
+import type { SetupData, InterviewState, Interview, InterviewPhase, PracticeStep, ResumeSummary } from "@/types";
 import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
 
 const PracticeSetup = lazy(() => import("@/components/practice/PracticeSetup"));
@@ -50,11 +50,11 @@ const Practice = () => {
   const location = useLocation();
   const { toast } = useToast();
 
-  const { data: userProfile } = useFetch(() => fetchStudentProfile());
+  const { data: resumes } = useFetch(() => fetchMyResumes());
   const { data: resumeText } = useFetch(
-    () => fetchResumeText((userProfile as { resumeId?: string })?.resumeId ?? ""),
-    [(userProfile as { resumeId?: string })?.resumeId],
-    { enabled: !!(userProfile as { resumeId?: string })?.resumeId }
+    () => fetchResumeText(setupData.resumeId ?? ""),
+    [setupData.resumeId],
+    { enabled: !!setupData.resumeId }
   );
 
   useEffect(() => {
@@ -88,6 +88,7 @@ const Practice = () => {
       axiosInstance.post("/interview/start", {
         role: effectiveSetupData.role,
         resume: effectiveSetupData.resume,
+        resumeId: effectiveSetupData.resumeId,
         roundType: effectiveSetupData.roundType,
         topic: effectiveSetupData.topic,
         difficulty: effectiveSetupData.difficulty,
@@ -131,10 +132,16 @@ const Practice = () => {
   }, [location.state]);
 
   useEffect(() => {
-    if (resumeText && !setupData.resume) {
-      setSetupData((prev) => ({ ...prev, resume: resumeText }));
+    const defaultResume = (resumes as ResumeSummary[] | null)?.find((resume) => resume.isDefault)
+      || (resumes as ResumeSummary[] | null)?.[0];
+    if (defaultResume && !setupData.resumeId) {
+      setSetupData((prev) => ({ ...prev, resumeId: defaultResume._id }));
     }
-  }, [resumeText, setupData.resume]);
+  }, [resumes, setupData.resumeId]);
+
+  useEffect(() => {
+    if (resumeText) setSetupData((prev) => ({ ...prev, resume: resumeText }));
+  }, [resumeText]);
 
   useEffect(() => {
     localStorage.removeItem("pendingNextRound");
@@ -152,7 +159,8 @@ const Practice = () => {
       !setupData.role ||
       !setupData.difficulty ||
       !setupData.roundType ||
-      !setupData.resume
+      !setupData.resume ||
+      !setupData.resumeId
     ) {
       toast({
         title: "信息不完整",
@@ -170,6 +178,7 @@ const Practice = () => {
       const res = await axiosInstance.post("/interview/start", {
         role: setupData.role,
         resume: setupData.resume,
+        resumeId: setupData.resumeId,
         roundType: setupData.roundType,
         topic: setupData.topic,
         difficulty: setupData.difficulty,
@@ -419,6 +428,7 @@ const Practice = () => {
         body: JSON.stringify({
           history: interviewState.chatHistory,
           resumeText: effectiveSetupData.resume,
+          resumeId: effectiveSetupData.resumeId,
           roleSummary: effectiveSetupData.role,
           roundType: effectiveSetupData.roundType,
           customTopic: effectiveSetupData.topic,
@@ -576,6 +586,7 @@ const Practice = () => {
         {
           history: interviewState.chatHistory,
           resumeText: setupData.resume,
+          resumeId: setupData.resumeId,
           roleSummary: setupData.role,
           roundType: setupData.roundType,
           customTopic: setupData.topic,
@@ -626,6 +637,7 @@ const Practice = () => {
           <PracticeSetup
             setupData={setupData}
             setSetupData={setSetupData}
+            resumes={(resumes || []) as ResumeSummary[]}
             handleSetupSubmit={handleSetupSubmit}
             navigate={navigate}
             isStarting={isStarting}
@@ -693,6 +705,7 @@ const Practice = () => {
           handleSetupSubmit={handleSetupSubmit}
           navigate={navigate}
           isStarting={isStarting}
+          resumes={(resumes || []) as ResumeSummary[]}
         />
       </Suspense>
     </div>

@@ -113,6 +113,8 @@ const ApplicationDetail = () => {
       const res = await axiosInstance.post("/interview/start", {
         role: job?.title,
         resume: resumeToUse,
+        resumeId: application!.resumeId?._id,
+        applicationId: application!._id,
         roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
         topic: job?.rounds[application!.currentRound]?.description || "",
         difficulty: job?.rounds[application!.currentRound]?.difficulty || "beginner",
@@ -308,11 +310,15 @@ const ApplicationDetail = () => {
         {
           history: interviewState.chatHistory,
           resumeText: resumeText,
+          resumeId: application!.resumeId?._id,
+          applicationId: application!._id,
           roleSummary: job?.title,
           roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
           customTopic: job?.rounds[application!.currentRound]?.description || "",
           difficulty: job?.rounds[application!.currentRound]?.difficulty || "intermediate",
           typeOfInterview: "company",
+          currentRound: application!.currentRound + 1,
+          totalRounds: job?.rounds?.length || 1,
           result: "quit",
         },
         {
@@ -380,11 +386,15 @@ const ApplicationDetail = () => {
         body: JSON.stringify({
           history: interviewState.chatHistory,
           resumeText: resumeText,
+          resumeId: application!.resumeId?._id,
+          applicationId: application!._id,
           roleSummary: job?.title,
           roundType: job?.rounds[application!.currentRound]?.type || "behavioral",
           customTopic: job?.rounds[application!.currentRound]?.description || "",
           difficulty: job?.rounds[application!.currentRound]?.difficulty || "intermediate",
           typeOfInterview: "company",
+          currentRound: application!.currentRound + 1,
+          totalRounds: job?.rounds?.length || 1,
           result: "success",
         }),
       });

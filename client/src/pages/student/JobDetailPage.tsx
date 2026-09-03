@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Calendar, Layers, Building2, MapPin, Globe, Sparkles, Clock, CheckCircle2, ArrowRight, Briefcase } from "lucide-react";
-import { fetchJobDetail, fetchMyApplications, applyJob as applyJobApi } from "@/services/api";
+import { fetchJobDetail, fetchMyApplications, fetchMyResumes, applyJob as applyJobApi } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { useToast } from "@/hooks/use-toast";
 import MarkdownText from "@/components/resume/MarkdownText";
-import type { JobRound } from "@/types";
+import type { JobRound, ResumeSummary } from "@/types";
 import { difficultyConfig } from "@/constants/difficulty";
 import { roundTypeConfig } from "@/constants/roundType";
 
@@ -18,10 +19,18 @@ const JobDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: job, loading } = useFetch(() => fetchJobDetail(id!), [id], { enabled: !!id });
   const { data: applications } = useFetch(() => fetchMyApplications());
+  const { data: resumes } = useFetch(() => fetchMyResumes());
   const [applying, setApplying] = useState(false);
+  const [selectedResumeId, setSelectedResumeId] = useState("");
   /** 本地标记是否刚申请成功，避免refetch刷新界面 */
   const [localApplied, setLocalApplied] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const defaultResume = (resumes as ResumeSummary[] | null)?.find((resume) => resume.isDefault)
+      || (resumes as ResumeSummary[] | null)?.[0];
+    if (defaultResume && !selectedResumeId) setSelectedResumeId(defaultResume._id);
+  }, [resumes, selectedResumeId]);
 
   const hasApplied = localApplied || (applications ?? []).some((a: { jobId: string | { _id: string } }) => {
     const jobId = a.jobId;
@@ -34,9 +43,13 @@ const JobDetailPage: React.FC = () => {
       toast({ title: "您已申请过该职位", description: "请勿重复申请", variant: "destructive" });
       return;
     }
+    if (!selectedResumeId) {
+      toast({ title: "请先选择简历", description: "投递会固定使用所选简历版本", variant: "destructive" });
+      return;
+    }
     setApplying(true);
     try {
-      await applyJobApi(id!);
+      await applyJobApi(id!, selectedResumeId);
       toast({ title: "申请成功", description: "请等待HR审核" });
       setLocalApplied(true);
     } catch (err: unknown) {
@@ -269,6 +282,26 @@ const JobDetailPage: React.FC = () => {
 
             {/* 申请按钮区域 */}
             <div className="pt-6 border-t border-slate-200 dark:border-gray-700">
+              {!hasApplied && (
+                <div className="mb-4 max-w-md">
+                  <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">选择投递简历</p>
+                  <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="请选择一份简历" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {((resumes || []) as ResumeSummary[]).map((resume) => (
+                        <SelectItem key={resume._id} value={resume._id}>
+                          {resume.title}{resume.isDefault ? "（默认）" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(resumes || []).length === 0 && (
+                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">请先到个人资料上传简历后再投递。</p>
+                  )}
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   {hasApplied && <><CheckCircle2 className="w-4 h-4 text-green-500" />您已申请该职位</>}

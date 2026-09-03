@@ -85,7 +85,7 @@ export const updateCompanyProfile = async (req, res) => {
     const company = await Company.findByIdAndUpdate(
       req.user.id,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     ).select("-password");
 
     res.json(company);

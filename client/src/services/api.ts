@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/axiosInstance";
-import type { Job, Application, CompanyDashboardData } from "@/types";
+import type { Job, Application, CompanyDashboardData, ResumeSummary } from "@/types";
 
 // 重导出类型，方便其他模块从 services/api 引入
 export type { Job, Application, CompanyDashboardData } from "@/types";
@@ -53,8 +53,8 @@ export const fetchJobApplications = async (jobId: string) => {
 };
 
 /** 投递职位 */
-export const applyJob = async (jobId: string) => {
-  return axiosInstance.post("/applications", { jobId });
+export const applyJob = async (jobId: string, resumeId: string) => {
+  return axiosInstance.post("/applications", { jobId, resumeId });
 };
 
 /** 更新申请状态 */
@@ -130,4 +130,22 @@ export const fetchResumeText = async (resumeId: string): Promise<string> => {
 export const fetchResumeDetail = async (resumeId: string) => {
   const res = await axiosInstance.get(`/resume/${resumeId}`);
   return res.data;
+};
+
+/** 获取当前学生可选的简历库 */
+export const fetchMyResumes = async (): Promise<ResumeSummary[]> => {
+  const res = await axiosInstance.get("/resume");
+  return (res.data?.resumes || []) as ResumeSummary[];
+};
+
+export const setDefaultResume = async (resumeId: string) => {
+  return axiosInstance.patch(`/resume/${resumeId}/default`);
+};
+
+export const archiveResume = async (resumeId: string) => {
+  return axiosInstance.delete(`/resume/${resumeId}`);
+};
+
+export const updateResumeTitle = async (resumeId: string, title: string) => {
+  return axiosInstance.patch(`/resume/${resumeId}`, { title });
 };

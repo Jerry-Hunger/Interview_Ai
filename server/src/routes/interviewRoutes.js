@@ -22,7 +22,7 @@ router.post("/start", authMiddleware(), aiLimiter, validateStartInterview, valid
 router.post("/respond-stream", authMiddleware(), aiLimiter, validateRespondInterview, validate, respondToInterviewStream);
 router.post("/conclude", authMiddleware(), aiLimiter, validateConcludeInterview, validate, concludeInterview);
 router.post("/conclude-stream", authMiddleware(), aiLimiter, validateConcludeInterview, validate, concludeInterviewStream);
-router.get("/mine", authMiddleware(), getUserInterviews);
-router.get("/:id", authMiddleware(), getInterviewById);
+router.get("/mine", authMiddleware("student"), getUserInterviews);
+router.get("/:id", authMiddleware("student"), getInterviewById);
 
 export default router;

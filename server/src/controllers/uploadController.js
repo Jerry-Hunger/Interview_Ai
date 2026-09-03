@@ -2,6 +2,7 @@ import Student from "../models/Student.js";
 import Company from "../models/Company.js";
 import Resume from "../models/Resume.js";
 import User from "../models/User.js";
+import crypto from "crypto";
 import logger from "../utils/logger.js";
 import {
   uploadFile,
@@ -85,21 +86,31 @@ export const uploadResume = async (req, res) => {
 
     const path = generateResumePath(userId, ext);
     const url = await uploadFile(file, path);
-
-    const student = await Student.findById(userId);
-    if (student.resumeId) {
-      await Resume.findByIdAndDelete(student.resumeId);
-    }
+    const checksum = crypto.createHash("sha256").update(file.buffer).digest("hex");
 
     const resume = new Resume({
       studentId: userId,
       fileUrl: url,
+      fileKey: path,
       fileName: file.originalname,
+      title: req.body.title?.trim() || file.originalname,
       fileType: ext,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      checksum,
     });
     await resume.save();
 
-    await Student.findByIdAndUpdate(userId, { resumeId: resume._id });
+    const student = await Student.findById(userId);
+    // 首份简历自动设为默认；后续上传保留用户当前选择，避免改变投递和练习习惯。
+    const shouldSetAsDefault = !student?.defaultResumeId && !student?.resumeId;
+    if (shouldSetAsDefault) {
+      await Student.findByIdAndUpdate(
+        userId,
+        { defaultResumeId: resume._id, $unset: { resumeId: 1 } },
+        { runValidators: true }
+      );
+    }
 
     res.json({
       success: true,
@@ -108,6 +119,8 @@ export const uploadResume = async (req, res) => {
         id: resume._id,
         fileName: resume.fileName,
         fileType: resume.fileType,
+        title: resume.title,
+        isDefault: shouldSetAsDefault,
       },
     });
   } catch (err) {

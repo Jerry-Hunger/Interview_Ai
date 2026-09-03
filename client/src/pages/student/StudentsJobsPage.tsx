@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fetchJobs, fetchMyApplications, applyJob as applyJobApi } from "@/services/api";
+import { fetchJobs, fetchMyApplications } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { difficultyConfig } from "@/constants/difficulty";
 import type { Job } from "@/types";
@@ -11,7 +11,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -21,10 +20,8 @@ import {
 } from "@/components/ui/select";
 
 const StudentJobsPage: React.FC = () => {
-  const [applyingId, setApplyingId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [filters, setFilters] = useState({
     company: searchParams.get("company") || "",
@@ -35,8 +32,6 @@ const StudentJobsPage: React.FC = () => {
 
   const { data: jobs, loading: jobsLoading } = useFetch(() => fetchJobs(filters), [filters]);
   const { data: applications, loading: appsLoading } = useFetch(() => fetchMyApplications());
-  /** 本地记录刚申请成功的职位ID，避免refetch刷新界面 */
-  const [localAppliedIds, setLocalAppliedIds] = useState<Set<string>>(new Set());
   const loading = jobsLoading || appsLoading;
 
   const handleFilterChange = (key: string, value: string) => {
@@ -61,30 +56,19 @@ const StudentJobsPage: React.FC = () => {
     setSearchParams(new URLSearchParams());
   };
 
-  // 合并服务端已申请ID和本地刚申请成功的ID
+  // 已申请状态以服务端投递记录为准。
   const appliedJobIds = new Set([
     ...(applications ?? []).map((a: { jobId: { _id: string } | string }) => {
       const jobId = a.jobId;
       const id = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
       return String(id ?? "");
     }),
-    ...localAppliedIds,
   ]);
 
   /** 投递职位 */
-  const applyJob = async (jobId: string) => {
-    setApplyingId(jobId);
-    try {
-      await applyJobApi(jobId);
-      toast({ title: "申请成功", description: "请等待HR审核" });
-      setLocalAppliedIds((prev) => new Set(prev).add(jobId));
-    } catch (err: unknown) {
-      console.error("Apply failed", err);
-      const axiosError = err as { response?: { data?: { msg?: string } } };
-      toast({ title: "申请失败", description: axiosError.response?.data?.msg ?? "申请失败，请重试。", variant: "destructive" });
-    } finally {
-      setApplyingId(null);
-    }
+  const applyJob = (jobId: string) => {
+    // 投递前必须在详情页选择简历，避免隐式使用不符合岗位的默认版本。
+    navigate(`/student/jobs/${jobId}`);
   };
 
   const renderJobCard = (job: Job, type: "open" | "closed" | "applied") => {
@@ -222,14 +206,12 @@ const StudentJobsPage: React.FC = () => {
               {isOpen && (
                 <Button
                   onClick={() => applyJob(job._id)}
-                  disabled={applyingId === job._id || alreadyApplied}
+                  disabled={alreadyApplied}
                   size="sm"
                   className={`gap-1.5 ${alreadyApplied ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'} text-white shadow-md transition-all`}
                 >
                   {alreadyApplied ? (
                     <><CheckCircle2 className="w-3.5 h-3.5" /> 已申请</>
-                  ) : applyingId === job._id ? (
-                    "申请中..."
                   ) : (
                     <><span>立即申请</span><ArrowRight className="w-3.5 h-3.5" /></>
                   )}

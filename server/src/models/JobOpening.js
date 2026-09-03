@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const roundSchema = new mongoose.Schema({
-  roundNumber: { type: Number, required: true },
+  roundNumber: { type: Number, required: true, min: 1 },
   type: {
     type: String,
     enum: ["technical", "behavioral", "hr"],
@@ -23,8 +23,8 @@ const jobOpeningSchema = new mongoose.Schema(
       ref: "Company",
       required: true,
     },
-    title: { type: String, required: true },
-    description: { type: String, required: true },
+    title: { type: String, required: true, trim: true, maxlength: 200 },
+    description: { type: String, required: true, trim: true, maxlength: 20000 },
     skills: [{ type: String }],
     rounds: [roundSchema],
     status: { type: String, enum: ["open", "closed"], default: "open" },
@@ -33,8 +33,6 @@ const jobOpeningSchema = new mongoose.Schema(
 );
 
 jobOpeningSchema.index({ companyId: 1, createdAt: -1 });
-jobOpeningSchema.index({ companyId: 1 });
-jobOpeningSchema.index({ status: 1 });
-jobOpeningSchema.index({ createdAt: -1 });
+jobOpeningSchema.index({ status: 1, createdAt: -1 });
 
 export default mongoose.model("JobOpening", jobOpeningSchema);

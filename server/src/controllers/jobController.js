@@ -14,6 +14,9 @@ export const createJob = async (req, res) => {
     if (!Array.isArray(rounds) || rounds.length === 0) {
       return error(res, "至少需要添加一个面试环节", 400);
     }
+    if (rounds.some((round, index) => Number(round.roundNumber) !== index + 1)) {
+      return error(res, "面试轮次必须从 1 开始连续编号", 400);
+    }
 
     const companyId = req.user.id;
 

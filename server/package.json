@@ -4,7 +4,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "migrate:resume-library": "node migrate-resume-library.js"
   },
   "keywords": [],
   "author": "",
