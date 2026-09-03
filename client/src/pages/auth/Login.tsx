@@ -121,7 +121,7 @@ const Login = () => {
 
     try {
       setGithubLoading(true);
-      window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
+      window.location.href = "/api/auth/github";
     } catch (err) {
       console.error("OAuth error:", err);
       toast({

@@ -299,7 +299,7 @@ const PracticeInterview = ({
               </CardContent>
             </Card>
 
-          {/* Center - Interview Windows */}
+          {/* Center - Interview Panel */}
           <div className="col-span-6 space-y-6">
             <Card className="shadow-lg bg-white dark:bg-[#181A2A] border-0 rounded-xl">
               <CardContent className="p-4 grid grid-cols-2 gap-6 justify-items-center">

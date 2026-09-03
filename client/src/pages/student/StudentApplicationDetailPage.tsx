@@ -186,7 +186,7 @@ const ApplicationDetail = () => {
       setStreamingMessage("");
       const fullResponse: string[] = [];
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/respond-stream`, {
+      const response = await fetch("/api/interview/respond-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -371,7 +371,7 @@ const ApplicationDetail = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/conclude-stream`, {
+      const response = await fetch("/api/interview/conclude-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

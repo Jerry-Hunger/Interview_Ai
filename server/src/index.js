@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import express from "express";
-import cors from "cors";
 import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -18,16 +17,6 @@ const app = express();
 
 // 信任代理（当使用 Nginx 反向代理时必须）
 app.set('trust proxy', 1);
-
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(",").map((s) => s.trim())
-      : ["http://localhost:5173"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    credentials: true,
-  })
-);
 
 app.use(express.json());
 app.use(httpLogger);
@@ -73,5 +62,3 @@ const shutdown = (signal) => {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
-// Windows 下 nodemon 重启时发送此事件
-process.on("SIGHUP", () => shutdown("SIGHUP"));

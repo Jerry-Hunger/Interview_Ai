@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  // 浏览器始终访问同源 API；开发时由 Vite 代理，生产时由 Nginx 反代。
+  baseURL: "/api",
   withCredentials: true,
 });
 

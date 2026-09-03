@@ -119,16 +119,26 @@ ALIYUN_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI generation | ✅ |
 | `ALIYUN_OSS_*` | Aliyun OSS configuration for file storage | ❌ |
 
-### 2. Frontend Configuration (`client/.env`)
+### 2. Frontend API Configuration
 
-Create a `.env` file in the `client/` directory:
+The frontend always sends requests to the relative `/api` path; no `client/.env` API address is needed.
 
-```env
-# API base URL (no trailing slash)
-VITE_API_URL=http://localhost:5000/api
+- During local development, Vite proxies `/api` to `http://localhost:5000`.
+- In production, configure Nginx to reverse-proxy `/api` to the backend service.
+
+For example, keep the `/api` prefix when forwarding so the backend routes remain unchanged. Disable proxy buffering for the streaming interview endpoints:
+
+```nginx
+location /api/ {
+  proxy_pass http://127.0.0.1:5000;
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_buffering off;
+}
 ```
-
-For production deployment, update this to your deployed backend URL.
 
 ---
 
@@ -168,13 +178,9 @@ cd ../client
 npm install
 ```
 
-### Step 5: Configure Frontend Environment
+### Step 5: Frontend API Proxy
 
-Create `client/.env` based on the template above:
-
-```env
-VITE_API_URL=http://localhost:5000/api
-```
+No frontend environment variables are required. Vite already proxies the relative `/api` path to the local backend during development.
 
 ### Step 6: Start the Backend Server
 
