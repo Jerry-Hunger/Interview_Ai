@@ -58,7 +58,6 @@ const SimpleAvatarUploader: React.FC<SimpleAvatarUploaderProps> = ({
       const response = await axiosInstance.post(uploadEndpoint, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       if (response.data.success && onUploadSuccess) {

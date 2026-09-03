@@ -2,47 +2,57 @@ import JobOpening from "../models/JobOpening.js";
 import Application from "../models/Application.js";
 import Company from "../models/Company.js";
 import logger from "../utils/logger.js";
+import { success, error } from "../utils/apiResponse.js";
 
 export const getCompanyDashboard = async (req, res) => {
   try {
     const companyId = req.user.id;
 
-    const jobs = await JobOpening.find({ companyId }).sort({ createdAt: -1 });
+    const jobs = await JobOpening.find({ companyId })
+      .select("title status rounds createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
 
     const jobIds = jobs.map((job) => job._id);
-    const applications = await Application.find({ jobId: { $in: jobIds } })
-      .populate("candidateId", "fullName email")
-      .populate("jobId", "title");
-
     const stats = {
       totalJobs: jobs.length,
-      totalApplications: applications.length,
-      applied: applications.filter((a) => a.status === "applied").length,
-      inProgress: applications.filter((a) => a.status === "in-progress").length,
-      selected: applications.filter((a) => a.status === "selected").length,
-      finalSelected: applications.filter((a) => a.status === "final-selected")
-        .length,
-      rejected: applications.filter((a) => a.status === "rejected").length,
+      totalApplications: 0,
+      applied: 0,
+      inProgress: 0,
+      selected: 0,
+      finalSelected: 0,
+      rejected: 0,
     };
 
-    const recentApplications = await Application.find({
-      jobId: { $in: jobIds },
-    })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("candidateId", "fullName email")
-      .populate("jobId", "title");
+    // 统计由 MongoDB 聚合完成，避免仪表盘将全部申请记录加载到 Node 进程后再筛选。
+    const [statusStats, recentApplications] = await Promise.all([
+      Application.aggregate([
+        { $match: { jobId: { $in: jobIds } } },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Application.find({ jobId: { $in: jobIds } })
+        .select("candidateId jobId status createdAt")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("candidateId", "fullName email")
+        .populate("jobId", "title")
+        .lean(),
+    ]);
+    for (const item of statusStats) {
+      stats.totalApplications += item.count;
+      if (item._id === "in-progress") stats.inProgress = item.count;
+      else if (item._id === "final-selected") stats.finalSelected = item.count;
+      else if (item._id in stats) stats[item._id] = item.count;
+    }
 
-    res.json({
+    success(res, {
       stats,
       jobs,
       recentApplications,
     });
   } catch (err) {
     logger.error({ err }, "获取仪表盘数据失败");
-    res
-      .status(500)
-      .json({ message: "获取仪表盘数据失败", error: err.message });
+    error(res, "获取仪表盘数据失败");
   }
 };
 
@@ -50,12 +60,12 @@ export const getCompanyProfile = async (req, res) => {
   try {
     const company = await Company.findById(req.user.id).select("-password");
     if (!company) {
-      return res.status(404).json({ error: "企业不存在" });
+      return error(res, "企业不存在", 404);
     }
-    res.json(company);
+    success(res, { company });
   } catch (err) {
     logger.error({ err }, "获取企业信息失败");
-    res.status(500).json({ error: "服务器错误" });
+    error(res, "服务器错误");
   }
 };
 
@@ -88,10 +98,10 @@ export const updateCompanyProfile = async (req, res) => {
       { new: true, runValidators: true }
     ).select("-password");
 
-    res.json(company);
+    success(res, { company });
   } catch (err) {
     logger.error({ err }, "更新企业信息失败");
-    res.status(500).json({ error: "服务器错误" });
+    error(res, "服务器错误");
   }
 };
 
@@ -101,15 +111,15 @@ export const deleteCompanyPhoto = async (req, res) => {
     const company = await Company.findById(req.user.id);
 
     if (!company) {
-      return res.status(404).json({ error: "企业不存在" });
+      return error(res, "企业不存在", 404);
     }
 
     const photos = (company.companyPhotos || []).filter(p => p !== url);
     await Company.findByIdAndUpdate(req.user.id, { companyPhotos: photos });
 
-    res.json({ success: true });
+    success(res, { message: "企业照片已删除" });
   } catch (err) {
     logger.error({ err }, "删除照片失败");
-    res.status(500).json({ error: "服务器错误" });
+    error(res, "服务器错误");
   }
 };

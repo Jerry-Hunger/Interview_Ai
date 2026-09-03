@@ -67,8 +67,7 @@ const ProfilePage = () => {
       try {
         await axiosInstance.put(
           `/resume/${data.resumeId}/text`,
-          { text: data.resumeText },
-          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          { text: data.resumeText }
         );
       } catch (err) {
         console.error("保存简历文本失败:", err);
@@ -159,9 +158,7 @@ const ProfilePage = () => {
 
     setSaving(true);
     try {
-      const res = await axiosInstance.put("/auth/profile", updates, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const res = await axiosInstance.put("/auth/profile", updates);
       setCurrentUser(res.data.user);
       setIsEditing(false);
       toast({ title: "保存成功" });

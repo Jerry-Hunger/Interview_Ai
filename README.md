@@ -178,7 +178,7 @@ docker compose down
 
 ## 本地开发
 
-项目包含两个独立工作区，建议使用与锁文件一致的 pnpm。本地 Node.js 请使用 22.13 或更高版本；项目 Docker 镜像使用 Node.js 24。
+项目包含两个独立工作区，建议使用与锁文件一致的 pnpm。本地 Node.js 请使用 20.19 或更高版本（可执行 `nvm use` 读取 `.nvmrc`）；项目 Docker 镜像使用 Node.js 24。
 
 ### 1. 启动 MongoDB 与配置后端
 
@@ -239,13 +239,9 @@ Vite 默认地址为 `http://localhost:5173`，会自动将 `/api` 请求代理�
 
 ## API 概览
 
-除健康检查外，业务接口均以 `/api` 为前缀。需要认证的接口应携带：
+除健康检查外，业务接口均以 `/api` 为前缀。登录后服务端会设置 `HttpOnly`、`SameSite=Lax` 的 `access_token` Cookie，浏览器会自动携带；前端不可读取 JWT。服务端暂时兼容 `Authorization: Bearer <token>`，便于渐进迁移。
 
-```http
-Authorization: Bearer <token>
-```
-
-使用 `success()` 的接口通常返回 `{ "success": true, ... }`；认证、面试、简历及企业资料等历史接口存在各自的响应字段，客户端应以当前调用方的读取方式为准。参数校验失败统一返回 HTTP `422`。
+常规 JSON 成功响应使用 `{ "success": true, ... }`，失败响应使用 `{ "success": false, "error": "..." }`；SSE 端点维持流式协议。参数校验失败统一返回 HTTP `422`。
 
 支持分页的列表接口接受正整数 `page` 与 `pageSize`（默认每页 20，最大 100），并在响应中附带 `{ page, pageSize, total, totalPages }` 形式的 `pagination` 元数据。
 
@@ -254,7 +250,8 @@ Authorization: Bearer <token>
 | 方法 | 路径 | 角色 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/api/auth/register` | 公开 | 注册学生或企业账户 |
-| POST | `/api/auth/login` | 公开 | 登录并返回 JWT 与角色 |
+| POST | `/api/auth/login` | 公开 | 登录并设置 HttpOnly Cookie，返回角色与资料 |
+| POST | `/api/auth/logout` | 公开 | 清除登录 Cookie |
 | GET | `/api/auth/me` | 已登录 | 获取当前用户资料 |
 | PUT | `/api/auth/profile` | 已登录 | 更新当前用户允许修改的资料字段 |
 | GET | `/api/auth/github` | 公开 | 跳转至 GitHub 授权页 |

@@ -4,6 +4,11 @@ import type { Job, Application, ApplicationDetail, CompanyDashboardData, Intervi
 // 重导出类型，方便其他模块从 services/api 引入
 export type { Job, Application, CompanyDashboardData } from "@/types";
 
+export type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
+export type Paginated<T> = { items: T[]; pagination: Pagination };
+
+const pageParams = (page: number, pageSize = 20) => ({ page, pageSize });
+
 // ─── 面试 ───
 
 /** 获取我的面试记录列表 */
@@ -27,6 +32,11 @@ export const fetchJobs = async (filters: Record<string, string>): Promise<Job[]>
   return (res.data?.jobs || []) as Job[];
 };
 
+export const fetchJobsPage = async (filters: Record<string, string>, page: number): Promise<Paginated<Job>> => {
+  const res = await axiosInstance.get("/jobs", { params: { ...filters, ...pageParams(page) } });
+  return { items: (res.data?.jobs || []) as Job[], pagination: res.data?.pagination || { page, pageSize: 20, total: 0, totalPages: 0 } };
+};
+
 /** 获取职位详情 */
 export const fetchJobDetail = async (id: string) => {
   const res = await axiosInstance.get(`/jobs/${id}`);
@@ -41,6 +51,11 @@ export const fetchMyApplications = async (): Promise<Application[]> => {
   return (res.data?.applications || []) as Application[];
 };
 
+export const fetchMyApplicationsPage = async (page: number): Promise<Paginated<Application>> => {
+  const res = await axiosInstance.get("/applications/mine", { params: pageParams(page) });
+  return { items: (res.data?.applications || []) as Application[], pagination: res.data?.pagination || { page, pageSize: 20, total: 0, totalPages: 0 } };
+};
+
 /** 获取申请详情 */
 export const fetchApplicationDetail = async (id: string): Promise<ApplicationDetail> => {
   const res = await axiosInstance.get(`/applications/${id}`);
@@ -51,6 +66,11 @@ export const fetchApplicationDetail = async (id: string): Promise<ApplicationDet
 export const fetchJobApplications = async (jobId: string) => {
   const res = await axiosInstance.get(`/applications/job/${jobId}`);
   return res.data?.applications || [];
+};
+
+export const fetchJobApplicationsPage = async (jobId: string, page: number): Promise<Paginated<Application>> => {
+  const res = await axiosInstance.get(`/applications/job/${jobId}`, { params: pageParams(page) });
+  return { items: (res.data?.applications || []) as Application[], pagination: res.data?.pagination || { page, pageSize: 20, total: 0, totalPages: 0 } };
 };
 
 /** 投递职位 */
@@ -77,10 +97,15 @@ export const fetchCompanyJobs = async (): Promise<Job[]> => {
   return (res.data?.jobs || []) as Job[];
 };
 
+export const fetchCompanyJobsPage = async (page: number): Promise<Paginated<Job>> => {
+  const res = await axiosInstance.get("/jobs/company", { params: pageParams(page) });
+  return { items: (res.data?.jobs || []) as Job[], pagination: res.data?.pagination || { page, pageSize: 20, total: 0, totalPages: 0 } };
+};
+
 /** 获取企业资料 */
 export const fetchCompanyProfile = async () => {
   const res = await axiosInstance.get("/company/profile");
-  return res.data;
+  return res.data?.company;
 };
 
 /** 创建职位 */

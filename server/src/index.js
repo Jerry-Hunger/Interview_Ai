@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from "express";
+import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -19,6 +20,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(httpLogger);
 app.use("/api", apiLimiter);
 

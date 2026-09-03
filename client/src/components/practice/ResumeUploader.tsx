@@ -405,7 +405,6 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
       const uploadResponse = await axiosInstance.post("/upload/resume", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 

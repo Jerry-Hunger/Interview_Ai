@@ -29,7 +29,6 @@ const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const token = searchParams.get("token");
     const userRole = searchParams.get("role");
     const expired = searchParams.get("expired");
 
@@ -42,10 +41,9 @@ const Login = () => {
       });
     }
 
-    if (token) {
+    if (userRole) {
       setGithubLoading(false);
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", userRole || "student");
+      sessionStorage.setItem("role", userRole);
       navigate(userRole === "company" ? "/company/dashboard" : "/student/dashboard");
     }
   }, [searchParams, navigate, toast]);
@@ -89,8 +87,7 @@ const Login = () => {
         description: `欢迎回来！正在跳转到您的${res.data.role === "student" ? "学生" : "企业"}控制台...`,
       });
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role);
+      sessionStorage.setItem("role", res.data.role);
 
       navigate(
         res.data.role === "student"

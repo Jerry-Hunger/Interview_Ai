@@ -4,14 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, Calendar, Power, PowerOff } from "lucide-react";
-import { fetchCompanyJobs, updateJobStatus as updateJobStatusApi, type Job } from "@/services/api";
+import { fetchCompanyJobsPage, updateJobStatus as updateJobStatusApi, type Job } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import PaginationControls from "@/components/shared/PaginationControls";
 
 const CompanyJobsPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: jobs, loading: isPending, error, refetch } = useFetch(() => fetchCompanyJobs());
+  const [page, setPage] = useState(1);
+  const { data: jobs, loading: isPending, error, refetch } = useFetch(() => fetchCompanyJobsPage(page), [page]);
 
   const handleToggleStatus = async (e: React.MouseEvent, job: Job) => {
     e.stopPropagation();
@@ -46,13 +49,13 @@ const CompanyJobsPage: React.FC = () => {
           我的发布职位
         </h1>
 
-        {(jobs ?? []).length === 0 ? (
+        {(jobs?.items ?? []).length === 0 ? (
           <div className="text-gray-600 dark:text-gray-400">
             您还没有发布任何职位
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(jobs ?? []).map((job) => (
+            {(jobs?.items ?? []).map((job) => (
               <Card
                 key={job._id}
                 className="rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition cursor-pointer"
@@ -117,6 +120,7 @@ const CompanyJobsPage: React.FC = () => {
             ))}
           </div>
         )}
+        {jobs && <PaginationControls pagination={jobs.pagination} onPageChange={setPage} />}
 
         <div className="mt-8">
           <Button

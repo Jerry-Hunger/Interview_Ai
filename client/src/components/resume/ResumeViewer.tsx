@@ -33,7 +33,6 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
       xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/resume/format-resume-stream", true);
       xhr.setRequestHeader("Content-Type", "application/json");
-      xhr.setRequestHeader("Authorization", `Bearer ${localStorage.getItem("token")}`);
 
       let lastProcessedIndex = 0;
 
@@ -92,9 +91,7 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
 
       if (!text && resumeId) {
         try {
-          const textRes = await axiosInstance.get(`/resume/${resumeId}/text`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          });
+          const textRes = await axiosInstance.get(`/resume/${resumeId}/text`);
           text = textRes.data.text || "";
         } catch {
           if (!cancelled) {

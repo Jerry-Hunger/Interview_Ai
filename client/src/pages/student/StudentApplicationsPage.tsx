@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchMyApplications, type Application } from "@/services/api";
+import { fetchMyApplicationsPage, type Application } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Briefcase, ChevronDown, ChevronUp } from "lucide-react";
+import PaginationControls from "@/components/shared/PaginationControls";
 
 const statusLabels: Record<Application["status"], string> = {
   applied: "已申请",
@@ -25,7 +26,8 @@ const statusColors: Record<Application["status"], string> = {
 
 const StudentApplicationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { data: applications, loading } = useFetch(() => fetchMyApplications());
+  const [page, setPage] = useState(1);
+  const { data: applications, loading } = useFetch(() => fetchMyApplicationsPage(page), [page]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
   );
@@ -37,7 +39,7 @@ const StudentApplicationsPage: React.FC = () => {
     "final-selected": [],
     rejected: [],
   };
-  (applications ?? []).forEach((app) => {
+  (applications?.items ?? []).forEach((app) => {
     if (groupedApps[app.status]) {
       groupedApps[app.status].push(app);
     }
@@ -136,6 +138,7 @@ const StudentApplicationsPage: React.FC = () => {
           </Card>
         ))}
       </div>
+      {applications && <PaginationControls pagination={applications.pagination} onPageChange={setPage} />}
       </div>
     </>
   );

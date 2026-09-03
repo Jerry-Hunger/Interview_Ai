@@ -99,8 +99,7 @@ const Register = () => {
       });
       const data = res.data;
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", role);
+      sessionStorage.setItem("role", data.role || role);
 
       toast({
         title: "注册成功",

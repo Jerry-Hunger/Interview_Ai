@@ -8,21 +8,14 @@ const axiosInstance = axios.create({
 
 // Token 过期处理函数（导出供其他模块使用）
 export const handleTokenExpiration = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("role");
+  sessionStorage.removeItem("role");
   // 使用 window.location 跳转以确保页面完全刷新
   window.location.href = "/login?expired=true";
 };
 
-// 添加请求拦截器，自动携带 Authorization 头
+// Cookie 由浏览器自动携带，令牌不再暴露给页面脚本。
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
+  (config) => config,
   (error) => {
     return Promise.reject(error);
   }
@@ -39,6 +32,10 @@ axiosInstance.interceptors.response.use(
       if (currentPath !== "/login" && currentPath !== "/register") {
         handleTokenExpiration();
       }
+    }
+    const responseData = error.response?.data as { error?: string; message?: string } | undefined;
+    if (responseData?.error || responseData?.message) {
+      error.message = responseData.error || responseData.message;
     }
     return Promise.reject(error);
   }

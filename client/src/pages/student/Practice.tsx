@@ -7,6 +7,7 @@ import { fetchMyResumes, fetchResumeText } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import type { SetupData, InterviewState, Interview, InterviewPhase, PracticeStep, ResumeSummary } from "@/types";
 import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
+import { concludeInterviewStream, respondInterviewStream, StreamRequestError } from "@/services/interviewStream";
 
 const PracticeSetup = lazy(() => import("@/components/practice/PracticeSetup"));
 const PracticeInterview = lazy(() => import("@/components/practice/PracticeInterview"));
@@ -98,8 +99,6 @@ const Practice = () => {
         totalRounds: effectiveSetupData.rounds,
         previousFeedback: state.previousFeedback,
         questionsPerRound: effectiveSetupData.questionsPerRound,
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).then((res) => {
         const firstQuestion = res.data.message;
         setCurrentStep("interview");
@@ -183,8 +182,6 @@ const Practice = () => {
         topic: setupData.topic,
         difficulty: setupData.difficulty,
         type: "practice",
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
       const firstQuestion = res.data.message;
@@ -245,17 +242,11 @@ const Practice = () => {
     try {
       const isLastQuestion = interviewState.currentQuestion >= interviewState.totalQuestions;
       setStreamingMessage("");
-      const fullResponse: string[] = [];
 
       const effectiveRounds = setupData?.rounds || 1;
 
-      const response = await fetch("/api/interview/respond-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-        body: JSON.stringify({
+      setIsLoading(true);
+      const finalResponse = (await respondInterviewStream({
           chatHistory: updatedChatHistory,
           answer: interviewState.answer,
           resume: setupData.resume,
@@ -266,33 +257,10 @@ const Practice = () => {
           isLastQuestion,
           currentRound: effectiveRounds > 1 ? currentRound : undefined,
           totalRounds: effectiveRounds > 1 ? effectiveRounds : undefined,
-        }),
-      });
+        }, (chunk) => setStreamingMessage((previous) => previous + chunk))).trim();
+      setIsLoading(false);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("respond-stream error:", response.status, errorText);
-        throw new Error(`服务器错误: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (reader) {
-        setIsLoading(true);
-        let done = false;
-        while (!done) {
-          const { value, done: doneReading } = await reader.read();
-          done = doneReading;
-          if (value) {
-            const chunk = decoder.decode(value, { stream: !done });
-            fullResponse.push(chunk);
-            setStreamingMessage(fullResponse.join(""));
-          }
-        }
-        setIsLoading(false);
-
-        const finalResponse = fullResponse.join("").trim();
+      {
         const isReprompt = isPerfunctoryReprompt(finalResponse);
 
         // 如果是 reprompt，清理标签后单独处理，避免重复推送
@@ -372,7 +340,7 @@ const Practice = () => {
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
       // 检查是否是429错误（请求过于频繁）
-      if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 429) {
+      if (error instanceof StreamRequestError && error.status === 429) {
         toast({
           title: "AI 忙碌中",
           description: "AI 面试官需要休息一下，请稍后再试。",
@@ -409,23 +377,8 @@ const Practice = () => {
       return;
     }
 
-    const feedbacks: string[] = [];
-    let finalFeedback = "";
-    let interviewId = "";
-    let result = "";
-    let currentChunkIndex = -1;
-    let phase: "idle" | "chunk" | "final" = "idle";
-    let buffer = "";
-
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("/api/interview/conclude-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+      const conclusion = await concludeInterviewStream({
           history: interviewState.chatHistory,
           resumeText: effectiveSetupData.resume,
           resumeId: effectiveSetupData.resumeId,
@@ -436,101 +389,26 @@ const Practice = () => {
           typeOfInterview: "practice",
           currentRound: effectiveRounds > 1 ? currentRound : undefined,
           totalRounds: effectiveRounds > 1 ? effectiveRounds : undefined,
-        }),
-      });
-
-      // 检查 HTTP 状态码
-      if (!response.ok) {
-        if (response.status === 429) {
-          setIsLoading(false);
-          toast({
-            title: "AI 忙碌中",
-            description: "AI 面试官需要休息一下，请稍后再试。",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw new Error(`服务器错误: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error("无法读取响应流");
-      }
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine) continue;
-
-          if (phase === "idle") {
-            if (trimmedLine.startsWith("[CHUNK_START:")) {
-              const match = trimmedLine.match(/\[CHUNK_START:(\d+)\]/);
-              if (match) {
-                currentChunkIndex = parseInt(match[1], 10);
-                feedbacks[currentChunkIndex] = "";
-                phase = "chunk";
-                setStreamingMessage(`正在生成第 ${currentChunkIndex + 1} 部分反馈...`);
-              }
-            } else if (trimmedLine === "[FINAL_START]") {
-              phase = "final";
-              setStreamingMessage("正在生成最终评估...");
-            }
-          } else if (phase === "chunk") {
-            if (trimmedLine.startsWith("[CHUNK_END:")) {
-              phase = "idle";
-            } else {
-              if (!feedbacks[currentChunkIndex]) feedbacks[currentChunkIndex] = "";
-              feedbacks[currentChunkIndex] += trimmedLine + "\n";
-            }
-          } else if (phase === "final") {
-            if (trimmedLine.startsWith("[DONE:")) {
-              const match = trimmedLine.match(/\[DONE:([^:]+):([^\]]+)\]/);
-              if (match) {
-                interviewId = match[1];
-                result = match[2];
-              }
-            } else if (!trimmedLine.startsWith("[")) {
-              finalFeedback += trimmedLine + "\n";
-            }
-          }
-        }
-      }
-
-      if (buffer.trim() && phase === "final" && !buffer.trim().startsWith("[")) {
-        finalFeedback += buffer.trim() + "\n";
-      }
-
-      if (!interviewId) {
-        throw new Error("生成反馈失败：未收到面试ID");
-      }
-
-      finalFeedback = finalFeedback.trim();
+        }, {
+          onChunkStart: (index) => setStreamingMessage(`正在生成第 ${index + 1} 部分反馈...`),
+          onFinalStart: () => setStreamingMessage("正在生成最终评估..."),
+        });
 
       const interview = {
-        _id: interviewId,
+        _id: conclusion.interviewId,
         type: "practice" as const,
         role: effectiveSetupData.role,
         difficulty: effectiveSetupData.difficulty,
         roundType: effectiveSetupData.roundType,
         rounds: effectiveRounds || 1,
         currentRound: effectiveRounds > 1 ? currentRound : undefined,
-        result: result as "success" | "failure" | "quit",
+        result: conclusion.result,
         feedback: "",
         transcript: [],
         createdAt: new Date().toISOString(),
-        finalFeedback,
+        finalFeedback: conclusion.finalFeedback,
         chatHistory: interviewState.chatHistory,
-        feedbacks,
+        feedbacks: conclusion.feedbacks,
         resumeText: effectiveSetupData.resume,  // 保存简历文本以便后续轮次使用
       };
 
@@ -581,9 +459,7 @@ const Practice = () => {
     setIsLoading(true);
 
     try {
-      const res = await axiosInstance.post(
-        "/interview/conclude",
-        {
+      const res = await axiosInstance.post("/interview/conclude", {
           history: interviewState.chatHistory,
           resumeText: setupData.resume,
           resumeId: setupData.resumeId,
@@ -593,13 +469,7 @@ const Practice = () => {
           difficulty: setupData.difficulty,
           typeOfInterview: "practice",
           result: "quit",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+        });
       const { interview } = res.data;
 
       setInterviewResults(interview);

@@ -17,6 +17,7 @@ import {
   LogIn,
   UserPlus,
 } from "lucide-react";
+import axiosInstance from "@/utils/axiosInstance";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,22 +26,22 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [role, setRole] = useState<string | null>(() => localStorage.getItem("role"));
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [role, setRole] = useState<string | null>(() => sessionStorage.getItem("role"));
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem("role"));
 
   useEffect(() => {
-    setRole(localStorage.getItem("role"));
-    setToken(localStorage.getItem("token"));
+    setRole(sessionStorage.getItem("role"));
+    setToken(sessionStorage.getItem("role"));
   }, [location.pathname]);
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutConfirm(false);
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    await axiosInstance.post("/auth/logout").catch(() => undefined);
+    sessionStorage.removeItem("role");
     setRole(null);
     setToken(null);
     navigate("/login");

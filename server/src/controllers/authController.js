@@ -6,6 +6,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import axios from "axios";
 import logger from "../utils/logger.js";
+import { success, error } from "../utils/apiResponse.js";
+import { clearAuthCookie, setAuthCookie } from "../utils/authCookie.js";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -160,7 +162,8 @@ export const githubCallback = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    res.redirect(`${process.env.FRONTEND_URL.split(',')[0]}/login?token=${token}&role=${user.role}`);
+    setAuthCookie(res, token);
+    res.redirect(`${process.env.FRONTEND_URL.split(',')[0]}/login?role=${user.role}`);
   } catch (err) {
     logger.error({ err }, "GitHub OAuth error");
     res.status(500).json({ error: "GitHub 登录失败，请重试" });
@@ -215,10 +218,11 @@ export const register = async (req, res) => {
 
     const profile = await ProfileModel.findById(user._id).select("-password");
 
-    res.status(201).json({ message: "注册成功", user: { ...profile.toObject(), email }, token });
+    setAuthCookie(res, token);
+    success(res, { message: "注册成功", role: user.role, user: { ...profile.toObject(), email } }, 201);
   } catch (err) {
     logger.error({ err }, "注册失败");
-    res.status(500).json({ error: "注册失败，请稍后重试" });
+    error(res, "注册失败，请稍后重试");
   }
 };
 
@@ -227,16 +231,16 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "邮箱或密码错误" });
+    if (!user) return error(res, "邮箱或密码错误", 400);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "邮箱或密码错误" });
+    if (!isMatch) return error(res, "邮箱或密码错误", 400);
 
     const ProfileModel = getProfileModel(user.role);
     const profile = await ProfileModel.findById(user._id).select("-password");
 
     if (!profile) {
-      return res.status(400).json({ message: "账户数据不完整，请联系管理员或重新注册" });
+      return error(res, "账户数据不完整，请联系管理员或重新注册", 400);
     }
 
     const token = jwt.sign(
@@ -245,9 +249,11 @@ export const login = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({ token, role: user.role, user: { ...profile.toObject(), email: user.email } });
+    setAuthCookie(res, token);
+    success(res, { role: user.role, user: { ...profile.toObject(), email: user.email } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error({ err }, "登录失败");
+    error(res, "登录失败，请稍后重试");
   }
 };
 
@@ -256,16 +262,22 @@ export const me = async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "用户不存在" });
+      return error(res, "用户不存在", 404);
     }
 
     const ProfileModel = getProfileModel(user.role);
     const profile = await ProfileModel.findById(userId).select("-password");
 
-    res.json({ user: { ...profile.toObject(), email: user.email }, role: user.role });
+    success(res, { user: { ...profile.toObject(), email: user.email }, role: user.role });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error({ err }, "获取当前用户失败");
+    error(res, "获取当前用户失败");
   }
+};
+
+export const logout = (_req, res) => {
+  clearAuthCookie(res);
+  success(res, { message: "已退出登录" });
 };
 
 export const updateProfile = async (req, res) => {
@@ -273,7 +285,7 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "用户不存在" });
+      return error(res, "用户不存在", 404);
     }
 
     const ProfileModel = getProfileModel(user.role);
@@ -292,8 +304,9 @@ export const updateProfile = async (req, res) => {
       { new: true, runValidators: true }
     ).select("-password");
 
-    res.json({ user: profile });
+    success(res, { user: profile });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error({ err }, "更新用户资料失败");
+    error(res, "更新用户资料失败");
   }
 };

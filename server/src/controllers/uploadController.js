@@ -15,6 +15,7 @@ import {
   isValidImageType,
   isValidResumeType,
 } from "../utils/oss.js";
+import { isValidImageUpload, isValidResumeUpload } from "../utils/fileValidation.js";
 
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const MAX_RESUME_SIZE = 5 * 1024 * 1024;
@@ -30,7 +31,7 @@ export const uploadAvatar = async (req, res) => {
     const user = await User.findById(userId);
 
     const ext = getFileExtension(file.originalname);
-    if (!isValidImageType(ext)) {
+    if (!isValidImageType(ext) || !isValidImageUpload(file.buffer, ext)) {
       return res
         .status(400)
         .json({ success: false, error: "不支持的图片格式，仅支持 jpg、png、webp" });
@@ -70,7 +71,7 @@ export const uploadResume = async (req, res) => {
     }
 
     const ext = getFileExtension(file.originalname);
-    if (!isValidResumeType(ext)) {
+    if (!isValidResumeType(ext) || !isValidResumeUpload(file.buffer, ext)) {
       return res
         .status(400)
         .json({
@@ -145,7 +146,7 @@ export const uploadLogo = async (req, res) => {
     }
 
     const ext = getFileExtension(file.originalname);
-    if (!isValidImageType(ext)) {
+    if (!isValidImageType(ext) || !isValidImageUpload(file.buffer, ext)) {
       return res
         .status(400)
         .json({ success: false, error: "不支持的图片格式，仅支持 jpg、png、webp" });
@@ -188,7 +189,7 @@ export const uploadPhotos = async (req, res) => {
       const file = files[i];
       const ext = getFileExtension(file.originalname);
 
-      if (!isValidImageType(ext)) {
+      if (!isValidImageType(ext) || !isValidImageUpload(file.buffer, ext)) {
         return res
           .status(400)
           .json({ success: false, error: `第 ${i + 1} 张图片格式不支持，仅支持 jpg、png、webp` });

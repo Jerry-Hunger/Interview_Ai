@@ -23,15 +23,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-radix': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tooltip',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-slot',
-          ],
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-router')) return 'vendor-react'
+          if (id.includes('node_modules/@radix-ui')) return 'vendor-radix'
+          // 仅在简历上传/预览时加载解析器；将 DOCX 的 ZIP 实现再拆分，避免单块超过 500KB。
+          if (id.includes('node_modules/pdfjs-dist')) return 'vendor-pdf'
+          if (id.includes('node_modules/tesseract.js')) return 'vendor-ocr'
+          if (id.includes('node_modules/jszip')) return 'vendor-document-zip'
+          if (id.includes('node_modules/mammoth')) return 'vendor-document'
         },
       },
     },

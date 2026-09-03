@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fetchJobs, fetchMyApplications } from "@/services/api";
+import { fetchJobsPage, fetchMyApplicationsPage } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { difficultyConfig } from "@/constants/difficulty";
 import type { Job } from "@/types";
@@ -11,6 +11,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PaginationControls from "@/components/shared/PaginationControls";
 import {
   Select,
   SelectContent,
@@ -29,15 +30,17 @@ const StudentJobsPage: React.FC = () => {
     type: searchParams.get("type") || "",
     status: searchParams.get("status") || "open",
   });
+  const [page, setPage] = useState(1);
 
-  const { data: jobs, loading: jobsLoading } = useFetch(() => fetchJobs(filters), [filters]);
-  const { data: applications, loading: appsLoading } = useFetch(() => fetchMyApplications());
+  const { data: jobs, loading: jobsLoading } = useFetch(() => fetchJobsPage(filters, page), [filters, page]);
+  const { data: applications, loading: appsLoading } = useFetch(() => fetchMyApplicationsPage(1));
   const loading = jobsLoading || appsLoading;
 
   const handleFilterChange = (key: string, value: string) => {
     const normalizedValue = value === "all" ? "" : value;
     const newFilters = { ...filters, [key]: normalizedValue };
     setFilters(newFilters);
+    setPage(1);
 
     const params = new URLSearchParams();
     Object.entries(newFilters).forEach(([k, v]) => {
@@ -54,11 +57,12 @@ const StudentJobsPage: React.FC = () => {
       status: "open",
     });
     setSearchParams(new URLSearchParams());
+    setPage(1);
   };
 
   // 已申请状态以服务端投递记录为准。
   const appliedJobIds = new Set([
-    ...(applications ?? []).map((a: { jobId: { _id: string } | string }) => {
+    ...(applications?.items ?? []).map((a: { jobId: { _id: string } | string }) => {
       const jobId = a.jobId;
       const id = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
       return String(id ?? "");
@@ -323,7 +327,7 @@ const StudentJobsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {(jobs ?? []).length === 0 ? (
+            {(jobs?.items ?? []).length === 0 ? (
               <div className="text-center py-16 bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <Briefcase className="w-10 h-10 text-slate-400 dark:text-slate-500" />
@@ -332,9 +336,10 @@ const StudentJobsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {(jobs ?? []).map((job) => renderJobCard(job, job.status === "open" ? "open" : "closed"))}
+                {(jobs?.items ?? []).map((job) => renderJobCard(job, job.status === "open" ? "open" : "closed"))}
               </div>
             )}
+            {jobs && <PaginationControls pagination={jobs.pagination} onPageChange={setPage} />}
           </>
         )}
       </div>

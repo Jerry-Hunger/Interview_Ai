@@ -5,17 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Users, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
-import { fetchJobDetail, fetchJobApplications } from "@/services/api";
+import { fetchJobDetail, fetchJobApplicationsPage } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { statusColors, statusLabels } from "./shared/constants";
 import type { Application } from "@/types";
+import PaginationControls from "@/components/shared/PaginationControls";
 
 const CompanyJobApplicationsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [page, setPage] = useState(1);
 
   const { data: job, loading: jobLoading, error: jobError } = useFetch(() => fetchJobDetail(id!), [id], { enabled: !!id });
-  const { data: applications, loading: appsLoading, error: appsError } = useFetch(() => fetchJobApplications(id!), [id], { enabled: !!id });
+  const { data: applications, loading: appsLoading, error: appsError } = useFetch(() => fetchJobApplicationsPage(id!, page), [id, page], { enabled: !!id });
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
   );
@@ -43,7 +45,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
     rejected: [],
   };
 
-  (applications ?? []).forEach((app: Application) => {
+  (applications?.items ?? []).forEach((app: Application) => {
     const normalized = normalizeStatus(app.status);
     if (groupedApps[normalized]) {
       groupedApps[normalized].push(app);
@@ -172,6 +174,7 @@ const CompanyJobApplicationsPage: React.FC = () => {
             )}
           </Card>
         ))}
+        {applications && <PaginationControls pagination={applications.pagination} onPageChange={setPage} />}
       </div>
     </div>
   );
