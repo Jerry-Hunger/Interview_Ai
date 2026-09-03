@@ -2,7 +2,8 @@ FROM node:24-bookworm-slim AS build
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+# pnpm 的构建脚本白名单位于工作区配置中，需在安装依赖前复制进镜像。
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY . ./
