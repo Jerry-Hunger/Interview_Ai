@@ -110,7 +110,9 @@ ALIYUN_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `PORT` | 由 Docker Compose 固定为容器内 `5000`，无需配置 | — |
+| `CLIENT_PORT` | 前端对宿主机暴露的端口，示例配置为 `8081` | ❌ |
+| `SERVER_PORT` | 后端监听并对宿主机暴露的端口，默认 `5000` | ❌ |
+| `MONGODB_PORT` | MongoDB 对宿主机暴露的调试端口，默认 `27017` | ❌ |
 | `MONGO_URI` | MongoDB 连接字符串；默认指向 Docker Compose 内置 MongoDB | ✅ |
 | `JWT_SECRET` | Secret key for JWT token signing | ✅ |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI generation | ✅ |
@@ -180,7 +182,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-首次启动会构建前后端镜像并创建名为 `mongodb_data` 的数据卷。应用启动后访问 [http://localhost:8080](http://localhost:8080)；API 通过同源 `/api` 由 Nginx 反向代理到后端，MongoDB 与后端端口不会暴露到宿主机。
+首次启动会构建前后端镜像并创建名为 `mongodb_data` 的数据卷。应用启动后访问 `http://localhost:<CLIENT_PORT>`（按示例配置为 [http://localhost:8081](http://localhost:8081)）；API 通过同源 `/api` 由 Nginx 反向代理到后端，同时可通过 `http://localhost:<SERVER_PORT>`（默认 `http://localhost:5000`）直接调试 API。MongoDB 也会映射到 `mongodb://localhost:<MONGODB_PORT>`（默认 `mongodb://localhost:27017`），便于使用数据库客户端调试。
 
 查看运行状态与日志：
 
@@ -203,7 +205,7 @@ docker compose down
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/intellihire
 ```
 
-GitHub OAuth 回调默认地址为 `http://localhost:8080`。部署到其他域名时，修改 `.env`：
+GitHub OAuth 回调按示例配置为 `http://localhost:8081`。如修改 `CLIENT_PORT`，也要同步修改 `.env` 中的 `FRONTEND_URL`；部署到其他域名时同样修改该项：
 
 ```bash
 FRONTEND_URL=https://example.com
