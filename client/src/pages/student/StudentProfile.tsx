@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Phone, MapPin, DollarSign, GraduationCap, Code, User } from "lucide-react";
 import axiosInstance from "@/utils/axiosInstance";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import ResumeUploader from "@/components/practice/ResumeUploader";
 import ResumeViewer from "@/components/resume/ResumeViewer";
 import SimpleAvatarUploader from "@/components/ui/SimpleAvatarUploader";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { fetchStudentProfile, fetchResumeDetail } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
+
+// 个人资料页不预加载本地 PDF、DOCX 与 OCR 解析功能。
+const ResumeUploader = lazy(() => import("@/components/practice/ResumeUploader"));
 
 type UserType = {
   avatarUrl?: string;
@@ -306,10 +308,12 @@ const ProfilePage = () => {
               )}
 
               <div className="mt-4">
-                <ResumeUploader
-                  handleDataChanged={handleResumeTextSave}
-                  onUploadSuccess={handleResumeUploadSuccess}
-                />
+                <Suspense fallback={<p className="text-sm text-gray-500">正在加载简历上传功能...</p>}>
+                  <ResumeUploader
+                    handleDataChanged={handleResumeTextSave}
+                    onUploadSuccess={handleResumeUploadSuccess}
+                  />
+                </Suspense>
               </div>
             </div>
           </CardContent>

@@ -18,8 +18,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Target, Play, CheckCircle, Loader2 } from "lucide-react";
-import ResumeUploader from "./ResumeUploader";
+import { lazy, Suspense } from "react";
 import type { SetupData } from "@/types";
+
+// 仅在进入练习配置页后加载简历上传与本地解析功能。
+const ResumeUploader = lazy(() => import("./ResumeUploader"));
 
 type PracticeSetupProps = {
   setupData: SetupData;
@@ -70,12 +73,14 @@ const PracticeSetup = ({
             <Label className="flex items-center gap-1 text-gray-900 dark:text-white">
               简历 <span className="text-red-500">*</span>
             </Label>
-            <ResumeUploader
-              handleDataChanged={(data: { resumeText: string }) => {
-                setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
-              }}
-              initialResumeText={setupData.resume}
-            />
+            <Suspense fallback={<p className="text-sm text-gray-500">正在加载简历上传功能...</p>}>
+              <ResumeUploader
+                handleDataChanged={(data: { resumeText: string }) => {
+                  setSetupData((prev) => ({ ...prev, resume: data.resumeText }));
+                }}
+                initialResumeText={setupData.resume}
+              />
+            </Suspense>
           </div>
           {/* 目标职位 */}
           <div className="space-y-2">

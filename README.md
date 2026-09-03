@@ -85,16 +85,13 @@ Interview_Ai/
 
 ## 🔧 Environment Setup
 
-### 1. Backend Configuration (`server/.env`)
+### 1. Docker Compose Configuration (`.env`)
 
-Create a `.env` file in the `server/` directory:
+在项目根目录创建 `.env` 文件（与 `docker-compose.yml` 同级）：
 
 ```env
-# Server port
-PORT=5000
-
-# MongoDB Atlas connection string
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/intellihire
+# MongoDB connection string（默认使用 Docker Compose 内置 MongoDB）
+MONGO_URI=mongodb://mongodb:27017/intellihire
 
 # JWT secret key (use a strong random string, 64+ characters recommended)
 JWT_SECRET=your_jwt_secret_here
@@ -113,11 +110,20 @@ ALIYUN_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `PORT` | Server port (default: `5000`) | ✅ |
-| `MONGO_URI` | MongoDB Atlas connection string | ✅ |
+| `PORT` | 由 Docker Compose 固定为容器内 `5000`，无需配置 | — |
+| `MONGO_URI` | MongoDB 连接字符串；默认指向 Docker Compose 内置 MongoDB | ✅ |
 | `JWT_SECRET` | Secret key for JWT token signing | ✅ |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI generation | ✅ |
+| `DEEPSEEK_TIMEOUT` | DeepSeek 请求超时（毫秒），默认 `60000` | ❌ |
+| `DEEPSEEK_MAX_RETRIES` | DeepSeek 请求失败后的重试次数，默认 `2` | ❌ |
 | `ALIYUN_OSS_*` | Aliyun OSS configuration for file storage | ❌ |
+| `FRONTEND_URL` | GitHub OAuth 完成后跳转的前端地址，默认模板为 `http://localhost:8080` | GitHub OAuth 时必填 |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth 应用凭据 | GitHub OAuth 时必填 |
+| `GITHUB_TIMEOUT` / `GITHUB_MAX_RETRIES` | GitHub API 请求超时（毫秒）与重试次数，默认分别为 `30000`、`3` | ❌ |
+| `HTTP_PROXY` | GitHub API 使用的 HTTP/HTTPS 代理地址 | ❌ |
+| `QQ_SMTP_HOST` / `QQ_SMTP_PORT` | QQ 邮箱 SMTP 主机与端口，默认 `smtp.qq.com:465` | 邮件通知时必填 |
+| `QQ_SMTP_USER` / `QQ_SMTP_PASS` | QQ 邮箱 SMTP 用户名与授权码 | 邮件通知时必填 |
+| `LOG_LEVEL` | Winston 日志最低级别，默认 `http` | ❌ |
 
 ### 2. Frontend API Configuration
 
@@ -144,11 +150,10 @@ location /api/ {
 
 ## 📦 Installation & Getting Started
 
-### Prerequisites
+### 前置条件
 
-- **Node.js** v18+ (recommended v20+)
-- **npm** or **yarn**
-- **MongoDB Atlas** account (or local MongoDB)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)（包含 Docker Compose v2）
+- DeepSeek API Key 与用于签名的 JWT Secret
 
 ### Step 1: Clone the Project
 
@@ -157,48 +162,52 @@ git clone <repository-url>
 cd Interview_Ai
 ```
 
-### Step 2: Install Backend Dependencies
+### Step 2: Configure Backend Environment
 
-```bash
-cd server
-npm install
-```
-
-### Step 3: Configure Backend Environment
-
-Create `server/.env` based on the template above. Make sure to fill in:
-- `MONGO_URI` - Your MongoDB Atlas connection string
+根据根目录模板创建 `.env`。Docker Compose 读取该文件并注入后端容器；默认 MongoDB 地址已配置，只需至少填入：
 - `JWT_SECRET` - A strong random secret key
 - `DEEPSEEK_API_KEY` - Your DeepSeek API key
 
-### Step 4: Install Frontend Dependencies
-
 ```bash
-cd ../client
-npm install
+cp .env.example .env
 ```
 
-### Step 5: Frontend API Proxy
+如需继续使用 MongoDB Atlas，直接修改 `.env` 中的 `MONGO_URI`。
 
-No frontend environment variables are required. Vite already proxies the relative `/api` path to the local backend during development.
-
-### Step 6: Start the Backend Server
+### Step 3: Start the Application
 
 ```bash
-cd server
-npm run dev
+docker compose up --build -d
 ```
 
-The backend server will start at `http://localhost:5000`.
+首次启动会构建前后端镜像并创建名为 `mongodb_data` 的数据卷。应用启动后访问 [http://localhost:8080](http://localhost:8080)；API 通过同源 `/api` 由 Nginx 反向代理到后端，MongoDB 与后端端口不会暴露到宿主机。
 
-### Step 7: Start the Frontend Development Server
+查看运行状态与日志：
 
 ```bash
-cd client
-npm run dev
+docker compose ps
+docker compose logs -f
 ```
 
-The frontend application will start at `http://localhost:5173`.
+停止服务但保留数据库数据：
+
+```bash
+docker compose down
+```
+
+如需清空本地 MongoDB 数据并重新开始，请显式执行 `docker compose down -v`。
+
+#### 使用 MongoDB Atlas（可选）
+
+```bash
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/intellihire
+```
+
+GitHub OAuth 回调默认地址为 `http://localhost:8080`。部署到其他域名时，修改 `.env`：
+
+```bash
+FRONTEND_URL=https://example.com
+```
 
 ---
 

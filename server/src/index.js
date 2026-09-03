@@ -36,6 +36,14 @@ app.get("/", (req, res) => {
   res.send("🚀 API 服务运行中...");
 });
 
+app.get("/health", (_req, res) => {
+  // 健康检查同时确认 API 进程和 MongoDB 连接均已就绪。
+  const isDatabaseReady = mongoose.connection.readyState === 1;
+  res.status(isDatabaseReady ? 200 : 503).json({
+    status: isDatabaseReady ? "ok" : "database_unavailable",
+  });
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

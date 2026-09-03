@@ -25,9 +25,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-pdf': ['pdfjs-dist'],
-          'vendor-tesseract': ['tesseract.js'],
-          'vendor-mammoth': ['mammoth'],
           'vendor-radix': [
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
