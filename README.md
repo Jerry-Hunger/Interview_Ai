@@ -1,303 +1,335 @@
-# IntelliHire - AI-Powered Interview & Hiring Platform
+# IntelliHire：AI 智能面试与招聘平台
 
-IntelliHire is an **AI-powered interview and hiring platform** that helps:
+IntelliHire 是一个面向学生和企业的全栈招聘平台。学生可以维护个人资料与简历、进行 AI 模拟面试、投递职位并追踪流程；企业可以完善企业主页、发布职位、查看候选人并推进招聘状态。
 
-- 🎓 **Students** practice interviews in real-time with AI-driven simulators.
-- 🏢 **Companies** conduct automated hiring through AI-driven interviews and candidate evaluations.
+项目采用前后端分离架构：浏览器端使用 React 构建交互界面，服务端使用 Express 提供 REST API，并通过 MongoDB 持久化业务数据。AI 面试问题和评估由 DeepSeek 生成，部分结果通过流式响应返回。
 
-The platform offers **customizable practice interviews**, **resume-based question generation**, **speech-to-text and text-to-speech support**, and a **round-wise automated hiring pipeline** — all in one place.
+## 功能概览
 
----
+- 双角色注册、登录与 GitHub OAuth 登录：学生（`student`）和企业（`company`）拥有独立的操作入口。
+- 学生侧：个人资料、头像与简历管理、职位浏览与投递、多轮模拟面试、历史面试结果查看。
+- 企业侧：企业资料、Logo/企业图片、职位与面试轮次管理、候选人申请查看、招聘状态推进与面试通知邮件。
+- AI 能力：基于简历、目标岗位、面试类型、难度和关注主题生成问题；面试结束后按问答块生成反馈与总评。
+- 文件能力：简历支持 PDF、DOC、DOCX；图片支持 JPG、JPEG、PNG、WebP。文件存储使用阿里云 OSS。
+- 使用体验：浅色/深色主题、浏览器语音识别与语音播报、摄像头预览、SSE 流式展示 AI 输出。
 
-## 🚀 Features
+## 技术栈
 
-- 🤖 **AI-Driven Interviews** powered by DeepSeek API.
-- 🎤 **Real-Time Interviews** with **Web Speech API** (STT + TTS).
-- 📊 **Detailed Results** – pass/fail status, feedback, transcript, and round analysis.
-- ⚡ **Automated Hiring** – companies can define job rounds, AI evaluates candidates automatically.
-- 🎯 **Customizable Practice Interviews** – choose topic, difficulty, or custom questions.
-- 📑 **Resume Integration** – built-in **resume text extractor** (PDF, DOCX, OCR) for personalized interviews.
-- 🌓 **Light/Dark Mode** support.
+| 范围 | 技术 |
+| --- | --- |
+| 前端 | React 19、TypeScript、Vite、React Router 7、Tailwind CSS 4、Radix UI/shadcn-ui、Axios |
+| 简历处理 | PDF.js、Mammoth、Tesseract.js（前端扫描型 PDF OCR） |
+| 后端 | Node.js、Express 5、Mongoose、JWT、express-validator、Multer、Winston |
+| 数据与外部服务 | MongoDB、DeepSeek Chat Completions、阿里云 OSS、GitHub OAuth、QQ SMTP |
+| 部署 | Docker Compose、Nginx |
 
----
+## 架构与核心流程
 
-## 🛠️ Tech Stack
-
-### Frontend
-- **React 19** with Vite
-- **TailwindCSS v4** with shadcn/ui components
-- **TypeScript**
-- **React Router v7**
-- **Recharts** for data visualization
-
-### Backend
-- **Node.js** with **Express.js**
-- **MongoDB** with Mongoose ODM
-- **JWT** authentication
-- **DeepSeek API** for AI-powered interview generation
-
-### Integrations
-- **Web Speech API** (STT & TTS)
-- **PDF.js** for resume parsing
-- **Tesseract.js** for OCR (scanned documents)
-- **Mammoth.js** for DOCX parsing
-
----
-
-## 📁 Project Structure
-
+```mermaid
+flowchart LR
+  U[浏览器] -->|/api| N[Nginx / Vite 开发代理]
+  N --> S[Express API]
+  S --> M[(MongoDB)]
+  S --> D[DeepSeek]
+  S --> O[阿里云 OSS]
+  S --> G[GitHub OAuth]
+  S --> E[QQ SMTP]
 ```
+
+前端的 Axios 实例固定以同源 `/api` 为基地址，并自动附加本地保存的 Bearer Token。开发环境中 Vite 将 `/api` 转发到 `http://localhost:5000`；Docker 环境中 Nginx 转发到 `server` 服务，并关闭代理缓冲以支持流式面试响应。
+
+### 业务链路
+
+```mermaid
+flowchart TD
+  A[注册 / 登录] --> B{用户角色}
+  B -->|学生| C[维护资料并上传简历]
+  C --> D[配置岗位、难度、题型、轮次]
+  D --> E[DeepSeek 生成首题]
+  E --> F[逐题作答，SSE 返回下一题]
+  F --> G[分块评估并保存 Interview]
+  C --> H[浏览职位并提交申请]
+  B -->|企业| I[维护企业资料]
+  I --> J[创建职位及轮次]
+  J --> K[查看申请并更新状态]
+  K --> L[通知候选人 / 推进下一轮]
+```
+
+### 服务端分层
+
+- `routes/`：声明 URL、鉴权、限流和校验中间件，再将请求交给控制器。
+- `controllers/`：处理 HTTP 参数、权限角色、查询编排和响应；复杂申请创建逻辑抽到 `services/`。
+- `models/`：定义 Mongoose 数据模型与常用索引。
+- `middlewares/`：提供 JWT 鉴权、请求参数校验、AI 端点限流和统一异常响应。
+- `prompts/` 与 `utils/deepseek.js`：构造提示词、调用 DeepSeek，并将上游 SSE 转为应用可消费的流。
+
+### 面试执行与评估逻辑
+
+1. 前端提交岗位、简历、题型与难度到 `POST /api/interview/start`，服务端请求 DeepSeek 生成首题。
+2. 每次作答调用 `POST /api/interview/respond-stream`。服务端依据对话历史生成追问或下一题，并通过文本流返回。
+3. 结束时调用 `POST /api/interview/conclude-stream`（或非流式的 `conclude`）。服务端每 3 组问答拆为一个评估块，再汇总为最终反馈与通过/未通过结果。
+4. 服务端保存 `Interview` 记录；多轮练习会记录当前轮次、总轮次和各轮反馈。
+
+## 项目结构
+
+```text
 Interview_Ai/
-├── client/                 # Frontend (React)
+├── client/                         # React 前端工作区
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   │   ├── practice/   # Interview practice components
-│   │   │   ├── resume/     # Resume-related components
-│   │   │   └── ui/         # shadcn/ui base components
-│   │   ├── contexts/       # React contexts
-│   │   ├── pages/          # Page components
-│   │   │   ├── auth/       # Login & Register
-│   │   │   ├── student/    # Student dashboard pages
-│   │   │   └── company/    # Company dashboard pages
-│   │   ├── utils/          # Utility functions
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── .env                # Frontend environment variables
+│   │   ├── components/              # 共享组件
+│   │   │   ├── practice/            # 模拟面试、简历上传与结果组件
+│   │   │   ├── resume/              # 简历展示组件
+│   │   │   └── ui/                  # 基础 UI 组件
+│   │   ├── pages/
+│   │   │   ├── auth/                # 登录、注册
+│   │   │   ├── student/             # 学生端页面
+│   │   │   └── company/             # 企业端页面
+│   │   ├── services/api.ts          # 业务 API 封装
+│   │   ├── utils/axiosInstance.ts   # Token 与 401 处理
+│   │   ├── contexts/                # 主题上下文
+│   │   ├── hooks/、constants/、types/
+│   │   ├── App.tsx                  # 路由表
+│   │   └── main.tsx                 # 前端入口
+│   ├── nginx.conf.template          # 生产环境反向代理模板
 │   └── package.json
-│
-├── server/                 # Backend (Node.js)
+├── server/                          # Express 服务端工作区
 │   ├── src/
-│   │   ├── controllers/    # Route controllers
-│   │   ├── models/         # Mongoose models
-│   │   ├── routes/         # API routes
-│   │   ├── middlewares/    # Express middlewares
-│   │   ├── config/         # Configuration
-│   │   ├── utils/          # Utility functions (DeepSeek API)
-│   │   └── index.js        # Server entry point
-│   ├── .env                # Backend environment variables
+│   │   ├── config/                  # MongoDB 连接
+│   │   ├── controllers/             # HTTP 控制器
+│   │   ├── middlewares/             # 鉴权、校验、限流、错误处理
+│   │   ├── models/                  # User、Student、Company 等模型
+│   │   ├── prompts/                 # AI 面试与简历提示词
+│   │   ├── routes/                  # API 路由
+│   │   ├── services/                # 可复用业务服务
+│   │   ├── utils/                   # DeepSeek、OSS、邮件、日志工具
+│   │   └── index.js                 # 服务入口与健康检查
+│   ├── seed-jobs.js                 # 示例职位数据脚本
 │   └── package.json
-│
-├── README.md
-└── AGENTS.md              # Developer documentation
+├── docker-compose.yml               # 前端、后端、MongoDB 编排
+├── .env.example                     # Docker 环境变量模板
+└── README.md
 ```
 
----
+### 主要数据模型
 
-## 🔧 Environment Setup
+| 模型 | 作用 | 关键关联 |
+| --- | --- | --- |
+| `User` | 登录凭据与角色 | 一对一关联学生或企业资料 |
+| `Student` | 学生个人资料、技能、简历引用 | `resumeId` → `Resume` |
+| `Company` | 企业资料、Logo、相册与招聘信息 | 被 `JobOpening` 引用 |
+| `Resume` | 简历文件地址、文件类型和提取后的文本 | `studentId` → `Student` |
+| `JobOpening` | 职位、技能、面试轮次和开关状态 | `companyId` → `Company` |
+| `Application` | 学生投递、当前轮次、审核进度和历史结果 | 关联职位、学生、简历和面试记录 |
+| `Interview` | 对话记录、分段反馈、最终反馈和面试结果 | `student` → `Student` |
 
-### 1. Docker Compose Configuration (`.env`)
-
-在项目根目录创建 `.env` 文件（与 `docker-compose.yml` 同级）：
-
-```env
-# MongoDB connection string（默认使用 Docker Compose 内置 MongoDB）
-MONGO_URI=mongodb://mongodb:27017/intellihire
-
-# JWT secret key (use a strong random string, 64+ characters recommended)
-JWT_SECRET=your_jwt_secret_here
-
-# DeepSeek API key
-DEEPSEEK_API_KEY=sk-your_deepseek_api_key_here
-
-# 阿里云 OSS configuration
-ALIYUN_OSS_REGION=oss-cn-hangzhou
-ALIYUN_OSS_BUCKET=your-bucket-name
-ALIYUN_OSS_ACCESS_KEY_ID=your-access-key-id
-ALIYUN_OSS_ACCESS_KEY_SECRET=your-access-key-secret
-```
-
-#### Environment Variable Reference
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `CLIENT_PORT` | 前端对宿主机暴露的端口，示例配置为 `8081` | ❌ |
-| `SERVER_PORT` | 后端监听并对宿主机暴露的端口，默认 `5000` | ❌ |
-| `MONGODB_PORT` | MongoDB 对宿主机暴露的调试端口，默认 `27017` | ❌ |
-| `MONGO_URI` | MongoDB 连接字符串；默认指向 Docker Compose 内置 MongoDB | ✅ |
-| `JWT_SECRET` | Secret key for JWT token signing | ✅ |
-| `DEEPSEEK_API_KEY` | DeepSeek API key for AI generation | ✅ |
-| `DEEPSEEK_TIMEOUT` | DeepSeek 请求超时（毫秒），默认 `60000` | ❌ |
-| `DEEPSEEK_MAX_RETRIES` | DeepSeek 请求失败后的重试次数，默认 `2` | ❌ |
-| `ALIYUN_OSS_*` | Aliyun OSS configuration for file storage | ❌ |
-| `FRONTEND_URL` | GitHub OAuth 完成后跳转的前端地址，默认模板为 `http://localhost:8080` | GitHub OAuth 时必填 |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth 应用凭据 | GitHub OAuth 时必填 |
-| `GITHUB_TIMEOUT` / `GITHUB_MAX_RETRIES` | GitHub API 请求超时（毫秒）与重试次数，默认分别为 `30000`、`3` | ❌ |
-| `HTTP_PROXY` | GitHub API 使用的 HTTP/HTTPS 代理地址 | ❌ |
-| `QQ_SMTP_HOST` / `QQ_SMTP_PORT` | QQ 邮箱 SMTP 主机与端口，默认 `smtp.qq.com:465` | 邮件通知时必填 |
-| `QQ_SMTP_USER` / `QQ_SMTP_PASS` | QQ 邮箱 SMTP 用户名与授权码 | 邮件通知时必填 |
-| `LOG_LEVEL` | Winston 日志最低级别，默认 `http` | ❌ |
-
-### 2. Frontend API Configuration
-
-The frontend always sends requests to the relative `/api` path; no `client/.env` API address is needed.
-
-- During local development, Vite proxies `/api` to `http://localhost:5000`.
-- In production, configure Nginx to reverse-proxy `/api` to the backend service.
-
-For example, keep the `/api` prefix when forwarding so the backend routes remain unchanged. Disable proxy buffering for the streaming interview endpoints:
-
-```nginx
-location /api/ {
-  proxy_pass http://127.0.0.1:5000;
-  proxy_http_version 1.1;
-  proxy_set_header Host $host;
-  proxy_set_header X-Real-IP $remote_addr;
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_set_header X-Forwarded-Proto $scheme;
-  proxy_buffering off;
-}
-```
-
----
-
-## 📦 Installation & Getting Started
+## 快速开始（Docker，推荐）
 
 ### 前置条件
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)（包含 Docker Compose v2）
-- DeepSeek API Key 与用于签名的 JWT Secret
+- Docker Desktop（含 Docker Compose v2）
+- DeepSeek API Key
+- 用于 JWT 签名的高强度随机字符串
 
-### Step 1: Clone the Project
+### 1. 配置环境变量
 
-```bash
-git clone <repository-url>
-cd Interview_Ai
-```
-
-### Step 2: Configure Backend Environment
-
-根据根目录模板创建 `.env`。Docker Compose 读取该文件并注入后端容器；默认 MongoDB 地址已配置，只需至少填入：
-- `JWT_SECRET` - A strong random secret key
-- `DEEPSEEK_API_KEY` - Your DeepSeek API key
+在项目根目录复制模板：
 
 ```bash
 cp .env.example .env
 ```
 
-如需继续使用 MongoDB Atlas，直接修改 `.env` 中的 `MONGO_URI`。
+至少填写以下配置：
 
-### Step 3: Start the Application
+```env
+JWT_SECRET=请替换为足够长的随机字符串
+DEEPSEEK_API_KEY=请替换为你的密钥
+```
+
+默认情况下，Docker 内的后端会连接到 Compose 提供的 MongoDB：
+
+```env
+MONGO_URI=mongodb://mongodb:27017/intellihire
+CLIENT_PORT=8081
+SERVER_PORT=5000
+MONGODB_PORT=27017
+```
+
+### 2. 启动服务
 
 ```bash
 docker compose up --build -d
-```
-
-首次启动会构建前后端镜像并创建名为 `mongodb_data` 的数据卷。应用启动后访问 `http://localhost:<CLIENT_PORT>`（按示例配置为 [http://localhost:8081](http://localhost:8081)）；API 通过同源 `/api` 由 Nginx 反向代理到后端，同时可通过 `http://localhost:<SERVER_PORT>`（默认 `http://localhost:5000`）直接调试 API。MongoDB 也会映射到 `mongodb://localhost:<MONGODB_PORT>`（默认 `mongodb://localhost:27017`），便于使用数据库客户端调试。
-
-查看运行状态与日志：
-
-```bash
 docker compose ps
-docker compose logs -f
 ```
 
-停止服务但保留数据库数据：
+启动完成后：
+
+- 前端：`http://localhost:8081`（或 `CLIENT_PORT` 指定的端口）
+- API 健康检查：`http://localhost:5000/health`（或 `SERVER_PORT` 指定的端口）
+- MongoDB 调试端口：`127.0.0.1:27017`（仅绑定本机）
+
+常用运维命令：
 
 ```bash
+docker compose logs -f
 docker compose down
 ```
 
-如需清空本地 MongoDB 数据并重新开始，请显式执行 `docker compose down -v`。
+`docker compose down` 会保留数据库卷；如确实需要删除本地数据库数据，再显式执行 `docker compose down -v`。
 
-#### 使用 MongoDB Atlas（可选）
+## 本地开发
+
+项目包含两个独立工作区，建议使用与锁文件一致的 pnpm。本地 Node.js 请使用 22.13 或更高版本；项目 Docker 镜像使用 Node.js 24。
+
+### 1. 启动 MongoDB 与配置后端
+
+确保本机 MongoDB 可用，然后配置服务端环境变量：
 
 ```bash
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/intellihire
+cp server/.env.example server/.env
 ```
 
-GitHub OAuth 回调按示例配置为 `http://localhost:8081`。如修改 `CLIENT_PORT`，也要同步修改 `.env` 中的 `FRONTEND_URL`；部署到其他域名时同样修改该项：
+将 `server/.env` 中的 `MONGO_URI` 保持为本地地址，或改为 MongoDB Atlas 连接串；填写 `JWT_SECRET` 与 `DEEPSEEK_API_KEY`。使用上传功能还必须配置阿里云 OSS。
+
+### 2. 分别启动前后端
+
+终端一：
 
 ```bash
-FRONTEND_URL=https://example.com
+cd server
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
----
+终端二：
 
-## 📖 Usage Guide
+```bash
+cd client
+pnpm install --frozen-lockfile
+pnpm dev
+```
 
-### For Students
+Vite 默认地址为 `http://localhost:5173`，会自动将 `/api` 请求代理到 `http://localhost:5000`。前端不需要、也不应配置 API 地址或任何密钥。
 
-1. **Register & Login** – Create an account as a student.
-2. **Build Your Profile** – Upload your resume for personalized interview questions.
-3. **Practice Interviews** – Choose interview type (technical, behavioral, coding, etc.), difficulty level, and target role.
-4. **Review Results** – Get detailed feedback, transcripts, and improvement suggestions.
-5. **Browse Jobs** – Explore open positions and apply directly.
-6. **Track Applications** – Monitor your application status and upcoming interviews.
+## 环境变量
 
-### For Companies
+根目录 `.env` 供 Docker Compose 使用；`server/.env` 用于本地直接启动后端。不要提交任何真实密钥。
 
-1. **Register & Login** – Create an account as a company.
-2. **Post Job Openings** – Define job roles, required skills, and interview rounds.
-3. **Review Applications** – View candidate profiles and resumes.
-4. **Manage Candidates** – Approve/reject candidates, track interview progress.
-5. **Automated Evaluation** – AI handles interview rounds and provides candidate feedback.
+| 变量 | 必填 | 说明 |
+| --- | --- | --- |
+| `JWT_SECRET` | 是 | JWT 签名密钥 |
+| `DEEPSEEK_API_KEY` | 是 | DeepSeek API 密钥；仅 AI 面试/简历格式化请求需要 |
+| `MONGO_URI` | 是 | MongoDB 连接字符串 |
+| `PORT` | 本地后端 | Express 监听端口，默认 `5000` |
+| `CLIENT_PORT`、`SERVER_PORT`、`MONGODB_PORT` | 否 | Docker 对宿主机暴露的端口 |
+| `DEEPSEEK_TIMEOUT`、`DEEPSEEK_MAX_RETRIES` | 否 | AI 请求超时毫秒数与失败重试次数 |
+| `ALIYUN_OSS_REGION`、`ALIYUN_OSS_BUCKET`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET` | 上传时必填 | 阿里云 OSS 文件存储配置 |
+| `FRONTEND_URL` | GitHub 登录时必填 | OAuth 回调结束后的前端地址 |
+| `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET` | GitHub 登录时必填 | GitHub OAuth 应用凭据 |
+| `GITHUB_TIMEOUT`、`GITHUB_MAX_RETRIES`、`HTTP_PROXY` | 否 | GitHub API 的超时、重试与代理配置 |
+| `QQ_SMTP_HOST`、`QQ_SMTP_PORT`、`QQ_SMTP_USER`、`QQ_SMTP_PASS` | 邮件通知时必填 | 企业开启面试流程时的 QQ SMTP 配置 |
+| `LOG_LEVEL` | 否 | Winston 最低日志级别，默认 `http` |
 
----
+## API 概览
 
-## 🎯 API Endpoints Overview
+除健康检查外，业务接口均以 `/api` 为前缀。需要认证的接口应携带：
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | User login |
-| GET | `/api/auth/me` | Get current user |
+```http
+Authorization: Bearer <token>
+```
 
-### Jobs
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/jobs` | List all open jobs |
-| GET | `/api/jobs/:id` | Get job details |
-| POST | `/api/jobs` | Create new job (company) |
-| GET | `/api/jobs/company` | Get company's jobs |
+使用 `success()` 的接口通常返回 `{ "success": true, ... }`；认证、面试、简历及企业资料等历史接口存在各自的响应字段，客户端应以当前调用方的读取方式为准。参数校验失败统一返回 HTTP `422`。
 
-### Applications
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/applications` | Apply for a job |
-| GET | `/api/applications/mine` | Get student's applications |
-| GET | `/api/applications/job/:id` | Get job's applications |
-| PATCH | `/api/applications/:id` | Update application status |
+### 认证与账户
 
-### Interviews
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/interviews/start` | Start practice interview |
-| POST | `/api/interviews/respond` | Submit answer |
-| POST | `/api/interviews/complete` | Complete interview |
-| GET | `/api/interviews/:id` | Get interview details |
+| 方法 | 路径 | 角色 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/auth/register` | 公开 | 注册学生或企业账户 |
+| POST | `/api/auth/login` | 公开 | 登录并返回 JWT 与角色 |
+| GET | `/api/auth/me` | 已登录 | 获取当前用户资料 |
+| PUT | `/api/auth/profile` | 已登录 | 更新当前用户允许修改的资料字段 |
+| GET | `/api/auth/github` | 公开 | 跳转至 GitHub 授权页 |
+| GET | `/api/auth/github/callback` | 公开 | 接收 GitHub 回调并跳转前端 |
 
-### Resume
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/resume/format-resume` | AI-format resume text |
+### 职位与申请
 
-### Company Dashboard
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/company/dashboard` | Dashboard statistics |
+| 方法 | 路径 | 角色 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/jobs` | 企业 | 创建职位及至少一个面试轮次 |
+| GET | `/api/jobs` | 学生 | 查询职位；支持 `company`、`rounds`、`type`、`status` 筛选 |
+| GET | `/api/jobs/company` | 企业 | 获取当前企业发布的职位 |
+| GET | `/api/jobs/:jobId` | 学生/企业 | 获取职位详情 |
+| PATCH | `/api/jobs/:jobId/status` | 企业 | 将职位切换为 `open` 或 `closed` |
+| POST | `/api/applications` | 学生 | 投递职位；同一学生与职位不能重复投递 |
+| GET | `/api/applications/mine` | 学生 | 获取我的投递记录 |
+| GET | `/api/applications/job/:jobId` | 企业 | 获取职位的候选人申请 |
+| GET | `/api/applications/:applicationId` | 学生/企业 | 获取申请详情 |
+| POST | `/api/applications/:applicationId/round` | 学生 | 写入某一轮面试结果 |
+| PATCH | `/api/applications/:applicationId` | 企业 | 更新申请状态并在进入面试时异步发送邮件 |
 
----
+申请状态包括 `applied`、`in-progress`、`selected`、`final-selected` 与 `rejected`。学生轮次成功后可推进至下一轮或录取，失败则标记为拒绝；企业也可以手动更新状态。
 
-## 🧪 Available Scripts
+### AI 面试与简历
 
-### Frontend (`client/`)
+| 方法 | 路径 | 角色 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/interview/start` | 已登录 | 生成首题或下一轮首题 |
+| POST | `/api/interview/respond-stream` | 已登录 | 流式生成下一题或收尾问题 |
+| POST | `/api/interview/conclude` | 已登录 | 非流式生成并保存面试评估 |
+| POST | `/api/interview/conclude-stream` | 已登录 | 流式生成并保存面试评估 |
+| GET | `/api/interview/mine` | 已登录 | 获取当前用户的面试记录 |
+| GET | `/api/interview/:id` | 已登录 | 获取某一面试记录 |
+| POST | `/api/resume/format-resume-stream` | 已登录 | 流式格式化简历文本 |
+| GET | `/api/resume/:id` | 已登录 | 获取简历元数据 |
+| GET | `/api/resume/:id/text` | 已登录 | 读取或提取 PDF/DOC/DOCX 文本 |
+| PUT | `/api/resume/:id/text` | 已登录 | 保存编辑后的简历文本 |
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run lint` | Run ESLint |
-| `npm run preview` | Preview production build |
+上述 AI 端点使用独立限流：同一客户端 15 分钟最多 20 次请求。流式端点需由代理层禁用缓冲。
 
-### Backend (`server/`)
+### 企业资料与文件上传
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start server with hot reload (nodemon) |
+| 方法 | 路径 | 角色 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/company/dashboard` | 企业 | 获取职位、申请统计及最近申请 |
+| GET | `/api/company/profile` | 企业 | 获取企业资料 |
+| PUT | `/api/company/profile` | 企业 | 更新企业资料 |
+| DELETE | `/api/company/photos` | 企业 | 从企业相册移除指定 URL |
+| POST | `/api/upload/avatar` | 已登录 | 上传头像，最大 2 MB |
+| POST | `/api/upload/resume` | 学生 | 上传简历，最大 5 MB |
+| POST | `/api/upload/logo` | 企业 | 上传企业 Logo，最大 2 MB |
+| POST | `/api/upload/photos` | 企业 | 上传企业图片，单次最多 10 张、每张最大 5 MB |
 
----
+上传图片仅接受 JPG、JPEG、PNG、WebP；简历仅接受 PDF、DOC、DOCX。文件将先进入内存，再上传到 OSS。
 
-## 📝 License
+## 可用命令与验证
 
-This project is licensed under the MIT License.
+| 工作区 | 命令 | 作用 |
+| --- | --- | --- |
+| `client/` | `pnpm dev` | 启动 Vite 开发服务器 |
+| `client/` | `pnpm lint` | 执行 ESLint |
+| `client/` | `pnpm build` | TypeScript 检查并构建生产资源 |
+| `client/` | `pnpm preview` | 预览构建结果 |
+| `server/` | `pnpm dev` | 通过 Nodemon 启动 Express 服务 |
+| 根目录 | `docker compose up --build -d` | 构建并启动完整环境 |
+
+当前仓库未配置自动化测试脚本。变更后建议至少执行：
+
+```bash
+cd client && pnpm lint && pnpm build
+docker compose config --quiet
+```
+
+涉及后端接口时，还应在已配置的 MongoDB 与环境变量下手动验证成功、参数校验失败和未认证三种场景。
+
+## 开发约定
+
+- 前端页面按角色放在 `client/src/pages/student/` 和 `client/src/pages/company/`；跨页面请求统一放入 `client/src/services/api.ts` 或既有 Axios 实例。
+- 后端新增写入接口时，应先补充 `server/src/middlewares/validators/` 校验，再在路由层挂载；响应优先使用 `server/src/utils/apiResponse.js`。
+- 不要把密钥、MongoDB 连接串或 OSS 凭据提交到仓库。所有浏览器可见的 `VITE_` 变量都不能存放秘密。
+- 修改 API 契约时应同步更新服务端校验、前端类型与调用方，并更新本 README。
+
+## 健康检查与排障
+
+- `GET /health`：仅当 Express 进程已启动且 MongoDB 连接状态为 ready 时返回 `200` 与 `{ "status": "ok" }`；否则返回 `503`。
+- AI 接口失败时，先检查 `DEEPSEEK_API_KEY`、网络连通性、超时和限流；服务端会对非 4xx 错误按配置重试。
+- 上传失败时，检查 OSS 四项配置、Bucket 权限、文件格式和大小限制。
+- GitHub 登录回调地址应与 `FRONTEND_URL` 及 GitHub OAuth 应用配置完全一致。
