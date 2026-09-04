@@ -4,6 +4,9 @@ import logger from "../utils/logger.js";
 import { success, error } from "../utils/apiResponse.js";
 import { getPagination, toPaginationMeta } from "../utils/pagination.js";
 
+/** 将关键词按字面量查询，避免用户输入改变 MongoDB 正则语义或导致语法错误。 */
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export const createJob = async (req, res) => {
   try {
     const { title, description, skills, rounds, status } = req.body;
@@ -69,7 +72,7 @@ export const listJobs = async (req, res) => {
 
     if (company) {
       const companies = await Company.find({
-        companyName: new RegExp(company, 'i')
+        companyName: new RegExp(escapeRegex(company), 'i')
       }).select('_id');
       filter.companyId = { $in: companies.map(c => c._id) };
     }

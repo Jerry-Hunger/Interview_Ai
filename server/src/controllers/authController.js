@@ -7,7 +7,14 @@ import crypto from "crypto";
 import axios from "axios";
 import logger from "../utils/logger.js";
 import { success, error } from "../utils/apiResponse.js";
-import { clearAuthCookie, setAuthCookie } from "../utils/authCookie.js";
+import {
+  clearAuthCookie,
+  clearGithubOAuthStateCookie,
+  createGithubOAuthState,
+  isValidGithubOAuthState,
+  setAuthCookie,
+  setGithubOAuthStateCookie,
+} from "../utils/authCookie.js";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -67,16 +74,22 @@ const createUserWithProfile = async (userData, profileData) => {
 
 export const githubLogin = (req, res) => {
   const scope = "read:user user:email";
-  res.redirect(`https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${scope}`);
+  const state = createGithubOAuthState();
+  setGithubOAuthStateCookie(res, state);
+  const params = new URLSearchParams({ client_id: GITHUB_CLIENT_ID, scope, state });
+  res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
 };
 
 export const githubCallback = async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
 
-    if (!code) {
-      return error(res, "未提供 GitHub 授权码", 400);
+    if (!code || !isValidGithubOAuthState(req.cookies?.github_oauth_state, state)) {
+      clearGithubOAuthStateCookie(res);
+      return error(res, "GitHub 授权请求无效或已过期", 400);
     }
+    // state 只能使用一次，验证通过后立即删除以阻止回放。
+    clearGithubOAuthStateCookie(res);
 
     const tokenResponse = await fetchWithRetry(async () => {
       return await axiosInstance.post(

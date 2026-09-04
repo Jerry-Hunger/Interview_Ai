@@ -16,7 +16,7 @@ import validate from "../middlewares/validators/validate.js";
 
 const router = express.Router();
 
-router.post("/format-resume-stream", authMiddleware(), aiLimiter, validateFormatResume, validate, formatResumeStream);
+router.post("/format-resume-stream", authMiddleware("student"), aiLimiter, validateFormatResume, validate, formatResumeStream);
 router.get("/", authMiddleware("student"), listMyResumes);
 router.patch("/:id/default", authMiddleware("student"), validateResumeId, validate, setDefaultResume);
 router.patch("/:id", authMiddleware("student"), validateUpdateResume, validate, updateResume);

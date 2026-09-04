@@ -229,7 +229,7 @@ export const updateApplicationStatus = async (req, res) => {
 export const addRoundResult = async (req, res) => {
   try {
     const { applicationId } = req.params;
-    const { roundNumber, interviewId, result, feedback } = req.body;
+    const { roundNumber, interviewId, result } = req.body;
 
     if (!["success", "failure"].includes(result)) {
       return error(res, "结果值无效，请使用 'success' 或 'failure'", 400);
@@ -276,7 +276,8 @@ export const addRoundResult = async (req, res) => {
       roundNumber: rn,
       interviewId: interviewId || null,
       result,
-      feedback: feedback || "",
+      // 企业可见反馈必须来自已验证的面试记录，不能信任学生提交的请求体。
+      feedback: interview.finalFeedback || "",
     });
 
     if (result === "success") {
