@@ -11,7 +11,14 @@ import { difficultyConfig } from "@/constants/difficulty";
 import type { ApplicationDetail, ApplicationHistoryEntry, InterviewState, Interview, InterviewPhase } from "@/types";
 import { roundTypeConfig } from "@/constants/roundType";
 import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
-import { concludeInterviewStream, respondInterviewStream, StreamRequestError } from "@/services/interviewStream";
+import {
+  concludeInterviewStream,
+  createInterviewFromConclusion,
+  getInterviewErrorMessage,
+  isRateLimitedInterviewError,
+  respondInterviewStream,
+  startInterviewStream,
+} from "@/services/interviewStream";
 import { Loader2, Hourglass, XCircle, Trophy, Clock, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
@@ -85,7 +92,7 @@ const ApplicationDetail = () => {
         ? application!.history[application!.history.length - 1].feedback
         : "";
 
-      const res = await axiosInstance.post("/interview/start", {
+      const firstQuestion = await startInterviewStream({
         role: job?.title,
         resume: resumeToUse,
         resumeId: application!.resumeId?._id,
@@ -100,8 +107,6 @@ const ApplicationDetail = () => {
         previousFeedback,
         questionsPerRound: 5,
       });
-
-      const firstQuestion = res.data.message;
 
       setIsStartingInterview(false);
       setCurrentStep("interview");
@@ -228,20 +233,14 @@ const ApplicationDetail = () => {
       }
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
-      if (error instanceof StreamRequestError && error.status === 429) {
-        toast({
-          title: "AI 忙碌中",
-          description: "AI 面试官需要休息一下，请稍后再试。",
-          variant: "destructive",
-        });
-      } else if (error && typeof error === 'object' && 'response' in error && (error as { response?: { status?: number } }).response?.status === 429) {
+      if (isRateLimitedInterviewError(error)) {
         toast({
           title: "AI 忙碌中",
           description: "AI 面试官需要休息一下，请稍后再试。",
           variant: "destructive",
         });
       } else {
-        const errorMessage = error instanceof Error ? error.message : "未知错误";
+        const errorMessage = getInterviewErrorMessage(error, "未知错误");
         toast({
           title: "错误",
           description: `出错了：${errorMessage}，请重试。`,
@@ -254,9 +253,7 @@ const ApplicationDetail = () => {
   const handleQuit = async () => {
     setIsLoading(true);
     try {
-      const res = await axiosInstance.post(
-        "/interview/conclude",
-        {
+      const conclusion = await concludeInterviewStream({
           history: interviewState.chatHistory,
           resumeText: resumeText,
           resumeId: application!.resumeId?._id,
@@ -269,9 +266,17 @@ const ApplicationDetail = () => {
           currentRound: application!.currentRound + 1,
           totalRounds: job?.rounds?.length || 1,
           result: "quit",
-        }
-      );
-      const { interview } = res.data;
+        });
+      const interview = createInterviewFromConclusion(conclusion, {
+        type: "company",
+        role: job?.title || "",
+        difficulty: job?.rounds[application!.currentRound]?.difficulty || job?.difficulty || "",
+        roundType: job?.rounds[application!.currentRound]?.type || "",
+        rounds: job?.rounds?.length || 1,
+        currentRound: application!.currentRound + 1,
+        chatHistory: interviewState.chatHistory,
+        resumeText,
+      });
 
       setInterviewResults(interview);
       // 重新获取最新申请数据
@@ -279,17 +284,14 @@ const ApplicationDetail = () => {
       setCurrentStep("results");
     } catch (error: unknown) {
       console.error("Error quitting interview:", error);
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number } };
-        if (axiosError.response?.status === 429) {
-          setIsLoading(false);
-          toast({
-            title: "AI 忙碌中",
-            description: "服务器繁忙，请稍后再试。",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (isRateLimitedInterviewError(error)) {
+        setIsLoading(false);
+        toast({
+          title: "AI 忙碌中",
+          description: "服务器繁忙，请稍后再试。",
+          variant: "destructive",
+        });
+        return;
       }
       toast({
         title: "错误",
@@ -302,14 +304,6 @@ const ApplicationDetail = () => {
 
   const handleEndInterview = async () => {
     setIsLoading(true);
-
-    // 调试：检查数据是否正确
-    console.log("handleEndInterview - job:", job);
-    console.log("handleEndInterview - application:", application);
-    console.log("job?.difficulty:", job?.difficulty);
-    console.log("job?.rounds:", job?.rounds);
-    console.log("application.currentRound:", application?.currentRound);
-    console.log("round info:", job?.rounds?.[application?.currentRound || 0]);
 
     try {
       const conclusion = await concludeInterviewStream({
@@ -330,22 +324,15 @@ const ApplicationDetail = () => {
           onFinalStart: () => setStreamingMessage("正在生成最终评估..."),
         });
 
-      const interview = {
-        _id: conclusion.interviewId,
-        type: "company" as const,
+      const interview = createInterviewFromConclusion(conclusion, {
+        type: "company",
         role: job?.title || "",
         difficulty: job?.rounds[application!.currentRound]?.difficulty || job?.difficulty || "",
         roundType: job?.rounds[application!.currentRound]?.type || "",
         rounds: job?.rounds?.length || 1,
         currentRound: application!.currentRound + 1,
-        result: conclusion.result,
-        feedback: "",
-        transcript: [],
-        createdAt: new Date().toISOString(),
-        finalFeedback: conclusion.finalFeedback,
         chatHistory: interviewState.chatHistory,
-        feedbacks: conclusion.feedbacks,
-      };
+      });
 
       setIsLoading(false);
 
@@ -367,7 +354,7 @@ const ApplicationDetail = () => {
     } catch (error: unknown) {
       setIsLoading(false);
       console.error("Error ending interview:", error);
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
+      const errorMessage = getInterviewErrorMessage(error, "未知错误");
       toast({
         title: "错误",
         description: `生成反馈失败：${errorMessage}`,

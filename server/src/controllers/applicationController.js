@@ -64,6 +64,19 @@ export const getMyApplications = async (req, res) => {
   }
 };
 
+/**
+ * 返回轻量级投递索引，而不是让前端只读取申请列表首页来判断投递状态。
+ */
+export const getMyAppliedJobIds = async (req, res) => {
+  try {
+    const jobIds = await Application.distinct("jobId", { candidateId: req.user.id });
+    return success(res, { jobIds });
+  } catch (err) {
+    logger.error({ err }, "获取已投递职位索引失败");
+    return error(res, "获取已投递职位失败");
+  }
+};
+
 export const getJobApplications = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -292,6 +305,7 @@ export const addRoundResult = async (req, res) => {
 export default {
   createApplication,
   getMyApplications,
+  getMyAppliedJobIds,
   getJobApplications,
   updateApplicationStatus,
   getApplicationById,

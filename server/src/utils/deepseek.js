@@ -26,17 +26,6 @@ const withRetry = async (fn, retries = parseInt(process.env.DEEPSEEK_MAX_RETRIES
   throw lastError;
 };
 
-export const generateDeepSeekResponse = async (prompt) => {
-  const response = await withRetry(() =>
-    deepseekClient.post("/chat/completions", {
-      model: "deepseek-v4-flash",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-    })
-  );
-  return response.data.choices[0].message.content;
-};
-
 export const streamDeepSeekResponse = async function* (prompt) {
   const response = await withRetry(() =>
     deepseekClient.post(

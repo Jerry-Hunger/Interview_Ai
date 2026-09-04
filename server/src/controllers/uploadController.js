@@ -16,6 +16,8 @@ import {
   isValidResumeType,
 } from "../utils/oss.js";
 import { isValidImageUpload, isValidResumeUpload } from "../utils/fileValidation.js";
+import { success, error } from "../utils/apiResponse.js";
+import { uploadCompanyPhotosWithRollback } from "../services/photoUploadService.js";
 
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const MAX_RESUME_SIZE = 5 * 1024 * 1024;
@@ -23,7 +25,7 @@ const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 export const uploadAvatar = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: "请选择图片文件" });
+      return error(res, "请选择图片文件", 400);
     }
 
     const file = req.file;
@@ -32,15 +34,11 @@ export const uploadAvatar = async (req, res) => {
 
     const ext = getFileExtension(file.originalname);
     if (!isValidImageType(ext) || !isValidImageUpload(file.buffer, ext)) {
-      return res
-        .status(400)
-        .json({ success: false, error: "不支持的图片格式，仅支持 jpg、png、webp" });
+      return error(res, "不支持的图片格式，仅支持 jpg、png、webp", 400);
     }
 
     if (file.size > MAX_AVATAR_SIZE) {
-      return res
-        .status(400)
-        .json({ success: false, error: "图片大小不能超过 2MB" });
+      return error(res, "图片大小不能超过 2MB", 400);
     }
 
     const path = generateAvatarPath(userId, ext);
@@ -49,17 +47,17 @@ export const uploadAvatar = async (req, res) => {
     const ProfileModel = user.role === "student" ? Student : Company;
     await ProfileModel.findByIdAndUpdate(userId, { avatarUrl: url });
 
-    res.json({ success: true, url });
+    success(res, { url });
   } catch (err) {
     logger.error({ err }, "上传头像失败");
-    res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
+    error(res, "上传失败，请稍后重试");
   }
 };
 
 export const uploadResume = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: "请选择简历文件" });
+      return error(res, "请选择简历文件", 400);
     }
 
     const file = req.file;
@@ -67,23 +65,16 @@ export const uploadResume = async (req, res) => {
     const user = await User.findById(userId);
 
     if (user.role !== "student") {
-      return res.status(400).json({ success: false, error: "只有学生可以上传简历" });
+      return error(res, "只有学生可以上传简历", 400);
     }
 
     const ext = getFileExtension(file.originalname);
     if (!isValidResumeType(ext) || !isValidResumeUpload(file.buffer, ext)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "不支持的简历格式，仅支持 pdf、doc、docx",
-        });
+      return error(res, "不支持的简历格式，仅支持 pdf、doc、docx", 400);
     }
 
     if (file.size > MAX_RESUME_SIZE) {
-      return res
-        .status(400)
-        .json({ success: false, error: "简历大小不能超过 5MB" });
+      return error(res, "简历大小不能超过 5MB", 400);
     }
 
     const path = generateResumePath(userId, ext);
@@ -114,8 +105,7 @@ export const uploadResume = async (req, res) => {
       );
     }
 
-    res.json({
-      success: true,
+    success(res, {
       url: resume.fileUrl,
       resume: {
         id: resume._id,
@@ -127,14 +117,14 @@ export const uploadResume = async (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "上传简历失败");
-    res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
+    error(res, "上传失败，请稍后重试");
   }
 };
 
 export const uploadLogo = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: "请选择图片文件" });
+      return error(res, "请选择图片文件", 400);
     }
 
     const file = req.file;
@@ -142,20 +132,16 @@ export const uploadLogo = async (req, res) => {
     const user = await User.findById(userId);
 
     if (user.role !== "company") {
-      return res.status(400).json({ success: false, error: "只有企业可以上传 Logo" });
+      return error(res, "只有企业可以上传 Logo", 400);
     }
 
     const ext = getFileExtension(file.originalname);
     if (!isValidImageType(ext) || !isValidImageUpload(file.buffer, ext)) {
-      return res
-        .status(400)
-        .json({ success: false, error: "不支持的图片格式，仅支持 jpg、png、webp" });
+      return error(res, "不支持的图片格式，仅支持 jpg、png、webp", 400);
     }
 
     if (file.size > MAX_AVATAR_SIZE) {
-      return res
-        .status(400)
-        .json({ success: false, error: "图片大小不能超过 2MB" });
+      return error(res, "图片大小不能超过 2MB", 400);
     }
 
     const path = generateLogoPath(userId, ext);
@@ -163,17 +149,17 @@ export const uploadLogo = async (req, res) => {
 
     await Company.findByIdAndUpdate(userId, { companyLogoUrl: url });
 
-    res.json({ success: true, url });
+    success(res, { url });
   } catch (err) {
     logger.error({ err }, "上传 Logo 失败");
-    res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
+    error(res, "上传失败，请稍后重试");
   }
 };
 
 export const uploadPhotos = async (req, res) => {
   try {
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-      return res.status(400).json({ success: false, error: "请选择图片文件" });
+      return error(res, "请选择图片文件", 400);
     }
 
     const files = req.files;
@@ -181,7 +167,7 @@ export const uploadPhotos = async (req, res) => {
     const user = await User.findById(userId);
 
     if (user.role !== "company") {
-      return res.status(400).json({ success: false, error: "只有企业可以上传照片" });
+      return error(res, "只有企业可以上传照片", 400);
     }
 
     // 先完整校验和检查配额，避免部分上传成功后产生无法关联的 OSS 文件。
@@ -190,58 +176,36 @@ export const uploadPhotos = async (req, res) => {
       const ext = getFileExtension(file.originalname);
 
       if (!isValidImageType(ext) || !isValidImageUpload(file.buffer, ext)) {
-        return res
-          .status(400)
-          .json({ success: false, error: `第 ${i + 1} 张图片格式不支持，仅支持 jpg、png、webp` });
+        return error(res, `第 ${i + 1} 张图片格式不支持，仅支持 jpg、png、webp`, 400);
       }
 
       if (file.size > MAX_RESUME_SIZE) {
-        return res
-          .status(400)
-          .json({ success: false, error: `第 ${i + 1} 张图片大小不能超过 5MB` });
+        return error(res, `第 ${i + 1} 张图片大小不能超过 5MB`, 400);
       }
     }
 
     const company = await Company.findById(userId);
     if (!company) {
-      return res.status(404).json({ success: false, error: "企业信息不存在" });
+      return error(res, "企业信息不存在", 404);
     }
     const existingPhotos = company.companyPhotos || [];
     if (existingPhotos.length + files.length > 10) {
-      return res.status(400).json({
-        success: false,
-        error: `企业照片最多 10 张，当前还可上传 ${10 - existingPhotos.length} 张`,
-      });
+      return error(res, `企业照片最多 10 张，当前还可上传 ${10 - existingPhotos.length} 张`, 400);
     }
 
-    const uploadResults = await Promise.allSettled(files.map(async (file, index) => {
-      const ext = getFileExtension(file.originalname);
-      const path = generatePhotoPath(userId, ext, index);
-      const url = await uploadFile(file, path);
-      return { path, url };
-    }));
-    const successfulUploads = uploadResults
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value);
-
-    if (uploadResults.some((result) => result.status === "rejected")) {
-      // 任一文件失败时回滚已成功对象，避免留下不可见的 OSS 孤儿文件。
-      await Promise.allSettled(successfulUploads.map((upload) => deleteFile(upload.path)));
-      throw new Error("部分企业照片上传失败");
-    }
-
-    const updatedPhotos = [...existingPhotos, ...successfulUploads.map((upload) => upload.url)];
-
-    try {
-      await Company.findByIdAndUpdate(userId, { companyPhotos: updatedPhotos });
-    } catch (err) {
-      await Promise.allSettled(successfulUploads.map((upload) => deleteFile(upload.path)));
-      throw err;
-    }
-
-    res.json({ success: true, urls: successfulUploads.map((upload) => upload.url) });
+    const urls = await uploadCompanyPhotosWithRollback({
+      files,
+      userId,
+      existingPhotos,
+      uploadFile,
+      deleteFile,
+      generatePhotoPath,
+      getFileExtension,
+      savePhotos: (photos) => Company.findByIdAndUpdate(userId, { companyPhotos: photos }),
+    });
+    success(res, { urls });
   } catch (err) {
     logger.error({ err }, "上传照片失败");
-    res.status(500).json({ success: false, error: "上传失败，请稍后重试" });
+    error(res, "上传失败，请稍后重试");
   }
 };

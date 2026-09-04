@@ -75,7 +75,7 @@ export const githubCallback = async (req, res) => {
     const { code } = req.query;
 
     if (!code) {
-      return res.status(400).json({ error: "No code provided" });
+      return error(res, "未提供 GitHub 授权码", 400);
     }
 
     const tokenResponse = await fetchWithRetry(async () => {
@@ -93,7 +93,7 @@ export const githubCallback = async (req, res) => {
     const accessToken = tokenResponse.data.access_token;
 
     if (!accessToken) {
-      return res.status(400).json({ error: "无法获取访问令牌" });
+      return error(res, "无法获取访问令牌", 400);
     }
 
     const userResponse = await fetchWithRetry(async () => {
@@ -115,7 +115,7 @@ export const githubCallback = async (req, res) => {
         });
         const primaryEmail = emailsResponse.data.find(e => e.primary)?.email;
         if (!primaryEmail) {
-          return res.status(400).json({ error: "无法获取邮箱，请设置 GitHub 公开邮箱" });
+          return error(res, "无法获取邮箱，请设置 GitHub 公开邮箱", 400);
         }
 
         const existingUser = await User.findOne({ email: primaryEmail });
@@ -166,7 +166,7 @@ export const githubCallback = async (req, res) => {
     res.redirect(`${process.env.FRONTEND_URL.split(',')[0]}/login?role=${user.role}`);
   } catch (err) {
     logger.error({ err }, "GitHub OAuth error");
-    res.status(500).json({ error: "GitHub 登录失败，请重试" });
+    error(res, "GitHub 登录失败，请重试");
   }
 };
 
@@ -175,12 +175,12 @@ export const register = async (req, res) => {
     const { role, email, password, ...rest } = req.body;
 
     if (!["student", "company"].includes(role)) {
-      return res.status(400).json({ message: "无效的角色" });
+      return error(res, "无效的角色", 400);
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "该邮箱已被注册" });
+      return error(res, "该邮箱已被注册", 400);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

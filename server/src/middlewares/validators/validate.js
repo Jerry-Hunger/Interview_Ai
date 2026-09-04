@@ -1,9 +1,10 @@
 import { validationResult } from "express-validator";
+import { error } from "../../utils/apiResponse.js";
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (errors.isEmpty()) return next();
-  res.status(422).json({ success: false, errors: errors.array() });
+  return error(res, "请求参数校验失败", 422, errors.array());
 };
 
 export default validate;

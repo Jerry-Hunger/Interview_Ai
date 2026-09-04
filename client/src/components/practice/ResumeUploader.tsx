@@ -69,8 +69,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({ handleDataChanged, onUp
 
   const getPdfjs = async () => {
     const pdfjsLib = await import("pdfjs-dist");
-    const pdfjsWorker = (await import("pdfjs-dist/build/pdf.worker?url")).default;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    // Worker 仅在用户解析 PDF 时从固定版本 CDN 按需获取，避免将 2MB 资源打进主构建产物。
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
     return pdfjsLib;
   };
 

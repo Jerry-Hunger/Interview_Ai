@@ -3,6 +3,7 @@ import express from "express";
 import multer from "multer";
 import { uploadAvatar, uploadResume, uploadLogo, uploadPhotos } from "../controllers/uploadController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
+import { error } from "../utils/apiResponse.js";
 
 const router = express.Router();
 
@@ -47,15 +48,9 @@ const fixFilenameEncoding = (req, res, next) => {
 const handleMulterError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ 
-        success: false, 
-        error: '文件大小不能超过 5MB' 
-      });
+      return error(res, "文件大小不能超过 5MB", 400);
     }
-    return res.status(400).json({ 
-      success: false, 
-      error: err.message 
-    });
+    return error(res, err.message, 400);
   }
   next(err);
 };

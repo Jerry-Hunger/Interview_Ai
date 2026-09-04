@@ -6,6 +6,9 @@ export type { Job, Application, CompanyDashboardData } from "@/types";
 
 export type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
 export type Paginated<T> = { items: T[]; pagination: Pagination };
+export type InterviewPage = Paginated<Interview> & {
+  stats: { total: number; success: number; failure: number; quit: number };
+};
 
 const pageParams = (page: number, pageSize = 20) => ({ page, pageSize });
 
@@ -18,6 +21,16 @@ export const fetchMyInterviews = async (): Promise<Interview[]> => {
   if (Array.isArray(res.data?.interviews)) return res.data.interviews as Interview[];
   if (Array.isArray(res.data?.data)) return res.data.data;
   return [];
+};
+
+/** 分页获取我的面试记录。 */
+export const fetchMyInterviewsPage = async (page: number): Promise<InterviewPage> => {
+  const res = await axiosInstance.get("/interview/mine", { params: pageParams(page) });
+  return {
+    items: (res.data?.interviews || []) as Interview[],
+    pagination: res.data?.pagination || { page, pageSize: 20, total: 0, totalPages: 0 },
+    stats: res.data?.stats || { total: 0, success: 0, failure: 0, quit: 0 },
+  };
 };
 
 // ─── 职位 ───
@@ -54,6 +67,12 @@ export const fetchMyApplications = async (): Promise<Application[]> => {
 export const fetchMyApplicationsPage = async (page: number): Promise<Paginated<Application>> => {
   const res = await axiosInstance.get("/applications/mine", { params: pageParams(page) });
   return { items: (res.data?.applications || []) as Application[], pagination: res.data?.pagination || { page, pageSize: 20, total: 0, totalPages: 0 } };
+};
+
+/** 仅获取已投递职位 ID，供职位列表和详情页准确显示投递状态。 */
+export const fetchMyAppliedJobIds = async (): Promise<string[]> => {
+  const res = await axiosInstance.get("/applications/mine/job-ids");
+  return (res.data?.jobIds || []).map((id: unknown) => String(id));
 };
 
 /** 获取申请详情 */
@@ -155,7 +174,7 @@ export const fetchResumeText = async (resumeId: string): Promise<string> => {
 /** 获取简历详情 */
 export const fetchResumeDetail = async (resumeId: string) => {
   const res = await axiosInstance.get(`/resume/${resumeId}`);
-  return res.data;
+  return res.data?.resume;
 };
 
 /** 获取当前学生可选的简历库 */

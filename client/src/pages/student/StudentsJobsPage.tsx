@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fetchJobsPage, fetchMyApplicationsPage } from "@/services/api";
+import { fetchJobsPage, fetchMyAppliedJobIds } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { difficultyConfig } from "@/constants/difficulty";
 import type { Job } from "@/types";
@@ -33,7 +33,7 @@ const StudentJobsPage: React.FC = () => {
   const [page, setPage] = useState(1);
 
   const { data: jobs, loading: jobsLoading } = useFetch(() => fetchJobsPage(filters, page), [filters, page]);
-  const { data: applications, loading: appsLoading } = useFetch(() => fetchMyApplicationsPage(1));
+  const { data: appliedJobIds, loading: appsLoading } = useFetch(() => fetchMyAppliedJobIds());
   const loading = jobsLoading || appsLoading;
 
   const handleFilterChange = (key: string, value: string) => {
@@ -61,13 +61,7 @@ const StudentJobsPage: React.FC = () => {
   };
 
   // 已申请状态以服务端投递记录为准。
-  const appliedJobIds = new Set([
-    ...(applications?.items ?? []).map((a: { jobId: { _id: string } | string }) => {
-      const jobId = a.jobId;
-      const id = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
-      return String(id ?? "");
-    }),
-  ]);
+  const appliedJobIdSet = new Set(appliedJobIds ?? []);
 
   /** 投递职位 */
   const applyJob = (jobId: string) => {
@@ -76,7 +70,7 @@ const StudentJobsPage: React.FC = () => {
   };
 
   const renderJobCard = (job: Job, type: "open" | "closed" | "applied") => {
-    const alreadyApplied = appliedJobIds.has(String(job._id));
+    const alreadyApplied = appliedJobIdSet.has(String(job._id));
     const isOpen = type === "open";
     const diff = difficultyConfig[job.difficulty as keyof typeof difficultyConfig];
 

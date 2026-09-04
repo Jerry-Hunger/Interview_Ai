@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
-import { fetchMyInterviews } from "@/services/api";
+import { useState } from "react";
+import { fetchMyInterviewsPage } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { difficultyConfig } from "@/constants/difficulty";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import PaginationControls from "@/components/shared/PaginationControls";
 import useEmblaCarousel from "embla-carousel-react";
 import {
   Gauge,
@@ -95,15 +97,16 @@ const Carousel = ({ children }: { children: React.ReactNode }) => {
 };
 
 const StudentDashboard = () => {
-  const { data: interviews, loading: isPending } = useFetch(() => fetchMyInterviews());
+  const [page, setPage] = useState(1);
+  const { data: interviews, loading: isPending } = useFetch(() => fetchMyInterviewsPage(page), [page]);
   const navigate = useNavigate();
 
   // interviews 可能为 null（useFetch 初始值），使用 ?? [] 保证安全
-  const list = interviews ?? [];
-  const total = list.length;
-  const passed = list.filter((i: { result: string }) => i.result === "success").length;
-  const failed = list.filter((i: { result: string }) => i.result === "failure").length;
-  const quit = list.filter((i: { result: string }) => i.result === "quit").length;
+  const list = interviews?.items ?? [];
+  const total = interviews?.stats.total ?? 0;
+  const passed = interviews?.stats.success ?? 0;
+  const failed = interviews?.stats.failure ?? 0;
+  const quit = interviews?.stats.quit ?? 0;
 
   const groups = {
     通过: list.filter((i: { result: string }) => i.result === "success"),
@@ -137,7 +140,7 @@ const StudentDashboard = () => {
 
         {/* 统计卡片 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="总面试数" value={total} icon={BarChart} gradient="from-indigo-500 to-purple-600" />
+          <StatCard title="面试总数" value={total} icon={BarChart} gradient="from-indigo-500 to-purple-600" />
           <StatCard title="通过" value={passed} icon={CheckCircle} gradient="from-emerald-500 to-teal-500" />
           <StatCard title="未通过" value={failed} icon={XCircle} gradient="from-rose-500 to-pink-500" />
           <StatCard title="已退出" value={quit} icon={AlertCircle} gradient="from-amber-500 to-orange-500" />
@@ -292,6 +295,7 @@ const StudentDashboard = () => {
             </CardContent>
           </Card>
         )}
+        {interviews && <PaginationControls pagination={interviews.pagination} onPageChange={setPage} />}
       </div>
     </div>
   );

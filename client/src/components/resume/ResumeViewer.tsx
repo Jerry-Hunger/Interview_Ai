@@ -58,7 +58,7 @@ const FormattedResumeModal: React.FC<FormattedResumeModalProps> = ({
                     setError(data.error);
                     return;
                   }
-                  if (data.done) {
+                  if (data.done || data.type === "done") {
                     markDone();
                     return;
                   }

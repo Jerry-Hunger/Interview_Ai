@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Calendar, Layers, Building2, MapPin, Globe, Sparkles, Clock, CheckCircle2, ArrowRight, Briefcase } from "lucide-react";
-import { fetchJobDetail, fetchMyApplications, fetchMyResumes, applyJob as applyJobApi } from "@/services/api";
+import { fetchJobDetail, fetchMyAppliedJobIds, fetchMyResumes, applyJob as applyJobApi } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { useToast } from "@/hooks/use-toast";
 import MarkdownText from "@/components/resume/MarkdownText";
@@ -18,7 +18,7 @@ const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: job, loading } = useFetch(() => fetchJobDetail(id!), [id], { enabled: !!id });
-  const { data: applications } = useFetch(() => fetchMyApplications());
+  const { data: appliedJobIds } = useFetch(() => fetchMyAppliedJobIds());
   const { data: resumes } = useFetch(() => fetchMyResumes());
   const [applying, setApplying] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState("");
@@ -32,11 +32,7 @@ const JobDetailPage: React.FC = () => {
     if (defaultResume && !selectedResumeId) setSelectedResumeId(defaultResume._id);
   }, [resumes, selectedResumeId]);
 
-  const hasApplied = localApplied || (applications ?? []).some((a: { jobId: string | { _id: string } }) => {
-    const jobId = a.jobId;
-    const jid = typeof jobId === "object" && jobId !== null ? jobId._id : jobId;
-    return jid?.toString() === id?.toString();
-  });
+  const hasApplied = localApplied || (appliedJobIds ?? []).includes(String(id));
 
   const handleApply = async () => {
     if (hasApplied) {
@@ -54,8 +50,8 @@ const JobDetailPage: React.FC = () => {
       setLocalApplied(true);
     } catch (err: unknown) {
       console.error("Apply failed", err);
-      const axiosError = err as { response?: { data?: { msg?: string } } };
-      toast({ title: "申请失败", description: axiosError.response?.data?.msg ?? "申请失败", variant: "destructive" });
+      const message = err instanceof Error ? err.message : "申请失败";
+      toast({ title: "申请失败", description: message, variant: "destructive" });
     } finally {
       setApplying(false);
     }

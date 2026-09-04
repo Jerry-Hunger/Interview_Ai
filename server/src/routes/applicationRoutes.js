@@ -3,6 +3,7 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 import {
   createApplication,
   getMyApplications,
+  getMyAppliedJobIds,
   getJobApplications,
   getApplicationById,
   updateApplicationStatus,
@@ -21,6 +22,7 @@ const router = express.Router();
 
 router.post("/", authMiddleware("student"), validateCreateApplication, validate, createApplication);
 router.get("/mine", authMiddleware("student"), getMyApplications);
+router.get("/mine/job-ids", authMiddleware("student"), getMyAppliedJobIds);
 router.get("/job/:jobId", authMiddleware("company"), validateJobApplications, validate, getJobApplications);
 
 router.get("/:applicationId", authMiddleware(["student", "company"]), validateApplicationId, validate, getApplicationById);

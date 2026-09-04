@@ -3,11 +3,13 @@ import Student from "../models/Student.js";
 import Application from "../models/Application.js";
 import JobOpening from "../models/JobOpening.js";
 import { streamDeepSeekResponse } from "../utils/deepseek.js";
+import { beginSse, sendSseError, sendSseEvent } from "../utils/sseResponse.js";
 import { resumeFormatPrompt } from "../prompts/interview.js";
 import axios from "axios";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
 import logger from "../utils/logger.js";
+import { success, error } from "../utils/apiResponse.js";
 
 const getResumeForStudent = (resumeId, studentId, includeArchived = false) => {
   const filter = { _id: resumeId, studentId, deletedAt: null };
@@ -39,21 +41,22 @@ export const formatResumeStream = async (req, res) => {
   const { resumeText } = req.body;
   const prompt = resumeFormatPrompt(resumeText);
 
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
+  beginSse(res);
+  let clientDisconnected = false;
+  req.on("close", () => { clientDisconnected = true; });
 
   try {
     for await (const chunk of streamDeepSeekResponse(prompt)) {
-      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+      if (clientDisconnected) break;
+      sendSseEvent(res, { type: "content", content: chunk });
     }
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-    res.end();
+    if (!clientDisconnected) {
+      sendSseEvent(res, { type: "done" });
+      res.end();
+    }
   } catch (error) {
     logger.error({ error: error.message }, "流式格式化简历失败");
-    res.write(`data: ${JSON.stringify({ error: "简历格式化失败" })}\n\n`);
-    res.end();
+    if (!clientDisconnected) sendSseError(res, "简历格式化失败");
   }
 };
 
@@ -65,7 +68,7 @@ export const listMyResumes = async (req, res) => {
     const resumes = await Resume.find(filter).sort({ updatedAt: -1 }).lean();
     const student = await Student.findById(req.user.id).select("defaultResumeId resumeId").lean();
     const defaultResumeId = student?.defaultResumeId || student?.resumeId || null;
-    res.json({
+    success(res, {
       resumes: resumes.map((resume) => ({
         ...resume,
         isDefault: Boolean(defaultResumeId && resume._id.equals(defaultResumeId)),
@@ -73,44 +76,44 @@ export const listMyResumes = async (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "获取简历列表失败");
-    res.status(500).json({ error: "获取简历列表失败" });
+    error(res, "获取简历列表失败");
   }
 };
 
 export const setDefaultResume = async (req, res) => {
   try {
     const resume = await getResumeForStudent(req.params.id, req.user.id);
-    if (!resume) return res.status(404).json({ error: "简历不存在或已归档" });
+    if (!resume) return error(res, "简历不存在或已归档", 404);
 
     const student = await Student.findByIdAndUpdate(
       req.user.id,
       { defaultResumeId: resume._id, $unset: { resumeId: 1 } },
       { new: true, runValidators: true }
     );
-    res.json({ success: true, defaultResumeId: student.defaultResumeId });
+    success(res, { defaultResumeId: student.defaultResumeId });
   } catch (err) {
     logger.error({ err }, "设置默认简历失败");
-    res.status(500).json({ error: "设置默认简历失败" });
+    error(res, "设置默认简历失败");
   }
 };
 
 export const updateResume = async (req, res) => {
   try {
     const resume = await getResumeForStudent(req.params.id, req.user.id, true);
-    if (!resume) return res.status(404).json({ error: "简历不存在" });
+    if (!resume) return error(res, "简历不存在", 404);
     if (req.body.title !== undefined) resume.title = req.body.title.trim();
     await resume.save();
-    res.json({ success: true, resume });
+    success(res, { resume });
   } catch (err) {
     logger.error({ err }, "更新简历失败");
-    res.status(500).json({ error: "更新简历失败" });
+    error(res, "更新简历失败");
   }
 };
 
 export const archiveResume = async (req, res) => {
   try {
     const resume = await getResumeForStudent(req.params.id, req.user.id);
-    if (!resume) return res.status(404).json({ error: "简历不存在或已归档" });
+    if (!resume) return error(res, "简历不存在或已归档", 404);
 
     resume.isArchived = true;
     await resume.save();
@@ -120,45 +123,45 @@ export const archiveResume = async (req, res) => {
       { runValidators: true }
     );
     // 归档而非物理删除，确保已投递简历和面试记录可以继续追溯。
-    res.json({ success: true });
+    success(res, { message: "简历已归档" });
   } catch (err) {
     logger.error({ err }, "归档简历失败");
-    res.status(500).json({ error: "归档简历失败" });
+    error(res, "归档简历失败");
   }
 };
 
 export const saveResumeText = async (req, res) => {
   try {
     const resume = await getResumeForStudent(req.params.id, req.user.id, true);
-    if (!resume) return res.status(404).json({ error: "简历不存在" });
+    if (!resume) return error(res, "简历不存在", 404);
     const { text } = req.body;
-    if (typeof text !== "string") return res.status(400).json({ error: "无效的文本内容" });
+    if (typeof text !== "string") return error(res, "无效的文本内容", 400);
     resume.text = text.trim();
     resume.textStatus = resume.text ? "ready" : "pending";
     await resume.save();
-    res.json({ success: true });
+    success(res, { message: "简历文本已保存" });
   } catch (err) {
     logger.error({ err }, "保存简历文本失败");
-    res.status(500).json({ error: "保存简历文本失败" });
+    error(res, "保存简历文本失败");
   }
 };
 
 export const getResumeById = async (req, res) => {
   try {
     const resume = await findAccessibleResume(req, req.params.id, true);
-    if (!resume) return res.status(404).json({ error: "简历不存在" });
-    res.json(resume);
+    if (!resume) return error(res, "简历不存在", 404);
+    success(res, { resume });
   } catch (err) {
     logger.error({ err }, "获取简历失败");
-    res.status(500).json({ error: "服务器错误" });
+    error(res, "服务器错误");
   }
 };
 
 export const getResumeTextById = async (req, res) => {
   try {
     const resume = await findAccessibleResume(req, req.params.id, true);
-    if (!resume) return res.status(404).json({ error: "简历不存在" });
-    if (resume.text) return res.json({ text: resume.text });
+    if (!resume) return error(res, "简历不存在", 404);
+    if (resume.text) return success(res, { text: resume.text });
 
     const response = await axios.get(resume.fileUrl, { responseType: "arraybuffer" });
     const buffer = Buffer.from(response.data);
@@ -178,21 +181,21 @@ export const getResumeTextById = async (req, res) => {
         logger.error({ err: pdfErr }, "PDF 解析失败");
         resume.textStatus = "failed";
         await resume.save();
-        return res.status(422).json({ error: "无法解析该 PDF 文件" });
+        return error(res, "无法解析该 PDF 文件", 422);
       }
     } else if (resume.fileType === "docx" || resume.fileType === "doc") {
       text = (await mammoth.extractRawText({ buffer })).value;
     } else {
-      return res.status(400).json({ error: "不支持的文件格式" });
+      return error(res, "不支持的文件格式", 400);
     }
 
     const trimmed = text.trim();
     resume.text = trimmed;
     resume.textStatus = trimmed ? "ready" : "failed";
     await resume.save();
-    res.json({ text: trimmed });
+    success(res, { text: trimmed });
   } catch (err) {
     logger.error({ err }, "提取简历文本失败");
-    res.status(500).json({ error: "提取简历文本失败" });
+    error(res, "提取简历文本失败");
   }
 };

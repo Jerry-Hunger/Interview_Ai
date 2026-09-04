@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=24.20.0"
   },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
@@ -28,6 +28,7 @@
     "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.542.0",
     "mammoth": "^1.10.0",

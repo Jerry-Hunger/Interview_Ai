@@ -32,7 +32,7 @@ export const createJob = async (req, res) => {
 
     await job.save();
 
-    success(res, { msg: "职位创建成功", job }, 201);
+    success(res, { message: "职位创建成功", job }, 201);
   } catch (err) {
     logger.error({ err }, "创建职位失败");
     error(res, "创建职位时发生错误");
@@ -158,7 +158,7 @@ export const updateJobStatus = async (req, res) => {
     job.status = status;
     await job.save();
 
-    success(res, { msg: `职位已${status === "open" ? "开启" : "关闭"}`, job });
+    success(res, { message: `职位已${status === "open" ? "开启" : "关闭"}`, job });
   } catch (err) {
     logger.error({ err }, "更新职位状态失败");
     error(res, "更新职位状态失败");

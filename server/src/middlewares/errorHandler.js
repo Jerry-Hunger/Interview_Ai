@@ -1,4 +1,5 @@
 import logger from "../utils/logger.js";
+import { error as sendError } from "../utils/apiResponse.js";
 
 const errorHandler = (err, req, res, _next) => {
   if (res.headersSent) {
@@ -33,7 +34,7 @@ const errorHandler = (err, req, res, _next) => {
     logger.error({ err: err.stack || err.message }, "未处理错误");
   }
 
-  res.status(status).json({ success: false, error: message });
+  sendError(res, message, status);
 };
 
 export default errorHandler;

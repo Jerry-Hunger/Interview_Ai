@@ -2,12 +2,18 @@ import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import axiosInstance from "@/utils/axiosInstance";
 import { fetchMyResumes, fetchResumeText } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import type { SetupData, InterviewState, Interview, InterviewPhase, PracticeStep, ResumeSummary } from "@/types";
 import { isPerfunctoryReprompt, stripRepromptTag } from "@/utils/interview";
-import { concludeInterviewStream, respondInterviewStream, StreamRequestError } from "@/services/interviewStream";
+import {
+  concludeInterviewStream,
+  createInterviewFromConclusion,
+  getInterviewErrorMessage,
+  isRateLimitedInterviewError,
+  respondInterviewStream,
+  startInterviewStream,
+} from "@/services/interviewStream";
 
 const PracticeSetup = lazy(() => import("@/components/practice/PracticeSetup"));
 const PracticeInterview = lazy(() => import("@/components/practice/PracticeInterview"));
@@ -86,7 +92,7 @@ const Practice = () => {
       hasTriggeredAutoEndRef.current = false;
       setIsStarting(true);
 
-      axiosInstance.post("/interview/start", {
+      startInterviewStream({
         role: effectiveSetupData.role,
         resume: effectiveSetupData.resume,
         resumeId: effectiveSetupData.resumeId,
@@ -99,8 +105,7 @@ const Practice = () => {
         totalRounds: effectiveSetupData.rounds,
         previousFeedback: state.previousFeedback,
         questionsPerRound: effectiveSetupData.questionsPerRound,
-      }).then((res) => {
-        const firstQuestion = res.data.message;
+      }).then((firstQuestion) => {
         setCurrentStep("interview");
         setInterviewState({
           currentQuestion: 1,
@@ -174,7 +179,7 @@ const Practice = () => {
     setRoundInterviewIds([]);
 
     try {
-      const res = await axiosInstance.post("/interview/start", {
+      const firstQuestion = await startInterviewStream({
         role: setupData.role,
         resume: setupData.resume,
         resumeId: setupData.resumeId,
@@ -183,8 +188,6 @@ const Practice = () => {
         difficulty: setupData.difficulty,
         type: "practice",
       });
-
-      const firstQuestion = res.data.message;
 
       setIsStarting(false);
       setCurrentStep("interview");
@@ -340,20 +343,14 @@ const Practice = () => {
     } catch (error: unknown) {
       console.error("Error in interview flow:", error);
       // 检查是否是429错误（请求过于频繁）
-      if (error instanceof StreamRequestError && error.status === 429) {
-        toast({
-          title: "AI 忙碌中",
-          description: "AI 面试官需要休息一下，请稍后再试。",
-          variant: "destructive",
-        });
-      } else if (error && typeof error === 'object' && 'response' in error && (error as { response?: { status?: number } }).response?.status === 429) {
+      if (isRateLimitedInterviewError(error)) {
         toast({
           title: "AI 忙碌中",
           description: "AI 面试官需要休息一下，请稍后再试。",
           variant: "destructive",
         });
       } else {
-        const errorMessage = error instanceof Error ? error.message : "未知错误";
+        const errorMessage = getInterviewErrorMessage(error, "未知错误");
         toast({
           title: "错误",
           description: `出错了：${errorMessage}，请重试。`,
@@ -394,23 +391,16 @@ const Practice = () => {
           onFinalStart: () => setStreamingMessage("正在生成最终评估..."),
         });
 
-      const interview = {
-        _id: conclusion.interviewId,
-        type: "practice" as const,
+      const interview = createInterviewFromConclusion(conclusion, {
+        type: "practice",
         role: effectiveSetupData.role,
         difficulty: effectiveSetupData.difficulty,
         roundType: effectiveSetupData.roundType,
-        rounds: effectiveRounds || 1,
+        rounds: effectiveRounds,
         currentRound: effectiveRounds > 1 ? currentRound : undefined,
-        result: conclusion.result,
-        feedback: "",
-        transcript: [],
-        createdAt: new Date().toISOString(),
-        finalFeedback: conclusion.finalFeedback,
         chatHistory: interviewState.chatHistory,
-        feedbacks: conclusion.feedbacks,
-        resumeText: effectiveSetupData.resume,  // 保存简历文本以便后续轮次使用
-      };
+        resumeText: effectiveSetupData.resume,
+      });
 
       setIsLoading(false);
 
@@ -459,7 +449,7 @@ const Practice = () => {
     setIsLoading(true);
 
     try {
-      const res = await axiosInstance.post("/interview/conclude", {
+      const conclusion = await concludeInterviewStream({
           history: interviewState.chatHistory,
           resumeText: setupData.resume,
           resumeId: setupData.resumeId,
@@ -470,8 +460,15 @@ const Practice = () => {
           typeOfInterview: "practice",
           result: "quit",
         });
-      const { interview } = res.data;
-
+      const interview = createInterviewFromConclusion(conclusion, {
+        type: "practice",
+        role: setupData.role,
+        difficulty: setupData.difficulty,
+        roundType: setupData.roundType,
+        rounds: setupData.rounds,
+        chatHistory: interviewState.chatHistory,
+        resumeText: setupData.resume,
+      });
       setInterviewResults(interview);
       navigate("/student/practice-result", { state: { interview }, replace: true });
     } catch (error: unknown) {
@@ -479,17 +476,14 @@ const Practice = () => {
       isQuittingRef.current = false;
       console.error("Error quitting interview:", error);
       // 检查是否是429错误（请求过于频繁）
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number } };
-        if (axiosError.response?.status === 429) {
-          setIsLoading(false);
-          toast({
-            title: "AI 忙碌中",
-            description: "服务器繁忙，请稍后再试。",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (isRateLimitedInterviewError(error)) {
+        setIsLoading(false);
+        toast({
+          title: "AI 忙碌中",
+          description: "服务器繁忙，请稍后再试。",
+          variant: "destructive",
+        });
+        return;
       }
       toast({
         title: "错误",

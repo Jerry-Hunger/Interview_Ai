@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Clock,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import ApplicationStatusChart from "@/components/charts/ApplicationStatusChart";
 import { fetchCompanyDashboard } from "@/services/api";
 import { useFetch } from "@/hooks/useFetch";
 import { statusColors, statusLabels } from "./shared/constants";
@@ -63,27 +63,19 @@ const StatCard = ({
 const CompanyDashboard = () => {
   const navigate = useNavigate();
   const { data, loading: isPending, error } = useFetch(() => fetchCompanyDashboard());
-  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
-  const [animated, setAnimated] = useState(false);
   const stats = data?.stats ?? null;
   const jobs = data?.jobs || [];
   const recentApps = data?.recentApplications || [];
-
-  useEffect(() => {
-    if (!isPending) {
-      const timer = setTimeout(() => setAnimated(true), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isPending]);
 
   const total = stats
     ? (stats.applied || 0) + (stats.inProgress || 0) + (stats.selected || 0) + (stats.finalSelected || 0) + (stats.rejected || 0)
     : 0;
 
-  const chartData = STAGES.map((s) => ({
-    name: s.label,
-    value: stats?.[s.key] || 0,
-  })).filter((d) => d.value > 0);
+  const chartData = STAGES.map((stage) => ({
+    label: stage.label,
+    value: stats?.[stage.key] || 0,
+    color: stage.color,
+  })).filter((stage) => stage.value > 0);
 
   const hasData = total > 0;
 
@@ -178,123 +170,9 @@ const CompanyDashboard = () => {
 
           {hasData ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              {/* 环形图 */}
-              <div className="flex justify-center">
-                <div className="relative w-[240px] h-[240px]">
-                  <svg
-                    viewBox="0 0 240 240"
-                    width="240"
-                    height="240"
-                    className="block"
-                  >
-                    {(() => {
-                      const radius = 85;
-                      const circumference = 2 * Math.PI * radius;
-                      const gap = 3;
-                      const totalGap = chartData.length * gap;
-                      const available = circumference - totalGap;
-                      let accumulatedOffset = 0;
-
-                      return chartData.map((entry, index) => {
-                        const stage = STAGES.find((s) => s.label === entry.name);
-                        const segmentLength = total > 0 ? (entry.value / total) * available : 0;
-                        const offset = circumference * 0.25 - accumulatedOffset;
-                        accumulatedOffset += segmentLength + gap;
-
-                        return (
-                          <circle
-                            key={`seg-${index}`}
-                            cx="120"
-                            cy="120"
-                            r={radius}
-                            fill="none"
-                            stroke={stage?.color || "#888"}
-                            strokeWidth={36}
-                            strokeDasharray={`${animated ? segmentLength : 0} ${circumference - (animated ? segmentLength : 0)}`}
-                            strokeDashoffset={offset}
-                            strokeLinecap="butt"
-                            className="cursor-pointer transition-all duration-700 ease-out"
-                            style={{ opacity: hoveredSegment !== null && hoveredSegment !== index ? 0.4 : 1 }}
-                            onMouseEnter={() => setHoveredSegment(index)}
-                            onMouseLeave={() => setHoveredSegment(null)}
-                          />
-                        );
-                      });
-                    })()}
-                  </svg>
-                  {/* 中心标签 */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">{total}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">总申请</span>
-                  </div>
-                  {/* 悬停提示 */}
-                  {hoveredSegment !== null && chartData[hoveredSegment] && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[calc(50%+50px)] pointer-events-none z-10">
-                      <div className="bg-white dark:bg-[#23263A] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {chartData[hoveredSegment].name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {chartData[hoveredSegment].value} 人 (
-                          {(total > 0
-                            ? ((chartData[hoveredSegment].value / total) * 100).toFixed(0)
-                            : "0")}
-                          %)
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 漏斗进度条 */}
-              <div className="space-y-4">
-                {STAGES.map((stage, idx) => {
-                  const count = stats?.[stage.key] || 0;
-                  const pct = total > 0 ? (count / total) * 100 : 0;
-                  return (
-                    <div key={stage.key}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {stage.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
-                            {count}
-                          </span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums w-8 text-right">
-                            {pct.toFixed(0)}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-700 ease-out"
-                          style={{
-                            width: animated ? `${pct}%` : "0%",
-                            backgroundColor: stage.color,
-                            opacity: 0.85,
-                          }}
-                        />
-                      </div>
-                      {idx < STAGES.length - 1 && (
-                        <div className="flex justify-center my-1">
-                          <ArrowRight
-                            size={12}
-                            className="text-gray-300 dark:text-gray-600 rotate-90"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {/* 通过率 */}
+              <ApplicationStatusChart stages={chartData} total={total} type="pie" />
+              <div>
+                <ApplicationStatusChart stages={chartData} total={total} type="bar" />
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2 text-sm">
                     <TrendingUp size={16} className="text-emerald-500 dark:text-emerald-400" />
@@ -329,7 +207,7 @@ const CompanyDashboard = () => {
               <h2 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">
                 进行中的职位
               </h2>
-              <span className="text-sm text-gray-400 dark:text-gray-500">({jobs.length})</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500">({stats?.activeJobs || 0})</span>
             </div>
           </div>
           <div className="space-y-3">

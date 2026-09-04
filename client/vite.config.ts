@@ -21,6 +21,8 @@ export default defineConfig({
     },
   },
   build: {
+    // 清理已不再被引用的资源，防止历史 PDF worker 残留在发布目录。
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks(id) {

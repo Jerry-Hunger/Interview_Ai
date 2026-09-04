@@ -1,8 +1,7 @@
 import express from "express";
 import {
-  startInterview,
+  startInterviewStream,
   respondToInterviewStream,
-  concludeInterview,
   concludeInterviewStream,
   getUserInterviews,
   getInterviewById,
@@ -18,9 +17,8 @@ import validate from "../middlewares/validators/validate.js";
 
 const router = express.Router();
 
-router.post("/start", authMiddleware(), aiLimiter, validateStartInterview, validate, startInterview);
+router.post("/start-stream", authMiddleware(), aiLimiter, validateStartInterview, validate, startInterviewStream);
 router.post("/respond-stream", authMiddleware(), aiLimiter, validateRespondInterview, validate, respondToInterviewStream);
-router.post("/conclude", authMiddleware(), aiLimiter, validateConcludeInterview, validate, concludeInterview);
 router.post("/conclude-stream", authMiddleware(), aiLimiter, validateConcludeInterview, validate, concludeInterviewStream);
 router.get("/mine", authMiddleware("student"), getUserInterviews);
 router.get("/:id", authMiddleware("student"), getInterviewById);

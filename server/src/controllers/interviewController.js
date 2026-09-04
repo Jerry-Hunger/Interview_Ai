@@ -1,7 +1,8 @@
-import { generateDeepSeekResponse, streamDeepSeekResponse } from "../utils/deepseek.js";
+import { streamDeepSeekResponse } from "../utils/deepseek.js";
 import Interview from "../models/Interview.js";
 import Resume from "../models/Resume.js";
 import Application from "../models/Application.js";
+import mongoose from "mongoose";
 import logger from "../utils/logger.js";
 import {
   startInterviewFirstRound,
@@ -11,7 +12,8 @@ import {
 } from "../prompts/interview.js";
 import { getPagination, toPaginationMeta } from "../utils/pagination.js";
 import { success, error as sendError } from "../utils/apiResponse.js";
-import { buildInterviewRecord, createEvaluationPlan } from "../services/interviewEvaluation.js";
+import { buildInterviewRecord, createEvaluationPlan, executeEvaluationPlan } from "../services/interviewEvaluation.js";
+import { beginSse, sendSseError, sendSseEvent } from "../utils/sseResponse.js";
 
 // 统一的面试结果判定：匹配"评估结论"或"结果"关键词
 const RESULT_PATTERN = /(?:评估结论|结果)\s*[：:]\s*(不?通过)/;
@@ -72,7 +74,7 @@ const resolveInterviewContext = async ({ studentId, type, resumeId, applicationI
   };
 };
 
-export const startInterview = async (req, res) => {
+export const startInterviewStream = async (req, res) => {
   const { role, resume, resumeId, applicationId, roundType, topic, difficulty, type, isContinuation, currentRound, totalRounds, previousFeedback, questionsPerRound } =
     req.body;
 
@@ -89,11 +91,24 @@ export const startInterview = async (req, res) => {
     const prompt = isContinuation && currentRound && totalRounds
       ? startInterviewContinuationRound({ resume: resumeText, role, roundType, topic, difficulty, currentRound, totalRounds, previousFeedback, questionsPerRound })
       : startInterviewFirstRound({ resume: resumeText, role, roundType, topic, difficulty });
-    const response = await generateDeepSeekResponse(prompt);
-    success(res, { message: response.trim() });
+    beginSse(res);
+    let clientDisconnected = false;
+    req.on("close", () => { clientDisconnected = true; });
+    for await (const chunk of streamDeepSeekResponse(prompt)) {
+      if (clientDisconnected) break;
+      sendSseEvent(res, { type: "content", content: chunk });
+    }
+    if (!clientDisconnected) {
+      sendSseEvent(res, { type: "done" });
+      res.end();
+    }
   } catch (error) {
-    logger.error({ error: error.message }, "开始面试失败");
-    sendError(res, error.status ? error.message : "AI 响应失败，请稍后重试。", error.status || 500);
+    logger.error({ error: error.message }, "流式开始面试失败");
+    if (!res.headersSent) {
+      sendError(res, error.status ? error.message : "AI 响应失败，请稍后重试。", error.status || 500);
+    } else {
+      sendSseError(res, "AI 响应失败，请稍后重试。");
+    }
   }
 };
 
@@ -118,11 +133,7 @@ export const respondToInterviewStream = async (req, res) => {
     prompt = respondNormal({ chatHistory, answer, resume, role, roundType, topic, difficulty });
   }
 
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.flushHeaders();
+  beginSse(res);
 
   let clientDisconnected = false;
   req.on("close", () => { clientDisconnected = true; });
@@ -130,86 +141,17 @@ export const respondToInterviewStream = async (req, res) => {
   try {
     for await (const chunk of streamDeepSeekResponse(prompt)) {
       if (clientDisconnected) break;
-      res.write(chunk);
+      sendSseEvent(res, { type: "content", content: chunk });
     }
-    res.end();
+    if (!clientDisconnected) {
+      sendSseEvent(res, { type: "done" });
+      res.end();
+    }
   } catch (error) {
     logger.error({ error: error.message }, "流式回答面试失败");
     if (!res.writableEnded) {
-      res.write(`data: ${JSON.stringify({ error: "AI 响应失败，请稍后重试。" })}\n\n`);
-      res.end();
+      sendSseError(res, "AI 响应失败，请稍后重试。");
     }
-  }
-};
-
-export const concludeInterview = async (req, res) => {
-  const {
-    history = [],
-    resumeText,
-    roleSummary,
-    roundType,
-    customTopic,
-    difficulty,
-    typeOfInterview,
-    resumeId,
-    applicationId,
-    result: clientResult,
-    totalRounds,
-    currentRound,
-  } = req.body;
-
-  const studentId = req.user.id;
-
-  try {
-  const context = await resolveInterviewContext({
-    studentId,
-    type: typeOfInterview,
-    resumeId,
-    applicationId,
-    roundNumber: currentRound || 1,
-  });
-  const selectedResumeText = context.resume.text || resumeText;
-  if (!selectedResumeText) throw createRequestError("所选简历尚未完成文本提取");
-  if (clientResult === "quit") {
-    const interview = new Interview(buildInterviewRecord({
-      studentId, history, context, resumeText: selectedResumeText, type: typeOfInterview,
-      difficulty, roleSummary, roundType, customTopic, totalRounds, currentRound,
-      finalFeedback: "面试已退出，未完成评估。", result: "quit",
-    }));
-    await interview.save();
-    logger.info({ interviewId: interview._id }, "保存退出面试");
-    return success(res, { interview });
-  }
-
-  const evaluationPlan = createEvaluationPlan({
-    history,
-    roleSummary,
-    resumeText: selectedResumeText,
-    roundType,
-    customTopic,
-    difficulty,
-  });
-
-  const feedbacks = await Promise.all(
-    Array.from({ length: evaluationPlan.chunkCount }, (_, index) =>
-      generateDeepSeekResponse(evaluationPlan.getChunkPrompt(index)).then((feedback) => feedback.trim())
-    )
-  );
-
-  const finalFeedback = await generateDeepSeekResponse(evaluationPlan.getFinalPrompt(feedbacks));
-
-  const result = parseResultFromFeedback(finalFeedback);
-
-  const interview = new Interview(buildInterviewRecord({
-    studentId, history, context, resumeText: selectedResumeText, type: typeOfInterview,
-    difficulty, roleSummary, roundType, customTopic, totalRounds, currentRound, feedbacks, finalFeedback, result,
-  }));
-  await interview.save();
-  logger.info({ interviewId: interview._id }, "保存面试记录");
-  success(res, { interview, feedbacks });
-  } catch (error) {
-    logger.error({ error: error.message }, "结束面试失败");
-    sendError(res, error.status ? error.message : "生成反馈失败，请稍后重试。", error.status || 500);
   }
 };
 
@@ -241,6 +183,8 @@ export const concludeInterviewStream = async (req, res) => {
     const selectedResumeText = context.resume.text || resumeText;
     if (!selectedResumeText) throw createRequestError("所选简历尚未完成文本提取");
 
+    beginSse(res);
+
     if (clientResult === "quit") {
       const interview = new Interview(buildInterviewRecord({
         studentId, history, context, resumeText: selectedResumeText, type: typeOfInterview,
@@ -248,14 +192,15 @@ export const concludeInterviewStream = async (req, res) => {
         finalFeedback: "面试已退出，未完成评估。", result: "quit",
       }));
       await interview.save();
-      return success(res, { interview });
+      sendSseEvent(res, {
+        type: "done",
+        interviewId: String(interview._id),
+        result: "quit",
+        feedbacks: [],
+        finalFeedback: "面试已退出，未完成评估。",
+      });
+      return res.end();
     }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
 
     let clientDisconnected = false;
     req.on("close", () => { clientDisconnected = true; });
@@ -269,29 +214,32 @@ export const concludeInterviewStream = async (req, res) => {
       difficulty,
     });
 
-    const feedbacks = [];
-    for (let i = 0; i < evaluationPlan.chunkCount; i++) {
-      if (clientDisconnected) break;
-      const prompt = evaluationPlan.getChunkPrompt(i);
-
-      res.write(`[CHUNK_START:${i}]\n`);
-
-      let fullFeedback = "";
-      for await (const chunk of streamDeepSeekResponse(prompt)) {
-        fullFeedback += chunk;
-        res.write(chunk);
-      }
-      feedbacks.push(fullFeedback.trim());
-      res.write(`\n[CHUNK_END:${i}:${Buffer.from(fullFeedback).toString("base64")}]\n`);
-    }
-
-    res.write("[FINAL_START]\n");
-
-    let fullFinalFeedback = "";
-    for await (const chunk of streamDeepSeekResponse(evaluationPlan.getFinalPrompt(feedbacks))) {
-      fullFinalFeedback += chunk;
-      res.write(chunk);
-    }
+    const evaluation = await executeEvaluationPlan({
+      plan: evaluationPlan,
+      shouldStop: () => clientDisconnected,
+      generateChunk: async (prompt, index) => {
+        if (clientDisconnected) return "";
+        sendSseEvent(res, { type: "chunk-start", index });
+        let fullFeedback = "";
+        for await (const chunk of streamDeepSeekResponse(prompt)) {
+          fullFeedback += chunk;
+          if (!clientDisconnected) sendSseEvent(res, { type: "chunk", text: chunk });
+        }
+        if (!clientDisconnected) sendSseEvent(res, { type: "chunk-end", index });
+        return fullFeedback;
+      },
+      generateFinal: async (prompt) => {
+        if (!clientDisconnected) sendSseEvent(res, { type: "final-start" });
+        let fullFinalFeedback = "";
+        for await (const chunk of streamDeepSeekResponse(prompt)) {
+          fullFinalFeedback += chunk;
+          if (!clientDisconnected) sendSseEvent(res, { type: "final", text: chunk });
+        }
+        return fullFinalFeedback;
+      },
+    });
+    if (evaluation.aborted) return;
+    const { feedbacks, finalFeedback: fullFinalFeedback } = evaluation;
 
     const result = parseResultFromFeedback(fullFinalFeedback);
 
@@ -303,16 +251,20 @@ export const concludeInterviewStream = async (req, res) => {
 
     await interview.save();
 
-    const doneMarker = `\n[DONE:${interview._id}:${result}]\n`;
-    res.write(doneMarker);
+    sendSseEvent(res, {
+      type: "done",
+      interviewId: String(interview._id),
+      result,
+      feedbacks,
+      finalFeedback: fullFinalFeedback,
+    });
     res.end();
   } catch (error) {
     logger.error({ error: error.message }, "流式结束面试失败");
     if (!res.headersSent) {
       sendError(res, error.status ? error.message : "生成反馈失败，请稍后重试。", error.status || 500);
     } else if (!res.writableEnded) {
-      res.write(`data: ${JSON.stringify({ error: "生成反馈失败，请稍后重试。" })}\n\n`);
-      res.end();
+      sendSseError(res, "生成反馈失败，请稍后重试。");
     }
   }
 };
@@ -323,15 +275,23 @@ export const getUserInterviews = async (req, res) => {
     const pagination = getPagination(req.query);
     logger.info({ studentId }, "获取学生面试记录");
     const filter = { student: studentId };
-    const [interviews, total] = await Promise.all([
+    const [interviews, total, resultStats] = await Promise.all([
       Interview.find(filter)
         .sort({ createdAt: -1 })
         .skip(pagination.skip)
         .limit(pagination.pageSize)
         .lean(),
       Interview.countDocuments(filter),
+      Interview.aggregate([
+        { $match: { student: new mongoose.Types.ObjectId(studentId) } },
+        { $group: { _id: "$result", count: { $sum: 1 } } },
+      ]),
     ]);
-    success(res, { interviews, pagination: toPaginationMeta(pagination, total) });
+    const stats = { total, success: 0, failure: 0, quit: 0 };
+    for (const item of resultStats) {
+      if (item._id in stats) stats[item._id] = item.count;
+    }
+    success(res, { interviews, pagination: toPaginationMeta(pagination, total), stats });
   } catch (err) {
     logger.error({ err }, "获取面试记录失败");
     sendError(res, "获取面试记录失败");

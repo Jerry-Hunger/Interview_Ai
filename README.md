@@ -65,9 +65,9 @@ flowchart TD
 
 ### 面试执行与评估逻辑
 
-1. 前端提交岗位、简历、题型与难度到 `POST /api/interview/start`，服务端请求 DeepSeek 生成首题。
-2. 每次作答调用 `POST /api/interview/respond-stream`。服务端依据对话历史生成追问或下一题，并通过文本流返回。
-3. 结束时调用 `POST /api/interview/conclude-stream`（或非流式的 `conclude`）。服务端每 3 组问答拆为一个评估块，再汇总为最终反馈与通过/未通过结果。
+1. 前端提交岗位、简历、题型与难度到 `POST /api/interview/start-stream`，服务端通过 SSE 请求 DeepSeek 生成首题。
+2. 每次作答调用 `POST /api/interview/respond-stream`。服务端依据对话历史生成追问或下一题，并通过 SSE 返回。
+3. 结束时调用 `POST /api/interview/conclude-stream`。服务端每 3 组问答拆为一个评估块，再汇总为最终反馈与通过/未通过结果，所有 AI 输出均通过 SSE 返回。
 4. 服务端保存 `Interview` 记录；多轮练习会记录当前轮次、总轮次和各轮反馈。
 
 ## 项目结构
@@ -279,9 +279,8 @@ Vite 默认地址为 `http://localhost:5173`，会自动将 `/api` 请求代理�
 
 | 方法 | 路径 | 角色 | 说明 |
 | --- | --- | --- | --- |
-| POST | `/api/interview/start` | 已登录 | 生成首题或下一轮首题 |
+| POST | `/api/interview/start-stream` | 已登录 | SSE 流式生成首题或下一轮首题 |
 | POST | `/api/interview/respond-stream` | 已登录 | 流式生成下一题或收尾问题 |
-| POST | `/api/interview/conclude` | 已登录 | 非流式生成并保存面试评估 |
 | POST | `/api/interview/conclude-stream` | 已登录 | 流式生成并保存面试评估 |
 | GET | `/api/interview/mine` | 已登录 | 获取当前用户的面试记录；支持 `page`、`pageSize` 分页 |
 | GET | `/api/interview/:id` | 已登录 | 获取某一面试记录 |

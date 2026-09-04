@@ -49,6 +49,28 @@ export const createEvaluationPlan = ({ history, roleSummary, resumeText, roundTy
   };
 };
 
+/**
+ * SSE 结束面试按同一顺序执行分块评估与最终汇总，调用方只负责转发事件。
+ */
+export const executeEvaluationPlan = async ({ plan, generateChunk, generateFinal, concurrent = false, shouldStop }) => {
+  const indexes = Array.from({ length: plan.chunkCount }, (_, index) => index);
+  const evaluateChunk = async (index) => (await generateChunk(plan.getChunkPrompt(index), index)).trim();
+  let feedbacks;
+  if (concurrent) {
+    feedbacks = await Promise.all(indexes.map(evaluateChunk));
+  } else {
+    feedbacks = [];
+    for (const index of indexes) {
+      // 客户端断开后不再调用模型，也不写入不完整面试记录。
+      if (shouldStop?.()) return { feedbacks, finalFeedback: "", aborted: true };
+      feedbacks.push(await evaluateChunk(index));
+    }
+  }
+  if (shouldStop?.()) return { feedbacks, finalFeedback: "", aborted: true };
+  const finalFeedback = (await generateFinal(plan.getFinalPrompt(feedbacks))).trim();
+  return { feedbacks, finalFeedback, aborted: false };
+};
+
 export const buildInterviewRecord = ({ studentId, history, context, resumeText, type, difficulty, roleSummary, roundType, customTopic, totalRounds, currentRound, feedbacks = [], finalFeedback, result }) => ({
   student: studentId,
   chatHistory: history,

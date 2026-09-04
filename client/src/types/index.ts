@@ -155,6 +155,7 @@ export type CompanyDashboardData = {
     finalSelected?: number;
     rejected?: number;
     totalJobs?: number;
+    activeJobs?: number;
     totalApplications?: number;
   };
   jobs?: Job[];
