@@ -8,7 +8,12 @@ ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com \
 
 # pnpm 的构建脚本白名单位于工作区配置中，需在安装依赖前复制进镜像。
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+# 显式写入 pnpm 配置；仅设置 COREPACK_NPM_REGISTRY 不会改变依赖包下载源。
+RUN corepack enable \
+    && pnpm config set registry https://registry.npmmirror.com \
+    && pnpm config set network-concurrency 8 \
+    && pnpm config set fetch-retries 5 \
+    && pnpm install --frozen-lockfile
 
 COPY . ./
 RUN pnpm build
