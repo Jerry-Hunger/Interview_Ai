@@ -169,18 +169,28 @@ const CompanyDashboard = () => {
           </div>
 
           {hasData ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              <ApplicationStatusChart stages={chartData} total={total} type="pie" />
-              <div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              <section className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/30" aria-label="申请阶段占比">
+                <div className="flex items-baseline justify-between px-1">
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">阶段占比</h3>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">共 {total} 份申请</span>
+                </div>
+                <ApplicationStatusChart stages={chartData} total={total} type="pie" />
+              </section>
+              <section className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/30" aria-label="各申请状态人数">
+                <div className="flex items-baseline justify-between px-1">
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">当前状态</h3>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">人数与占比</span>
+                </div>
                 <ApplicationStatusChart stages={chartData} total={total} type="bar" />
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <div className="mt-1 pt-4 border-t border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-2 text-sm">
                     <TrendingUp size={16} className="text-emerald-500 dark:text-emerald-400" />
                     <span className="text-gray-600 dark:text-gray-400">通过率</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{passRate}%</span>
                   </div>
                 </div>
-              </div>
+              </section>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[300px]">
