@@ -2,7 +2,7 @@ import "dotenv/config";
 import mongoose from "mongoose";
 
 const MONGO_URI = process.env.MONGO_URI;
-const COMPANY_ID = "6a9abb27a1211a28447b14e2";
+const COMPANY_ID = process.env.MIGRATION_COMPANY_ID;
 
 const jobs = [
   {
